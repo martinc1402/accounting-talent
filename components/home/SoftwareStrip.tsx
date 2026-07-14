@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { software } from "@/content/home";
 import { Container } from "@/components/ui/Container";
 
@@ -14,28 +15,37 @@ import { Container } from "@/components/ui/Container";
   On a site whose entire pitch is that it does not overstate things, that is the
   wrong trade for some visual texture.
 
-  It lives inside the hero's white band. It is a strip, not a section, and the
-  page's band budget is already spent.
+  A line of prose, not a row of chips. The chips were outlined and padded and
+  looked exactly like filter buttons, so they promised an interaction that does
+  not exist. Nothing here is clickable, focusable, or hoverable, and it is now
+  built that way rather than merely failing to be a button.
+
+  No bottom padding. The gap to the next section is owned by TheMath's top
+  padding, the way every other section on the page works. Paying for it twice is
+  what made this gap ~1.8x the rhythm of the other in-band gaps.
 */
 export function SoftwareStrip() {
   return (
-    <section className="pb-16 lg:pb-20">
+    <section>
       <Container>
         <div className="reveal border-t border-line pt-8">
           <p className="text-caption text-subtle">{software.intro}</p>
 
-          <ul className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-3">
-            {software.tools.map((tool) => (
-              <li
-                key={tool}
-                className="rounded-card border border-line px-4 py-2.5 text-small font-medium text-muted"
-              >
-                {tool}
-              </li>
+          {/*
+            Each name is nowrap so no product name ever splits across lines. The
+            line itself is free to wrap between names, which is what it does on a
+            phone.
+          */}
+          <p className="mt-4 text-small text-subtle">
+            {software.tools.map((tool, i) => (
+              <Fragment key={tool}>
+                {i > 0 && <span aria-hidden> · </span>}
+                <span className="whitespace-nowrap">{tool}</span>
+              </Fragment>
             ))}
-          </ul>
+          </p>
 
-          <p className="mt-5 text-caption text-subtle/80">{software.note}</p>
+          <p className="mt-3 text-fine text-subtle/80">{software.note}</p>
         </div>
       </Container>
     </section>

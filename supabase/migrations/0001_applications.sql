@@ -5,12 +5,21 @@
 -- using the service role key, which bypasses RLS. Do not add a public insert
 -- policy: it would let anyone spam the table straight from the browser.
 
-create type application_tier as enum (
-  'fast_track',
-  'standard',
-  'waitlist',
-  'filter_out'
-);
+-- Guarded, unlike a bare `create type`. Postgres has no `create type if not
+-- exists`, and a pasted script runs as one transaction: a second run would fail
+-- here and roll back the WHOLE file, which looks like "the migration did
+-- nothing" rather than "it already ran". Every create below is idempotent, so
+-- this one is too, and the file can be re-run safely.
+do $$ begin
+  create type application_tier as enum (
+    'fast_track',
+    'standard',
+    'waitlist',
+    'filter_out'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists applications (
   id uuid primary key default gen_random_uuid(),

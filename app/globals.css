@@ -18,6 +18,25 @@
   --color-paper: #f5f4f1;
   --color-line: #e2e5ec;
 
+  /*
+    The site's only non-navy colour, and it exists for exactly one thing: the
+    Verified state. Verified is what US firms filter for first, so it is doing
+    semantic work rather than decorating. It appears nowhere else.
+
+    Two shades of the one hue, because no single green clears WCAG AA on both
+    surfaces the badge renders on. Measured:
+
+      #22c55e   6.70:1 on navy   2.28:1 on white
+      #16a34a   4.63:1 on navy   3.30:1 on white
+      #15803d   3.05:1 on navy   5.02:1 on white
+
+    So the bright one is for the navy profile card and the deep one is for the
+    white search panel. Using a single green would silently fail contrast on one
+    of them.
+  */
+  --color-verified: #22c55e;
+  --color-verified-deep: #15803d;
+
   --font-display: var(--font-newsreader), Georgia, serif;
   --font-sans: var(--font-geist), system-ui, sans-serif;
 
@@ -46,6 +65,15 @@
 
   --text-caption: clamp(0.875rem, 0.86rem + 0.1vw, 0.9375rem);
   --text-caption--line-height: 1.5;
+
+  /*
+    Legal fine print, and nothing else. The scale used to bottom out at caption,
+    which meant a trademark disclaimer sat at exactly the same size as the label
+    introducing it: no hierarchy between the thing you should read and the thing
+    you only need to be able to read.
+  */
+  --text-fine: 0.75rem;
+  --text-fine--line-height: 1.5;
 }
 
 /*
@@ -225,14 +253,24 @@ body {
   Scroll reveals run entirely in CSS. Content is visible by default and only
   animates where the browser supports scroll-driven timelines, so nothing is
   ever hidden on the low-end Android devices most of this audience uses.
+
+  The range starts later and ends sooner than it used to (was entry 5% / cover
+  22%). Paired with a keyframe that starts at 0.4 rather than 0, this stops text
+  being legible-but-ghosted: a heading used to sit at 0.06 opacity while already
+  on screen, which read as pale grey rather than as a fade. It now never drops
+  below ~0.43 and reaches full colour EARLIER than before, by the time it is 83%
+  down the viewport rather than 73%.
+
+  There is no `duration` to shorten here. A scroll-driven animation has no clock;
+  its pace is scroll distance, so the range IS the duration.
 */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .reveal {
       animation: reveal-in linear both;
       animation-timeline: view();
-      animation-range: entry calc(5% + var(--reveal-step, 0%)) cover
-        calc(22% + var(--reveal-step, 0%));
+      animation-range: entry calc(15% + var(--reveal-step, 0%)) cover
+        calc(15% + var(--reveal-step, 0%));
     }
 
     /*
@@ -256,10 +294,15 @@ body {
   }
 }
 
+/*
+  From 0.4, not 0. Text that is on screen and readable should never be a ghost of
+  itself: at 0 the fade spent its first stretch rendering near-black headings as
+  pale grey, which looks like a colour bug rather than an animation.
+*/
 @keyframes reveal-in {
   from {
-    opacity: 0;
-    transform: translateY(16px);
+    opacity: 0.4;
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
