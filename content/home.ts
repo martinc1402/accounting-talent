@@ -39,9 +39,11 @@ export const hero = {
     standing between it and a claim we cannot make is the word "sample".
   */
   sampleProfile: {
-    // Arjun, not Priya: the headshot is of a man, and a female name over a male
-    // face is the single most obvious "this is fabricated" signal you could put
-    // on a card whose whole job is to look credible.
+    // The name follows the face. This headshot is of a man, so the name is a
+    // man's: a mismatched name over a photograph is the single most obvious
+    // "this is fabricated" signal you could put on a card whose whole job is to
+    // look credible. (The detail card further down the page is a different
+    // person, Priya, with her own photograph. Same rule, applied twice.)
     name: "Arjun S.",
     photo: {
       src: "/images/headshot-1.jpg",
@@ -122,13 +124,17 @@ export const firmView = {
 } as const;
 
 /*
-  The same profile as the hero card, opened.
+  A second profile, opened.
 
-  Three scales of one object: the hero card (the summary), FirmView (the search
-  result), and this (the full record a firm reads before it contacts you). The
-  shared fields below are DERIVED from hero.sampleProfile rather than restated,
-  the same way hero.h1 is derived from its lines. If the hero says $900-1,200 and
-  this card says something else, the "same person" premise dies quietly.
+  This used to be the hero's profile at detail scale, deriving its name and photo
+  from hero.sampleProfile so the two could not drift apart. It is now a different
+  person: Arjun stays in the hero and in the search results, and Priya is the
+  record a firm actually opens. Two faces, a man and a woman, on a page recruiting
+  both.
+
+  Nothing reads as broken by that, because the heading was never about him: it
+  asks what a firm sees when it opens YOUR profile. So her fields are her own
+  below, not references to his.
 
   This card is a sample, and unlike the hero card it is not only a sample of
   fields the form collects. The application asks 21 questions and does not ask for
@@ -142,8 +148,11 @@ export const profileDetail = {
   heading: "What a US\u00A0firm sees when it opens your profile",
   lede: "Not a resume in an inbox. A structured, verified record, and the firm reads it without anyone standing in between.",
 
-  name: hero.sampleProfile.name,
-  photo: hero.sampleProfile.photo,
+  name: "Priya S.",
+  photo: {
+    src: "/images/headshot-2.jpg",
+    alt: "The accountant in the sample detail profile.",
+  },
 
   /*
     Split in two on purpose. The green means Verified, it does not mean
@@ -166,19 +175,19 @@ export const profileDetail = {
 
   /*
     The most valuable thing on the card, and the only part a middleman cannot
-    fake for you: his own English, unedited, answering the Stage 2 writing
+    fake for you: her own English, unedited, answering the Stage 2 writing
     prompt. A firm's real fear is not that the accounting is wrong, it is that it
     cannot tell whether the person can explain what they did. So the card lets
-    him explain what he did.
+    her explain what she did.
 
     Set in the sans face, not the display serif. The serif is the brand's voice.
-    The whole worth of this paragraph is that it is HIS voice, so the brand keeps
+    The whole worth of this paragraph is that it is HER voice, so the brand keeps
     out of it.
   */
   quote: {
     label: "In their own words",
     text: "“Last tax season a client's QuickBooks bank feed re\u2011imported three months of transactions after their bank migrated systems, so the register showed nearly double the actual activity and the books were off by $18,400. I exported both the register and the bank statements to Excel, matched them by date and amount to isolate the duplicates, and confirmed in the audit log that they came from the second feed connection. After removing the duplicates and re\u2011reconciling October to December, the difference came to zero. I also set a bank rule to flag same\u2011day same\u2011amount entries so it would not happen again silently.”",
-    attribution: "Written by Arjun during assessment · unedited",
+    attribution: "Written by Priya during assessment · unedited",
   },
 
   softwareLabel: "Software",
@@ -226,9 +235,14 @@ export const profileDetail = {
 
   salary: {
     label: "Expected salary",
-    // Derived, so the two cards cannot quote different numbers.
-    figure: hero.sampleProfile.salary,
-    suffix: hero.sampleProfile.salarySuffix,
+    /*
+      Her figure, not a reference to his, now that these are two people. It is
+      deliberately the SAME band as the hero card: same role, same experience, so
+      the page must not quote two different numbers for the same job. If these
+      ever diverge it should be because someone meant it.
+    */
+    figure: "$900\u20111,200",
+    suffix: "/mo",
     facts: [
       { term: "Commitment", detail: "Full\u2011time, only job" },
       { term: "Can start", detail: "Within 30\u00A0days" },
@@ -261,7 +275,7 @@ export const profileDetail = {
     buttons is having buttons that do nothing when a job-seeker taps them.
   */
   actions: {
-    primary: "Contact Arjun",
+    primary: "Contact Priya",
     secondary: "Save to shortlist",
   },
   footnote: "Profile ATL\u20110042 · you hire and pay directly",

@@ -13,13 +13,16 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Label, PillGroup, Row } from "@/components/home/ProfileCard";
 
 /*
-  The sample profile, opened. This replaced a full-bleed photograph of a firm
+  A sample profile, opened. This replaced a full-bleed photograph of a firm
   partner, which broke the scroll but made no argument. This breaks the scroll
   AND makes the argument, because it is the product rather than atmosphere.
 
-  It is the hero card at detail scale: same shell, same tokens, same person, same
-  Row and PillGroup components, imported rather than copied. A reader who saw the
-  hero recognises this as the same object, which is the entire point.
+  It is the hero card at detail scale: same shell, same tokens, same Row and
+  PillGroup components, imported rather than copied. What it is NOT is the same
+  person. The hero card and the search results are Arjun; this is Priya. Two faces
+  on a page recruiting both, and the heading was never about him anyway ("what a
+  firm sees when it opens YOUR profile"). So the components are shared and the
+  content is hers.
 
   Not built on components/ui/Card, for the same reason ProfileCard is not: Card
   bakes its padding into the base, and with no tailwind-merge in the project a
@@ -115,45 +118,59 @@ export function ProfileDetail() {
         <div className="mt-12 overflow-hidden rounded-card border border-line bg-navy shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
           <div className="flex flex-col gap-5 border-b border-paper/20 p-6 sm:flex-row sm:items-start sm:gap-7 lg:p-10">
             {/*
-              The same face as the hero card, cropped to the same framing, and it
-              takes a stage to do it.
+              A different photograph from the hero card's, and it needs a
+              different mechanism. Not a preference: the hero's does not reach.
 
-              The source is 2:3. Under object-cover the width binds (a 5:6 tile of
-              width w renders the image 1.5w tall in a 1.2w frame), so the tile
-              shows 1.2/1.5 = 80% of the image height NO MATTER WHAT
-              object-position says. Head-and-shoulders is 9% to 51%, a 42% band,
-              and a 42% band does not fit an 80% window: object-position only
-              chooses WHICH 80% you see. Every possible value drags in the
-              waistband and the hands, leaving the head at ~34% of the tile. That
-              is a standing shot shrunk into an avatar slot, not the hero's face.
+              The hero card pans a 1.9x stage with object-position. Run that on
+              this 3:4 source and the reachable range runs out. With the stage
+              anchored at the top, object-position y can only place the frame's
+              top edge between 0% and 10% of the image height, because the cover
+              overflow of a 3:4 image in a 5:6 stage is only 13.3% of the stage.
+              Her hair starts at 12.5%. Even object-position 100% still lands
+              above her head, so NO value produces the crop we need.
 
-              So the image is rendered into a stage 1.9x the tile and clipped by
-              it. The tile then shows 1/1.9 = 52.6% of the stage's 80% band =
-              42.1%, which is the band we actually need. Putting its top edge at
-              the hero's 9% needs object-position y = 9 / (0.8 / 1.9 * 100 / 42.1)
-              ... in the simple form the algebra reduces to: y = f / 0.2 with the
-              stage's own overflow, so f = 9% gives y = 45%. Visible band 9% to
-              51.1%: the hero card's crop, to the pixel. The head lands at 64% of
-              the tile height against the hero panel's 65%.
+              So the stage matches the image's own aspect (making object-cover a
+              no-op, and a safe fallback) and the pan is done with a transform.
+              Transform percentages resolve against the element's OWN box;
+              top/left percentages resolve against the PARENT's. That difference
+              is the whole reason this works and `top: -11%` would quietly mean
+              something else.
 
-              sizes accounts for the 1.9x. A 144px tile holds a 274px-wide image
-              box, so quoting the tile width here would fetch a variant one step
-              too small and soften the face.
+              The algebra. Tile is w x 1.2w, stage is k*w wide and 1.333*k*w tall,
+              so the visible band is 1.2w / 1.333kw = 0.9/k of the image height.
+              k = 2.571 gives a 35% band; translating it up by 10.8% of the stage
+              height puts that band at 10.8% to 45.8% of the photograph, which is
+              headroom above the hair (12.6%), the whole face (chin at 33.2%), and
+              a landing past the shoulder line (41.8%) rather than on it. Cutting
+              AT the shoulder line is what read as an abrupt crop on the hero card.
 
-              sepia-[10%] is kept from the hero card. The correction was
-              calibrated against a cream tile rather than this navy one, so it is
-              not strictly needed here, but rendering the same face at a different
-              colour temperature four screens apart is precisely what would break
-              the "same person" illusion.
+              The horizontal figure is measured, not derived: her face does not sit
+              where the geometry would like it to. 25.4% was found by bracketing,
+              and puts the band at 25.4% to 64.3%, centred on 44.8%.
+
+              Her head fills ~59% of the tile against the hero's 64%. Her head is
+              proportionally smaller in frame and her shoulders lower, so head size
+              and settled shoulders cannot both be matched: tightening to a 64%
+              head lands the bottom edge within 2% of her shoulder line. Shoulders
+              win, for the reason above.
+
+              sizes describes the STAGE, not the tile: a 144px tile holds a 370px
+              image box, and quoting the tile width would fetch a variant 2.5x too
+              small and rasterise the face soft.
+
+              No sepia. On the hero card that was a colour-temperature correction
+              measured against its cool near-white wall sitting next to a warm
+              cream tile. This photograph's background is a different problem
+              entirely and sepia does nothing useful for it.
             */}
             <div className="relative aspect-[5/6] w-28 shrink-0 overflow-hidden rounded-card bg-paper sm:w-32 lg:w-36">
-              <div className="absolute top-0 left-1/2 h-[190%] w-[190%] -translate-x-1/2">
+              <div className="absolute top-0 left-0 aspect-[3/4] w-[257.1%] -translate-x-[25.4%] -translate-y-[10.8%]">
                 <Image
                   src={p.photo.src}
                   alt={p.photo.alt}
                   fill
-                  sizes="(max-width: 640px) 220px, 280px"
-                  className="object-cover object-[50%_45%] sepia-[10%]"
+                  sizes="(max-width: 640px) 290px, 380px"
+                  className="object-cover"
                 />
               </div>
             </div>
@@ -202,7 +219,7 @@ export function ProfileDetail() {
             On a phone the reader gets header, then the panels, then the evidence,
             then the buttons. Two reasons. The salary is what this audience came
             for and it must not sit two thousand pixels down the card. And the
-            inert buttons have to be TERMINAL: a full-width cream "Contact Arjun"
+            inert buttons have to be TERMINAL: a full-width cream "Contact Priya"
             pill halfway down a long card will be tapped, and nothing will happen.
             Last, directly above "you hire and pay directly", they read as the
             card's closing chrome, which is where a real product puts them anyway.
@@ -286,8 +303,8 @@ export function ProfileDetail() {
                 <Label>{p.quote.label}</Label>
                 {/*
                   Sans, not the display serif. The serif is the brand's voice, and
-                  the entire worth of this paragraph is that it is HIS voice: the
-                  one thing on the card a middleman cannot supply for him. So the
+                  the entire worth of this paragraph is that it is HER voice: the
+                  one thing on the card a middleman cannot supply for her. So the
                   brand stays out of it. (The serif is also 300-weight at 0.95
                   leading, which is wrong for ninety words of running text.)
                 */}

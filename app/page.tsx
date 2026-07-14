@@ -21,9 +21,13 @@ import { FinalCta } from "@/components/home/FinalCta";
 
   ProfileDetail replaced a full-bleed photograph in this slot. The photo broke the
   scroll but made no argument; the card breaks the scroll AND makes the argument,
-  because it is the product rather than atmosphere. It also puts the sample profile
-  at three scales across the page: the hero card summarises it, HowItWorks shows it
-  as a search result, and this is the record a firm actually opens.
+  because it is the product rather than atmosphere.
+
+  Two sample people, deliberately. Arjun carries the hero card and the search
+  results in HowItWorks (one profile, summarised, then found). Priya carries the
+  detail card: the record a firm actually opens. A page recruiting men and women
+  should show both, and the detail heading asks what a firm sees when it opens
+  YOUR profile, so it was never his to begin with.
 */
 export default function HomePage() {
   return (

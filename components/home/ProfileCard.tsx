@@ -36,11 +36,12 @@ import { LogoMark } from "@/components/ui/LogoMark";
 const COMPACT_HERO_CARD = false;
 
 /*
-  Row, PillGroup and Label are exported because ProfileDetail is the same object
-  at a bigger scale, and it renders the same icon rows and the same software
-  pills. Sharing the components rather than copying them is the only thing that
-  actually guarantees the two cards cannot drift into lookalikes, which is the
-  same argument components/ui/Card.tsx makes about the white cards.
+  Row, PillGroup and Label are exported because ProfileDetail is the same KIND of
+  card at a bigger scale (a different person, but the same navy shell, the same
+  icon rows, the same software pills). Sharing the components rather than copying
+  them is the only thing that actually guarantees the two cards cannot drift into
+  lookalikes, which is the same argument components/ui/Card.tsx makes about the
+  white cards.
 */
 export function Label({ children }: { children: ReactNode }) {
   return (
