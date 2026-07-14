@@ -40,6 +40,13 @@ yarn-error.log*
 # playwright mcp scratch output
 /.playwright-mcp/
 
+# supabase cli cache
+/supabase/.temp/
+
+# reference screenshots dropped in the project root. Real images live in
+# public/images/, so anything at the top level is scratch.
+/home-mobile.jpeg
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
