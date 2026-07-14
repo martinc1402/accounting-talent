@@ -1,65 +1,40 @@
-import Image from "next/image";
+import { Nav } from "@/components/chrome/Nav";
+import { Footer } from "@/components/chrome/Footer";
+import { Hero } from "@/components/home/Hero";
+import { SoftwareStrip } from "@/components/home/SoftwareStrip";
+import { TheMath } from "@/components/home/TheMath";
+import { HowItWorks } from "@/components/home/HowItWorks";
+import { WhoWeWant } from "@/components/home/WhoWeWant";
+import { PhotoBand } from "@/components/home/PhotoBand";
+import { TheHonestPart } from "@/components/home/TheHonestPart";
+import { ShortFaq } from "@/components/home/ShortFaq";
+import { FinalCta } from "@/components/home/FinalCta";
 
-export default function Home() {
+/*
+  Worker-facing homepage. At employer launch this hero swaps to the /employers
+  pitch and worker recruitment moves to /careers. Every section reads from
+  content/home.ts, so that flip is a content change rather than a rewrite.
+
+  SoftwareStrip sits inside the hero's white band and PhotoBand is a photograph
+  rather than a colour, so neither spends a background band: the page still runs
+  white / paper / white / mist / navy.
+*/
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      <Nav />
+      <main className="flex-1">
+        <Hero />
+        <SoftwareStrip />
+        <TheMath />
+        <HowItWorks />
+        <WhoWeWant />
+        <PhotoBand />
+        <TheHonestPart />
+        <ShortFaq />
+        <FinalCta />
       </main>
-    </div>
+      <Footer />
+    </>
   );
 }

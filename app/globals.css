@@ -1,26 +1,273 @@
 @import "tailwindcss";
 
+/*
+  Palette and type scale derived from sparkadvisors.com.
+  Navy #131F5B is the single accent: it is the only non-neutral on the site.
+  There is no secondary palette. The cards are white with a hairline, and the
+  one navy card carries a badge explaining why it is the colour it is.
+*/
+@theme {
+  --color-navy: #131f5b;
+  --color-navy-deep: #0d1642;
+
+  --color-ink: #14181b;
+  --color-muted: #283338;
+  --color-subtle: #4a5560;
+
+  --color-mist: #eff1f7;
+  --color-paper: #f5f4f1;
+  --color-line: #e2e5ec;
+
+  --font-display: var(--font-newsreader), Georgia, serif;
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+
+  --radius-card: 0.5rem;
+
+  /*
+    The text scale, measured against sparkadvisors.com at 1440px and 390px.
+    Everything clamps between those two widths, so type scales continuously
+    rather than jumping at a breakpoint.
+
+    Sizes match Spark 1:1. Leading does not: Spark runs body at 1.15, which is
+    dense. This audience reads English as a second language on cheap Android
+    phones, which is exactly where tight leading costs the most, so body sits at
+    1.5 and the lede at 1.25. Large text needs proportionally less leading than
+    small text, which is why the lede is tighter than the body despite being
+    bigger.
+  */
+  --text-lede: clamp(1.35rem, 1.14rem + 0.88vw, 1.9rem);
+  --text-lede--line-height: 1.25;
+
+  --text-body: clamp(1.125rem, 1.09rem + 0.2vw, 1.28rem);
+  --text-body--line-height: 1.5;
+
+  --text-small: clamp(1rem, 0.98rem + 0.1vw, 1.0625rem);
+  --text-small--line-height: 1.5;
+
+  --text-caption: clamp(0.875rem, 0.86rem + 0.1vw, 0.9375rem);
+  --text-caption--line-height: 1.5;
+}
+
+/*
+  Light only, by brand decision. Declaring color-scheme stops Android
+  browsers (Chrome's "auto dark theme") from inverting the palette.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/*
+  Spark sets display type light, very tight, with near-solid leading: 0.95, not
+  1.0. Verified against the multi-line headlines that descenders (the "y" in
+  "salary", the "g" in "accounting") do not collide at this leading.
+*/
+.display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+
+/*
+  One display scale for the whole site. These were previously hand-copied
+  arbitrary values (text-[2.1rem] lg:text-[3rem]) repeated across five
+  components, so the rhythm drifted whenever one of them was edited alone.
+
+  Sized against sparkadvisors.com measured at 390px and 1440px: hero 44.8 -> 75.2,
+  section 36 -> 60. They clamp instead of using breakpoint variants, so type
+  scales continuously rather than jumping at `lg`.
+*/
+.display-hero {
+  font-size: clamp(2.8rem, 2.09rem + 2.9vw, 4.7rem);
+}
+
+/*
+  The home hero only. Its headline is broken by hand into three fixed lines, and
+  the longest ("Keep 100% of your salary.") does not fit the copy column at the
+  full display-hero size. At 1024px, the lg breakpoint, the column actually
+  SHRINKS (the layout splits into two) while the type keeps growing, so that line
+  wrapped and produced a fourth.
+
+  So the headline is sized to fit its three lines rather than the column being
+  widened to fit the headline. Widening was tried and reverted: taking the width
+  off the image column left the profile card covering the photograph at 1024.
+
+  The ceiling is set by measurement, not taste. The copy column stops growing at
+  ~1304px (the container caps at 1240px), fixing it at 666px forever, and the
+  longest line needs <= 66px of type to fit that. 65px keeps a margin. At 1024,
+  where the column is narrowest (531px), the same line needs <= 54px; this curve
+  gives 53px there.
+
+  Not folded into .display-hero, because that class is shared by the /employers
+  headline and the closing CTA, and neither of those should move.
+
+  The mobile floor (2.8rem) is unchanged, so nothing moves below md, where the
+  headline wraps naturally anyway.
+*/
+.display-hero-home {
+  font-size: clamp(2.8rem, 0.57rem + 4.29vw, 4.0625rem);
+}
+
+/* Page titles on the narrow pages (faq, legal, apply). */
+.display-page {
+  font-size: clamp(2.25rem, 1.79rem + 1.9vw, 4rem);
+}
+
+.display-section {
+  font-size: clamp(2.25rem, 1.7rem + 2.28vw, 3.75rem);
+}
+
+.display-step {
+  font-size: clamp(1.75rem, 1.47rem + 1.14vw, 2.5rem);
+}
+
+/* The salary figures and the rate-card bands: the numbers that carry the pitch. */
+.display-stat {
+  font-size: clamp(2.25rem, 1.79rem + 1.9vw, 3.5rem);
+}
+
+.display-figure {
+  font-size: clamp(2rem, 1.82rem + 0.76vw, 2.5rem);
+}
+
+/*
+  Display type at a solid weight. The face defaults to 300, which is right for
+  the big headlines but leaves a 40px navy line looking thin and washed out, so
+  the one line that carries the argument ("Twice the pay for you...") opts up.
+
+  This has to live here rather than being a Tailwind `font-medium` on the
+  element: `.display` is unlayered CSS and Tailwind's utilities sit in
+  @layer utilities, and unlayered always outranks layered. Verified in the
+  browser: adding font-medium leaves the computed weight at 300. A utility would
+  look like it worked and change nothing.
+*/
+.display-solid {
+  font-weight: 500;
+}
+
+/*
+  Line breaking.
+
+  Headings balance: the browser evens out the line lengths instead of filling
+  greedily and leaving a one-word orphan on the last line.
+
+  Body text gets `pretty`, which only fixes the last line (it prevents widows) and
+  is much cheaper than balancing a long paragraph.
+
+  `.display` is the site's heading-styled-text hook, so it balances too. It also
+  sits on the logo wordmark and the salary-bar amounts, but those are single-line
+  or already whitespace-nowrap, so balancing them is a no-op.
+
+  The cascade sorts out the overlap by itself: `.display` (0-1-0) beats `p`
+  (0-0-1), so a heading-styled paragraph balances rather than getting `pretty`.
+
+  Neither property prevents a break at a hyphen, and neither knows that "US" must
+  not be orphaned from its noun. That is what the non-breaking characters in
+  content/*.ts are for. These rules and those escapes do different jobs.
+*/
+@supports (text-wrap: balance) {
+  h1,
+  h2,
+  h3,
+  .display {
+    text-wrap: balance;
+  }
+}
+
+@supports (text-wrap: pretty) {
+  p,
+  li,
+  dd,
+  dt {
+    text-wrap: pretty;
+  }
+}
+
+/*
+  The home hero headline opts out of balancing from md up, where its <br>
+  elements take over. A balancer and a set of manual breaks are two things trying
+  to decide the same thing, and the balancer would re-wrap the text inside the
+  segments the <br>s create.
+
+  Below md the <br>s are display:none and the headline wraps on its own, so it
+  keeps `balance` there.
+
+  The @supports guard is load-bearing, not decoration: Lightning CSS strips bare
+  text-wrap declarations at Next's default browser targets, so without it this
+  rule would vanish from the compiled CSS, `balance` would stay on, and the
+  manual breaks would silently lose.
+*/
+@supports (text-wrap: balance) {
+  @media (min-width: 768px) {
+    .hero-manual-breaks {
+      text-wrap: wrap;
+    }
+  }
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/*
+  Scroll reveals run entirely in CSS. Content is visible by default and only
+  animates where the browser supports scroll-driven timelines, so nothing is
+  ever hidden on the low-end Android devices most of this audience uses.
+*/
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry calc(5% + var(--reveal-step, 0%)) cover
+        calc(22% + var(--reveal-step, 0%));
+    }
+
+    /*
+      Stagger. A scroll-driven animation ignores animation-delay (there is no
+      clock to delay against), so siblings are offset by pushing their
+      animation-range further down the scroll instead. Set --reveal-step on a
+      parent and each child resolves a little later than the one above it.
+    */
+    .reveal-group > *:nth-child(2) {
+      --reveal-step: 3%;
+    }
+    .reveal-group > *:nth-child(3) {
+      --reveal-step: 6%;
+    }
+    .reveal-group > *:nth-child(4) {
+      --reveal-step: 9%;
+    }
+    .reveal-group > *:nth-child(5) {
+      --reveal-step: 12%;
+    }
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Plus sign becomes an x when the native <details> row opens. */
+details[open] summary .chevron {
+  transform: rotate(135deg);
 }
