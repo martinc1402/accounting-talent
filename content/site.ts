@@ -40,6 +40,17 @@ export const primaryCta = {
   href: "/apply",
 } as const;
 
+/*
+  The nav CTA on the employer page. Everywhere else the nav sells the worker
+  application ("Apply free"); on /employers the reader is a firm, so it points at
+  the waitlist form on the same page rather than the worker funnel. Nav swaps to
+  this purely off its `active` prop, so it stays a zero-JS server component.
+*/
+export const employerCta = {
+  label: "Join the waitlist",
+  href: "#waitlist",
+} as const;
+
 export const footer = {
   tagline: "Hire India's accounting talent, directly.",
   links: [

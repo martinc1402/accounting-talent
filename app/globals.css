@@ -88,6 +88,19 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+  In-page anchor jumps (the nav's "Join the waitlist" -> #waitlist, and
+  "/#how-it-works") ease instead of teleporting. Gated by the same
+  reduced-motion guard the scroll reveals use, so nothing moves for a reader who
+  asked for stillness. scroll-mt on the targets keeps them clear of the sticky
+  header.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   background: #ffffff;
   color: var(--color-ink);

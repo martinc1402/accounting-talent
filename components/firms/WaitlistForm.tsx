@@ -32,7 +32,14 @@ export function WaitlistForm() {
         {firms.waitlist.label}
       </label>
 
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+      {/*
+        Always stacked: input full width, button full width beneath it. This form
+        only ever lives in the narrow waitlist card (~410px), where sitting the
+        input beside a "Join the waitlist" button squeezes it below the width of
+        its own "you@yourfirm.com" placeholder and clips it. Full-width input
+        removes the clip at every viewport.
+      */}
+      <div className="mt-2 flex flex-col gap-3">
         <input
           id="email"
           name="email"
@@ -42,17 +49,21 @@ export function WaitlistForm() {
           placeholder={firms.waitlist.placeholder}
           aria-invalid={state.status === "error" || undefined}
           aria-describedby={state.status === "error" ? "email-error" : undefined}
-          className={`w-full rounded-full border bg-white px-5 py-3.5 text-body text-ink placeholder:text-subtle/70 transition-colors focus:border-navy focus:outline-none sm:flex-1 ${
+          className={`w-full rounded-full border bg-white px-5 py-3.5 text-body text-ink placeholder:text-subtle/70 transition-colors focus:border-navy focus:outline-none ${
             state.status === "error"
               ? "border-red-700"
               : "border-line hover:border-navy/40"
           }`}
         />
 
-        <ButtonAction type="submit" disabled={pending}>
+        <ButtonAction type="submit" disabled={pending} className="w-full">
           {pending ? "Adding you..." : firms.waitlist.cta}
         </ButtonAction>
       </div>
+
+      {/* 12px, muted: sets expectations before the click, which is what a firm
+          hovering over a work-email field wants to know. */}
+      <p className="mt-3 text-fine text-subtle">{firms.waitlist.microcopy}</p>
 
       {state.status === "error" && (
         <p

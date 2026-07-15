@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { List } from "@phosphor-icons/react/dist/ssr";
-import { nav, primaryCta } from "@/content/site";
+import { nav, primaryCta, employerCta } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 
@@ -24,6 +24,11 @@ import { Button } from "@/components/ui/Button";
   renders <Nav /> itself, so the caller knows the route.
 */
 export function Nav({ active }: { active?: string }) {
+  // The one place the CTA changes by route: a firm reading /employers is sold the
+  // waitlist, not the worker application. Driven by the existing `active` prop, so
+  // this needs no client-side routing and the header stays zero-JS.
+  const cta = active === "/employers" ? employerCta : primaryCta;
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white">
       {/* px-4 and gap-2 at base: at 360px the logo, the CTA and the hamburger
@@ -57,7 +62,7 @@ export function Nav({ active }: { active?: string }) {
         </nav>
 
         <div className="flex items-center gap-1">
-          <Button href={primaryCta.href}>{primaryCta.label}</Button>
+          <Button href={cta.href}>{cta.label}</Button>
 
           <details className="relative lg:hidden">
             <summary
