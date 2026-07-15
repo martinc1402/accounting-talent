@@ -17,7 +17,11 @@ export function Accordion({ items }: { items: readonly FaqItem[] }) {
       {items.map((item) => (
         <details
           key={item.q}
-          className="group border-b border-line first:border-t"
+          id={item.id}
+          // scroll-mt clears the 72px sticky header when an item is an anchor
+          // target, for both native #hash jumps and the /faq deep-link script's
+          // scrollIntoView. Inert where no id is set (homepage, employer FAQ).
+          className="group scroll-mt-24 border-b border-line first:border-t"
         >
           <summary className="flex min-h-[44px] cursor-pointer list-none items-start justify-between gap-6 py-6 text-left [&::-webkit-details-marker]:hidden">
             <h3 className="text-body font-medium text-ink transition-colors group-hover:text-navy">
