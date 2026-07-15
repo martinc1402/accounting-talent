@@ -63,8 +63,24 @@ const WEAK_QUALIFICATIONS = ["B.Com", "Other / none of these"];
 
 const OWN_COMPUTER = "Own laptop or desktop (not shared, not mobile-only)";
 
+/*
+  Option values in content/form.ts carry non-breaking spaces (US clients,
+  CA Inter, ...) so they never break awkwardly on screen, and those exact
+  strings are what the form submits and stores. The constant lists above are
+  written with ordinary spaces, so every comparison has to normalise NBSP first
+  or it silently never matches. That bug used to strand "currently work on US
+  clients" applicants below fast_track. norm() is applied to every value that is
+  compared against a list, so the two can never drift apart again.
+*/
+const norm = (v: Answers[string]): string =>
+  String(Array.isArray(v) ? v[0] ?? "" : v ?? "")
+    .replace(/\u00A0/g, " ")
+    .trim();
+
 const list = (v: Answers[string]): string[] =>
-  Array.isArray(v) ? v : v ? [v] : [];
+  (Array.isArray(v) ? v : v ? [v] : []).map((s) =>
+    s.replace(/\u00A0/g, " ").trim(),
+  );
 
 export function scoreApplication(a: Answers): Tier {
   const software = [
@@ -72,10 +88,11 @@ export function scoreApplication(a: Answers): Tier {
     ...list(a.tax_software),
   ];
   const hasRealPackage = software.some((s) => REAL_US_PACKAGES.includes(s));
-  const usExperience = HAS_US_CLIENTS.includes(String(a.us_experience ?? ""));
-  const salary = String(a.salary_expectation ?? "");
-  const qualification = String(a.qualification ?? "");
-  const years = String(a.experience_years ?? "");
+  const usExperienceRaw = norm(a.us_experience);
+  const usExperience = HAS_US_CLIENTS.includes(usExperienceRaw);
+  const salary = norm(a.salary_expectation);
+  const qualification = norm(a.qualification);
+  const years = norm(a.experience_years);
   const setup = list(a.home_setup);
 
   // Expectation mismatch: junior, weakest qualification, senior salary ask.
@@ -95,7 +112,7 @@ export function scoreApplication(a: Answers): Tier {
   }
 
   // Tally-only or nothing, and no foreign-client exposure: trainable pipeline.
-  if (!hasRealPackage && a.us_experience === "No") return "waitlist";
+  if (!hasRealPackage && usExperienceRaw === "No") return "waitlist";
 
   // Trainable, honest and affordable: strong fundamentals, no US exposure yet.
   if (

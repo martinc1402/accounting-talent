@@ -49,7 +49,7 @@ export const QUESTIONS: readonly Question[] = [
     id: "email",
     type: "email",
     label: "What's your email address?",
-    help: "We send a verification link here. Unverified applications are not reviewed.",
+    help: "This is where we send your skills assessment, so use one you check.",
     placeholder: "you@example.com",
   },
   {
@@ -242,7 +242,7 @@ export const QUESTIONS: readonly Question[] = [
     id: "home_setup",
     type: "checkgate",
     label: "Do you have a reliable work-from-home setup?",
-    help: "All three are required to continue. US\u00A0firms ask about this constantly.",
+    help: "Check every one you have. US\u00A0firms ask about this constantly.",
     options: [
       "Own laptop or desktop (not shared, not mobile-only)",
       "Reliable broadband internet",
@@ -299,6 +299,6 @@ export const intro = {
 
 export const confirmation = {
   h2: "Application received.",
-  lede: "Check your email now to verify your address. Unverified applications are not reviewed.",
+  lede: "We've got it. Keep an eye on your email over the next few days.",
   body: "Shortlisted applicants receive a short skills assessment (a writing prompt plus a 10\u2011question US\u00A0accounting quiz) within 3 days. Verified profiles are shown first when US\u00A0firms begin hiring.",
 } as const;
