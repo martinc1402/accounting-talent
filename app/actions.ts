@@ -1,16 +1,37 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import type { Answers } from "@/content/form";
 import { stateForCity } from "@/content/cities";
 import { validateAll, visibleQuestions } from "@/lib/validate";
 import { scoreApplication } from "@/lib/scoring";
+import { isLikelyBot } from "@/lib/antispam";
+import { isRateLimited } from "@/lib/ratelimit";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 
 /*
   Server Functions are reachable by direct POST, not just through our UI, so
   everything here re-validates from scratch and never trusts the client.
 */
+
+// The client IP, from the proxy headers Vercel sets. "unknown" is a real
+// bucket, not a bypass: locally every request lands there together, which is
+// exactly what makes the rate limit testable without a real IP.
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  const fwd = h.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return h.get("x-real-ip") ?? "unknown";
+}
+
+// One line per dropped submission, structured so it is greppable in the logs.
+// Only a short prefix of the (already hashed) IP is emitted.
+function logDrop(form: string, reason: string, ipHash: string) {
+  console.warn(
+    `[guard] drop form=${form} reason=${reason} ip=${ipHash.slice(0, 12)}`,
+  );
+}
 
 export type ApplyState = {
   status: "idle" | "success" | "error";
@@ -19,11 +40,33 @@ export type ApplyState = {
 };
 
 type Utm = { source?: string; medium?: string; campaign?: string };
+type Guard = { hp?: string; startedAt?: number };
 
 export async function submitApplication(
   raw: Answers,
   utm: Utm = {},
+  guard: Guard = {},
 ): Promise<ApplyState> {
+  // Guards run cheapest-first, and every hit returns the normal success shape
+  // without persisting, so a bot never learns it was caught. Honeypot + timing
+  // are free; the rate limit is a DB round trip, so it runs second. The wizard
+  // takes minutes, hence the generous 3s floor.
+  const ip = await clientIp();
+
+  if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 3000 })) {
+    logDrop("apply", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("apply", ip, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("apply", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
   const errors = validateAll(raw);
   if (Object.keys(errors).length > 0) {
     return {
@@ -116,6 +159,34 @@ export async function joinFirmWaitlist(
   _prev: WaitlistState,
   formData: FormData,
 ): Promise<WaitlistState> {
+  // Guards first, every hit a silent success. Honeypot + timing are free; the
+  // rate limit is the DB round trip, so it runs second. The floor stays low
+  // (800ms) because a person with a saved email can legitimately submit this
+  // one-field form fast.
+  const ip = await clientIp();
+  const startedAtRaw = formData.get("ts");
+  const startedAt = startedAtRaw ? Number(startedAtRaw) : undefined;
+
+  if (
+    isLikelyBot({
+      hp: formData.get("company_website")?.toString(),
+      startedAt,
+      minMs: 800,
+    })
+  ) {
+    logDrop("waitlist", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("waitlist", ip, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("waitlist", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();

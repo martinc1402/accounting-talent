@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { confirmation, intro, type Answers } from "@/content/form";
 import { validateQuestion, visibleQuestions } from "@/lib/validate";
@@ -25,12 +25,29 @@ export function ApplyForm({ utm }: { utm: Utm }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Anti-spam: the honeypot input a person never fills, and the time the form
+  // became ready. Read at submit and handed to the server, which silently drops
+  // a filled honeypot or a sub-2.5s submission. See lib/antispam.ts.
+  const honeypot = useRef<HTMLInputElement>(null);
+  const startedAt = useRef(Date.now());
+
+  // Move focus to each new question so keyboard and screen-reader users are
+  // carried along with the form instead of being left where the tapped control
+  // just unmounted. preventScroll because the wizard already scrolls to top.
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
   // Recomputed from the answers, so conditional questions (Q8a, the referrer
   // follow-up) appear and disappear as the parent answer changes.
   const steps = useMemo(() => visibleQuestions(answers), [answers]);
   const index = Math.min(step, steps.length - 1);
   const question = steps[index];
   const isLast = index === steps.length - 1;
+
+  useEffect(() => {
+    if (phase === "questions") {
+      headingRef.current?.focus({ preventScroll: true });
+    }
+  }, [index, phase]);
 
   const set = (id: string, value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -40,7 +57,10 @@ export function ApplyForm({ utm }: { utm: Utm }) {
   const submit = (final: Answers) => {
     setSubmitError(null);
     startTransition(async () => {
-      const result = await submitApplication(final, utm);
+      const result = await submitApplication(final, utm, {
+        hp: honeypot.current?.value,
+        startedAt: startedAt.current,
+      });
       if (result.status === "success") {
         setPhase("done");
         window.scrollTo({ top: 0 });
@@ -153,6 +173,28 @@ export function ApplyForm({ utm }: { utm: Utm }) {
 
   return (
     <div>
+      {/* Honeypot. Off-screen and aria-hidden, so a person never sees or fills
+          it; a form-filling bot usually does, and the server drops the submit.
+          data-*-ignore + autoComplete="off" stop a password manager from
+          autofilling it and dropping a real applicant. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-9999px] h-0 w-0 overflow-hidden"
+      >
+        <label>
+          Company website
+          <input
+            ref={honeypot}
+            type="text"
+            name="company_website"
+            tabIndex={-1}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+          />
+        </label>
+      </div>
+
       {/* Progress rail. Answering is the only thing that moves it. */}
       <div className="mb-8">
         <div className="h-0.5 w-full overflow-hidden rounded-full bg-line">
@@ -169,7 +211,9 @@ export function ApplyForm({ utm }: { utm: Utm }) {
       <div className="rounded-card border border-line bg-white p-6 lg:p-9">
         <h2
           id={`${question.id}-label`}
-          className="display display-step text-ink"
+          ref={headingRef}
+          tabIndex={-1}
+          className="display display-step text-ink focus:outline-none"
         >
           {question.label}
           {question.optional && (

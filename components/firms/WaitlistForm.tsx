@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { joinFirmWaitlist, type WaitlistState } from "@/app/actions";
 import { firms } from "@/content/firms";
@@ -14,6 +14,12 @@ export function WaitlistForm() {
     initial,
   );
 
+  // Stamped after mount (not during render) so server and client agree on the
+  // first paint and there is no hydration mismatch. The server reads this to
+  // reject sub-second submissions. A human is always slower than that.
+  const [startedAt, setStartedAt] = useState("");
+  useEffect(() => setStartedAt(String(Date.now())), []);
+
   if (state.status === "success") {
     return (
       <p className="flex items-start gap-3 rounded-card border border-navy/20 bg-white p-5 text-body text-navy">
@@ -25,6 +31,34 @@ export function WaitlistForm() {
 
   return (
     <form action={formAction} noValidate>
+      {/*
+        Anti-spam, invisible to people. Off-screen (not display:none, so a
+        form-filling bot still fills it) and aria-hidden so a screen reader
+        ignores it; a real submission leaves it empty.
+
+        The data-*-ignore attributes and autoComplete="off" keep password
+        managers from autofilling it — without them a saved "company" in a 1Password
+        or LastPass identity would populate the trap and silently drop a real firm.
+        `ts` lets the server reject sub-second POSTs. Both are read in joinFirmWaitlist.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-9999px] h-0 w-0 overflow-hidden"
+      >
+        <label>
+          Company website
+          <input
+            type="text"
+            name="company_website"
+            tabIndex={-1}
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+          />
+        </label>
+      </div>
+      <input type="hidden" name="ts" value={startedAt} readOnly />
+
       <label
         htmlFor="email"
         className="block text-caption font-medium text-ink"
