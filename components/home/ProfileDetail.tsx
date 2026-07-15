@@ -87,36 +87,14 @@ function Panel({ children }: { children: ReactNode }) {
   );
 }
 
-export function ProfileDetail() {
-  const p = profileDetail;
-
+/*
+  The top of the card: photo, name, verified line, the three icon rows. Shared by
+  both variants unchanged, so the teaser and the full record are provably the same
+  object down to the pixel rather than two things that happen to look alike.
+*/
+function ProfileHeader({ p }: { p: typeof profileDetail }) {
   return (
-    /*
-      No background class. The page spends its bands deliberately (white / paper /
-      white / mist / navy) and this section takes none: paper (WhoWeWant) runs into
-      white here and stays white through TheHonestPart. White is also the ground
-      the reader already met this card on, and the shadow below is tuned against it.
-    */
-    <section className="py-16 lg:py-28">
-      <Container>
-        <div className="reveal">
-          <SectionHeading>{p.heading}</SectionHeading>
-          <p className="mt-5 max-w-[52ch] text-lede text-muted">{p.lede}</p>
-        </div>
-
-        {/*
-          No .reveal on the card, and that is a fix rather than an omission. The
-          reveal animation is `linear both`, so before its scroll range opens,
-          fill-mode pins the element at the `from` keyframe: opacity 0.4. On a
-          paragraph that is an unnoticed ghost. On a 1240x1500 navy slab over
-          white it composites to a pale lavender bar rising out of the fold,
-          which is the exact colour-bug artefact that keyframe's 0.4 (rather than
-          0) was introduced to kill. The card is a hard navy block replacing a
-          full-bleed photograph: it IS the punctuation, and it does not need an
-          entrance.
-        */}
-        <div className="mt-12 overflow-hidden rounded-card border border-line bg-navy shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
-          <div className="flex flex-col gap-5 border-b border-paper/20 p-6 sm:flex-row sm:items-start sm:gap-7 lg:p-10">
+    <div className="flex flex-col gap-5 border-b border-paper/20 p-6 sm:flex-row sm:items-start sm:gap-7 lg:p-10">
             {/*
               A different photograph from the hero card's, and it needs a
               different mechanism. Not a preference: the hero's does not reach.
@@ -211,7 +189,101 @@ export function ProfileDetail() {
                 </Row>
               </ul>
             </div>
+    </div>
+  );
+}
+
+/*
+  The card shell, shared by both variants. overflow-hidden + rounded-card trace one
+  continuous edge across the photo and the navy body. No .reveal on it: the reveal
+  animation is `linear both`, so before its scroll range opens fill-mode pins the
+  element at opacity 0.4, which on a 1240x1500 navy slab over white composites to a
+  pale lavender bar rising out of the fold. The card is a hard block, not an
+  entrance.
+*/
+const CARD_SHELL =
+  "overflow-hidden rounded-card border border-line bg-navy";
+
+/*
+  The teaser fade. A mask fades the card's OWN pixels to transparent over the last
+  96px, so whatever band sits behind it shows through: it is background-agnostic,
+  which is the point (no hardcoded white that breaks if the band changes). Inline
+  style, not a utility, so Lightning CSS cannot strip it and it stays scoped to the
+  teaser. The shadow is dropped in the teaser because a box-shadow paints outside
+  the mask and would leave a faint edge under the fade.
+*/
+const TEASER_MASK =
+  "linear-gradient(to bottom, #000 0, #000 calc(100% - 96px), transparent 100%)";
+
+export function ProfileDetail({
+  variant = "full",
+}: {
+  variant?: "full" | "teaser";
+}) {
+  const p = profileDetail;
+
+  if (variant === "teaser") {
+    return (
+      <section className="py-16 lg:py-28">
+        <Container>
+          <div className="reveal">
+            <SectionHeading kicker="The record">{p.heading}</SectionHeading>
+            <p className="mt-5 max-w-[52ch] text-lede text-muted">{p.lede}</p>
           </div>
+
+          {/*
+            Only the top of the card, faded out. The body grid is not rendered at
+            all, so the Contact / Save controls do not exist in the teaser rather
+            than being hidden: there is nothing for a job-seeker to tap and nothing
+            for the keyboard to reach.
+          */}
+          {/*
+            Taller cap on mobile than desktop, because the card fundamentally has
+            two shapes. Below sm the header stacks (photo ABOVE the text, not
+            beside it) and runs ~500px on its own, so the ~380px that lands neatly
+            on the quote at desktop width would fade out mid-way through the icon
+            rows on a phone. 590px clears the header and fades through the quote at
+            375, which is the whole point of the teaser: her writing is the hook.
+          */}
+          <div
+            className={`mt-12 max-h-[590px] sm:max-h-[380px] ${CARD_SHELL}`}
+            style={{ maskImage: TEASER_MASK, WebkitMaskImage: TEASER_MASK }}
+          >
+            <ProfileHeader p={p} />
+            <div className="p-6 lg:p-10 lg:pt-8">
+              <Label>{p.quote.label}</Label>
+              <blockquote className="mt-3 border-l-2 border-paper/25 pl-5">
+                <p className="text-body text-paper/90">{p.quote.text}</p>
+              </blockquote>
+            </div>
+          </div>
+
+          <p className="mt-5 max-w-[62ch] text-caption text-subtle">
+            {p.captionTeaser}
+          </p>
+        </Container>
+      </section>
+    );
+  }
+
+  return (
+    /*
+      No background class. The page spends its bands deliberately (white / paper /
+      white / mist / navy) and this section takes none: paper (WhoWeWant) runs into
+      white here and stays white through TheHonestPart. White is also the ground
+      the reader already met this card on, and the shadow below is tuned against it.
+    */
+    <section className="py-16 lg:py-28">
+      <Container>
+        <div className="reveal">
+          <SectionHeading>{p.heading}</SectionHeading>
+          <p className="mt-5 max-w-[52ch] text-lede text-muted">{p.lede}</p>
+        </div>
+
+        <div
+          className={`mt-12 ${CARD_SHELL} shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]`}
+        >
+          <ProfileHeader p={p} />
 
           {/*
             Explicit grid placement rather than order-*, so the intent is legible.
@@ -323,27 +395,14 @@ export function ProfileDetail() {
               </div>
 
               {/*
-                Rows, not pills, and the distinction is the point: pills are for
-                tags (software, which you either have or you do not), rows are for
-                measured facts (volumes, which have a number on the right). As
-                pills these were key/value pairs in a tag's clothes, twice the
-                width of a real tag, and they burst their own container.
+                Pills, like software, because Priya's scope items are tags rather
+                than key/value facts: "AP & AR" has no number to sit on the right,
+                so the divide-y rows used for Arjun's return volumes would leave
+                half of each row empty here. The reasoning lives in full in the
+                content/home.ts returns comment.
               */}
               <div className="mt-8">
-                <Label>{p.returnsLabel}</Label>
-                <ul className="mt-3 divide-y divide-paper/15 border-y border-paper/15">
-                  {p.returns.map((r) => (
-                    <li
-                      key={r.form}
-                      className="flex items-baseline justify-between gap-4 py-2.5"
-                    >
-                      <span className="text-small text-paper/85">{r.form}</span>
-                      <span className="text-caption whitespace-nowrap text-paper/60 tabular-nums">
-                        {r.volume}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <PillGroup label={p.returnsLabel} items={p.returns} />
               </div>
 
               <div className="mt-8">

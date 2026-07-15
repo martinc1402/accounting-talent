@@ -1,7 +1,6 @@
 import { Nav } from "@/components/chrome/Nav";
 import { Footer } from "@/components/chrome/Footer";
 import { Hero } from "@/components/home/Hero";
-import { SoftwareStrip } from "@/components/home/SoftwareStrip";
 import { TheMath } from "@/components/home/TheMath";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { WhoWeWant } from "@/components/home/WhoWeWant";
@@ -15,9 +14,11 @@ import { FinalCta } from "@/components/home/FinalCta";
   pitch and worker recruitment moves to /careers. Every section reads from
   content/home.ts, so that flip is a content change rather than a rewrite.
 
-  The page runs white / paper / white / mist / navy, and that budget is spent
-  deliberately. SoftwareStrip sits inside the hero's white band, and ProfileDetail
-  takes no background of its own, so neither costs a band.
+  Bands from the top: white (hero, with the software strip folded into its foot)
+  / paper (the money section) / white (how it works) / paper (who we're looking
+  for) / white (the profile record + the honest part) / mist (faq) / navy (final
+  cta + footer). The alternation is deliberate rhythm; ProfileDetail takes no
+  background of its own, so it does not cost a band.
 
   ProfileDetail replaced a full-bleed photograph in this slot. The photo broke the
   scroll but made no argument; the card breaks the scroll AND makes the argument,
@@ -35,11 +36,10 @@ export default function HomePage() {
       <Nav />
       <main className="flex-1">
         <Hero />
-        <SoftwareStrip />
         <TheMath />
         <HowItWorks />
         <WhoWeWant />
-        <ProfileDetail />
+        <ProfileDetail variant="teaser" />
         <TheHonestPart />
         <ShortFaq />
         <FinalCta />

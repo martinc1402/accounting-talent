@@ -148,7 +148,7 @@ export const profileDetail = {
   heading: "What a US\u00A0firm sees when it opens your profile",
   lede: "Not a resume in an inbox. A structured, verified record, and the firm reads it without anyone standing in between.",
 
-  name: "Priya S.",
+  name: "Priya M.",
   photo: {
     src: "/images/headshot-2.jpg",
     alt: "The accountant in the sample detail profile.",
@@ -164,13 +164,13 @@ export const profileDetail = {
   */
   verified: {
     state: "Verified 26\u00A0Jun 2026",
-    detail: "passed the English writing assessment and the US\u00A0tax exam (9/10)",
+    detail: "passed the English writing assessment and US\u00A0tax & accounting exam (8/10)",
   },
 
   rows: {
-    role: "Tax\u00A0preparer · 4\u00A0yrs experience · 2.5\u00A0yrs on US\u00A0clients",
-    education: "CA\u00A0Inter (both groups) · B.Com, Gujarat University",
-    location: "Ahmedabad, India · English (assessed), Hindi, Gujarati",
+    role: "Bookkeeper · 5\u00A0yrs experience · 3\u00A0yrs on US\u00A0clients",
+    education: "CMA (India) · B.Com, MG\u00A0University",
+    location: "Kochi, India · English (assessed), Malayalam, Hindi",
   },
 
   /*
@@ -183,70 +183,72 @@ export const profileDetail = {
     Set in the sans face, not the display serif. The serif is the brand's voice.
     The whole worth of this paragraph is that it is HER voice, so the brand keeps
     out of it.
+
+    One typography edit to her verbatim answer: the dash after "their books"
+    became a colon, so it matches the dash-free convention the rest of the copy
+    (and Arjun's hero quote) already hold to.
   */
   quote: {
     label: "In their own words",
-    text: "“Last tax season a client's QuickBooks bank feed re\u2011imported three months of transactions after their bank migrated systems, so the register showed nearly double the actual activity and the books were off by $18,400. I exported both the register and the bank statements to Excel, matched them by date and amount to isolate the duplicates, and confirmed in the audit log that they came from the second feed connection. After removing the duplicates and re\u2011reconciling October to December, the difference came to zero. I also set a bank rule to flag same\u2011day same\u2011amount entries so it would not happen again silently.”",
+    text: "“A new client came to us fourteen months behind on their books: two QuickBooks files, a personal card mixed into business spending, and an opening balance that was off by $6,900. I rebuilt the chart of accounts, brought in the bank and card feeds month by month, and tagged every owner expense for their CPA to review. It took about six weeks working a few hours a day. When we finished, their CPA filed the overdue return from clean books, and the client moved to a normal monthly close with me.”",
     attribution: "Written by Priya during assessment · unedited",
   },
 
   softwareLabel: "Software",
   software: [
     "QuickBooks Online · ProAdvisor",
-    "Drake",
-    "Lacerte",
-    "Excel (advanced)",
+    "Xero",
+    "Dext",
+    "Bill.com",
+    "Gusto payroll",
   ],
 
   /*
-    Rows, not pills. "Form 1040 · about 140 a season" is a key/value pair wearing
-    a tag's clothes: it is twice the width of a real tag, three of them will not
-    share a line, and the pill ends up wider than the column with nothing
-    flex-wrap can do about it. It visibly burst its own pill in the mockup.
+    Pills here, not the key/value rows Arjun's returns use, and the difference is
+    the data. A row exists to carry a right-hand number ("Form 1040 · about 140 a
+    season"). Priya's scope items are tags: things she does, most without a count.
+    "AP & AR" and "Catch-up / cleanup" have no number to put on the right, so a
+    row would leave half of itself empty. So they render as pills, like software.
 
-    So the card draws a line it should have drawn anyway: pills are for tags
-    (software, which you either have or you do not), rows are for measured facts
-    (volumes, which have a number on the right).
-
-    "about", not "~". The tilde is not in this site's vocabulary; everywhere else
-    it says "about ₹55,000", "approximate", "typical".
+    returns is now a string[] rather than {form, volume}[]. ProfileDetail renders
+    it through the shared PillGroup, the same component the software list uses.
   */
-  returnsLabel: "US\u00A0returns prepared",
+  returnsLabel: "Bookkeeping scope",
   returns: [
-    { form: "Form\u00A01040", volume: "about 140 a season" },
-    { form: "Form\u00A01120\u2011S", volume: "about 35 a season" },
-    { form: "Form\u00A01065", volume: "about 15 a season" },
-    { form: "Form\u00A0941", volume: "payroll, quarterly" },
+    "Monthly close · 14 clients",
+    "Catch\u2011up / cleanup",
+    "AP & AR",
+    "Sales tax filings",
   ],
 
   experienceLabel: "Experience",
   experience: [
     {
-      title: "Senior tax associate · US\u2011focused offshore firm, Ahmedabad",
-      meta: "Jan 2024 to present · firm name shared on contact",
-      body: "Prepares and first\u2011reviews 1040 and 1120\u2011S returns for three US\u00A0CPA firm clients; monthly close and QBO cleanup for 12 small\u2011business books.",
+      title: "Bookkeeper · US\u2011focused bookkeeping firm, Kochi",
+      meta: "Mar 2023 to present · firm name shared on contact",
+      body: "Monthly close and cleanup for 14 US\u00A0small\u2011business clients across QuickBooks Online and Xero; AP through Bill.com and payroll via Gusto.",
     },
     {
-      title: "Article assistant, then staff accountant · CA\u00A0firm, Ahmedabad",
-      meta: "Aug 2019 to Dec 2023 · CA\u00A0articleship completed",
-      body: "Statutory audit, Indian bookkeeping, and Tally\u2011to\u2011QuickBooks migrations for trading and services clients.",
+      title: "Junior accountant · CA\u00A0firm, Kochi",
+      meta: "Jun 2020 to Feb 2023",
+      body: "Indian bookkeeping, GST filings, and year\u2011end support for trading and services clients.",
     },
   ],
 
   salary: {
     label: "Expected salary",
     /*
-      Her figure, not a reference to his, now that these are two people. It is
-      deliberately the SAME band as the hero card: same role, same experience, so
-      the page must not quote two different numbers for the same job. If these
-      ever diverge it should be because someone meant it.
+      Her own band, below the tax-preparer hero card on purpose. A bookkeeper
+      earns less than a tax preparer, and the two sample profiles landing at
+      different points inside the rate card elsewhere on the page is more honest
+      than two identical numbers.
     */
-    figure: "$900\u20111,200",
+    figure: "$700\u2011950",
     suffix: "/mo",
     facts: [
       { term: "Commitment", detail: "Full\u2011time, only job" },
-      { term: "Can start", detail: "Within 30\u00A0days" },
-      { term: "Works to", detail: "10pm IST ≈ 12:30pm ET" },
+      { term: "Can start", detail: "Within 15\u00A0days" },
+      { term: "Works to", detail: "IST day hours · overnight turnaround" },
     ],
   },
 
@@ -264,8 +266,8 @@ export const profileDetail = {
   setupLabel: "Work setup",
   setup: [
     "Own laptop, not shared",
-    "Reliable broadband",
-    "Power backup and 5G\u00A0hotspot",
+    "60\u00A0Mbps broadband",
+    "UPS power backup",
   ],
 
   /*
@@ -278,10 +280,17 @@ export const profileDetail = {
     primary: "Contact Priya",
     secondary: "Save to shortlist",
   },
-  footnote: "Profile ATL\u20110042 · you hire and pay directly",
+  footnote: "Profile ATL\u20110017 · you hire and pay directly",
 
   caption:
-    "A sample profile, shown at full size. Sample details, including the work history and volumes. What is real is the format: this is the record a US\u00A0firm reads, and the assessment writing is the applicant's own.",
+    "A sample profile, shown at full size. Sample details, including the work history and bookkeeping scope. What is real is the format: this is the record a US\u00A0firm reads, and the assessment writing is the applicant's own.",
+
+  // The teaser variant shows only the top of the card and none of the fabricated
+  // history, so it gets its own one-line caption. "Sample profile." leads it on
+  // purpose: the teaser still shows a real face, a name and a Verified badge, and
+  // dropping the word "sample" is exactly the overstatement this site avoids.
+  captionTeaser:
+    "Sample profile. A structured, verified record, not a resume in an inbox.",
 } as const;
 
 export const math = {

@@ -22,7 +22,7 @@ export function WhoWeWant() {
     <section className="bg-paper py-16 lg:py-28">
       <Container>
         <div className="reveal max-w-[64ch]">
-          <SectionHeading>{whoWeWant.h2}</SectionHeading>
+          <SectionHeading kicker="Who it's for">{whoWeWant.h2}</SectionHeading>
           {/* 62ch, not 54: the narrower measure forced this three-line intro into
               a cramped shape. 62ch also matches TheMath's lead-in, which is the
               directly comparable section intro at the same text-lede size. */}

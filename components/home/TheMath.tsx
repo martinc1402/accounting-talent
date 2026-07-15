@@ -60,9 +60,15 @@ export function TheMath() {
   const { agency, direct, caption } = math.comparison;
 
   return (
-    <section className="py-16 lg:py-24">
+    // Cream band, the same bg-paper token "Who we're looking for" uses. It gives
+    // the top of the page a white -> cream -> white -> cream rhythm rather than
+    // one long white run.
+    <section className="bg-paper py-16 lg:py-28">
       <Container>
-        <SectionHeading className="reveal max-w-[14ch] sm:max-w-none">
+        <SectionHeading
+          kicker="The math"
+          className="reveal max-w-[14ch] sm:max-w-none"
+        >
           {math.h2}
         </SectionHeading>
 
@@ -90,9 +96,16 @@ export function TheMath() {
                 </span>
               </div>
 
+              {/*
+                White with a hairline, not a grey fill. On the cream band a
+                bg-line grey (a ~1.1:1 luminance step off the band) went muddy and
+                lost its edge. White reads brighter than the cream and the border
+                draws its outline, so the segment reads as empty space taken away,
+                which is exactly what "the middleman keeps this" means.
+              */}
               <div
                 style={{ width: `${agency.keeps.pct}%` }}
-                className="flex items-center bg-line px-3 sm:px-4"
+                className="flex items-center border border-line bg-white px-3 sm:px-4"
               >
                 {/* 231px of text in a 224px segment at 375px. Drops below the
                     bar there instead of overflowing. */}
@@ -150,7 +163,7 @@ export function TheMath() {
               */}
               <div
                 style={{ width: `${direct.saves.pct}%` }}
-                className="flex items-center justify-center rounded-r-card border border-l-0 border-dashed border-navy/25 px-2"
+                className="flex items-center justify-center rounded-r-card border border-l-0 border-dashed border-navy/40 px-2"
               >
                 {/* 178px of text in a 128px segment at 375px. Drops below. */}
                 <span className="hidden text-caption text-subtle sm:block">
@@ -189,10 +202,12 @@ export function TheMath() {
         </p>
 
         {/* A link, not a button: the section is an argument, not a form. Same
-            label and destination as every other CTA on the site. */}
+            label and destination as every other CTA on the site. mt-3 (not mt-2)
+            so it sits clear of the takeaway line above rather than reading as a
+            run-on continuation of it. */}
         <Link
           href="/apply"
-          className="group mt-2 inline-flex items-center gap-1.5 text-caption font-medium text-navy"
+          className="group mt-3 inline-flex items-center gap-1.5 text-caption font-medium text-navy"
         >
           {hero.cta}
           <ArrowRight
