@@ -10,9 +10,10 @@ import type { Answers } from "@/content/form";
   waitlist    Polite hold. Not a rejection: these people are future supply.
   filter_out  Auto-archive on expectation mismatch.
 
-  Email-verification timeout and duplicate WhatsApp numbers are also
-  filter_out conditions in the spec, but those are enforced downstream once
-  verification ships, not here.
+  Duplicate WhatsApp numbers are also a filter_out condition in the spec, but
+  that is handled downstream in review (the applications_whatsapp_idx makes them
+  cheap to find), not here. (The spec's email-verification timeout is moot:
+  there is no email-address verification step.)
 */
 export type Tier = "fast_track" | "standard" | "waitlist" | "filter_out";
 

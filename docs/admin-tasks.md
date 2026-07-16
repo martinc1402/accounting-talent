@@ -83,3 +83,26 @@ you can test it.
 
 Every call is recorded in the `admin_actions` table (action, ids, outcome,
 detail) — query it to confirm a send landed or to see why one was refused.
+
+## Bounce tracking (dead email addresses)
+
+There is no email-address verification step, so a bounced Stage 2 invite is how a
+dead email surfaces. The Resend webhook records it, so a dead address shows in the
+review queue instead of looking like an unresponsive applicant.
+
+**One-time setup:**
+
+1. Run `supabase/migrations/0004_email_bounce.sql` in the Studio SQL editor (adds
+   `assessments.email_bounced_at`).
+2. Resend dashboard → **Webhooks** → **Add Endpoint**:
+   - URL: `https://www.accountingtalent.in/api/webhooks/resend`
+   - Events: **`email.bounced`** and **`email.complained`**
+3. Copy the webhook's **Signing Secret** (`whsec_...`) into `RESEND_WEBHOOK_SECRET`
+   in Vercel (and `.env.local` if testing locally). The route rejects any request
+   whose Svix signature doesn't verify, so bounces can't be spoofed.
+
+**How it shows up:** on a bounce/complaint the webhook stamps `email_bounced_at`
+on the matching assessment(s) (by recipient address) and logs an
+`admin_actions` row (`action = "email_bounce"`). The **Outstanding invites** query
+in `supabase/queries/assessment-review.sql` has a `bounced` column — a `true`
+there means don't chase that applicant, the address is dead.

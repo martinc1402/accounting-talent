@@ -42,7 +42,7 @@ export const privacy: LegalSection[] = [
     heading: "Why we collect it",
     body: [
       "Every question on the application form maps to something a US\u00A0accounting firm will search for, or to a check on whether the profile is genuine. That is the whole purpose of the database.",
-      "We use your email to verify that you are a real applicant, and your WhatsApp number to reach you about the skills assessment.",
+      "We use your email and WhatsApp number to reach you about the skills assessment.",
     ],
   },
   {
@@ -50,6 +50,7 @@ export const privacy: LegalSection[] = [
     body: [
       "Your profile is shown to US\u00A0accounting firms that hold a paid subscription to the database. It is not public, it is not indexed by search engines, and it is not visible to people who have not paid and been verified.",
       "We do not sell your data. We do not share it with advertisers, data brokers, or third-party recruiters.",
+      "We use the Meta Pixel to measure the effectiveness of our advertising. It records that a visit or application happened, not the contents of your application.",
     ],
   },
   {
@@ -62,7 +63,7 @@ export const privacy: LegalSection[] = [
   {
     heading: "How long we keep it",
     body: [
-      "We keep your profile for as long as you want to be listed. If your email is never verified, we archive the application after 72 hours and it is not reviewed.",
+      "We keep your profile for as long as you want to be listed.",
       "If you ask us to delete your profile, we delete it.",
     ],
   },

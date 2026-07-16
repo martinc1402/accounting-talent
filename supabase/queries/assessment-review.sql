@@ -19,11 +19,34 @@ select
   ap.email,
   ap.tier             as stage1_segment,
   a.quiz_score,
-  a.writing_sample
+  a.writing_sample,
+  a.email_bounced_at  -- non-null: the invite bounced (dead address)
 from assessments a
 join applications ap on ap.id = a.application_id
 where a.status = 'submitted'
 order by a.submitted_at asc;
+
+-- ---------------------------------------------------------------------------
+-- 1b. OUTSTANDING INVITES  (invited/started, not yet submitted, not expired)
+-- Who was invited but hasn't completed the assessment. `bounced` distinguishes
+-- a dead email address (the invite hard-bounced, recorded by the Resend webhook)
+-- from someone who simply hasn't done it yet — so a dead email is not chased as
+-- an unresponsive applicant.
+-- ---------------------------------------------------------------------------
+select
+  a.id                as assessment_id,
+  a.status,
+  a.invited_at,
+  a.expires_at,
+  ap.full_name,
+  ap.email,
+  a.email_bounced_at,
+  (a.email_bounced_at is not null) as bounced
+from assessments a
+join applications ap on ap.id = a.application_id
+where a.status in ('invited', 'started')
+  and a.expires_at > now()
+order by a.email_bounced_at nulls last, a.invited_at asc;
 
 -- ---------------------------------------------------------------------------
 -- 2. DUPLICATE CHECK  (run before passing anyone)

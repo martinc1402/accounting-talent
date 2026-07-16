@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { confirmation, intro, type Answers } from "@/content/form";
 import { validateQuestion, visibleQuestions } from "@/lib/validate";
+import { trackMeta } from "@/lib/meta-pixel";
 import { submitApplication } from "@/app/actions";
 import { ButtonAction } from "@/components/ui/Button";
 import {
@@ -36,6 +37,11 @@ export function ApplyForm({ utm }: { utm: Utm }) {
   // just unmounted. preventScroll because the wizard already scrolls to top.
   const headingRef = useRef<HTMLHeadingElement>(null);
 
+  // Fire the Meta Lead event exactly once, from the success render — never on
+  // the submit click, so a failed submission never counts. The ref guards
+  // re-renders and back-navigation into this mount.
+  const leadFired = useRef(false);
+
   // Recomputed from the answers, so conditional questions (Q8a, the referrer
   // follow-up) appear and disappear as the parent answer changes.
   const steps = useMemo(() => visibleQuestions(answers), [answers]);
@@ -48,6 +54,13 @@ export function ApplyForm({ utm }: { utm: Utm }) {
       headingRef.current?.focus({ preventScroll: true });
     }
   }, [index, phase]);
+
+  useEffect(() => {
+    if (phase === "done" && !leadFired.current) {
+      leadFired.current = true;
+      trackMeta("Lead");
+    }
+  }, [phase]);
 
   const set = (id: string, value: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));

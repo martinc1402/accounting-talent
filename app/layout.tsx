@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Newsreader } from "next/font/google";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 import "./globals.css";
 
 /*
@@ -48,12 +49,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Meta Pixel only exists in production with a configured id. Anywhere else
+  // (preview, local, unset id) MetaPixel is never rendered, so no script, no
+  // noscript, and no network — nothing to execute or opt out of.
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const pixelEnabled =
+    process.env.VERCEL_ENV === "production" && Boolean(pixelId);
+
   return (
     <html
       lang="en"
       className={`${geist.variable} ${newsreader.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-white">{children}</body>
+      <body className="flex min-h-full flex-col bg-white">
+        {children}
+        {pixelEnabled && <MetaPixel pixelId={pixelId!} />}
+      </body>
     </html>
   );
 }

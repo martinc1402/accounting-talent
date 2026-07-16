@@ -144,7 +144,10 @@ export async function submitApplication(
     };
   }
 
-  // TODO: send the verification email (Resend or Postmark) once Stage 2 ships.
+  // No email-address verification step: it was dropped rather than deferred, so
+  // the application is live for review as soon as it is saved. Reachability is
+  // instead confirmed at Stage 2, where a bounced assessment invite marks the
+  // address dead (see the Resend bounce webhook).
   return { status: "success" };
 }
 
