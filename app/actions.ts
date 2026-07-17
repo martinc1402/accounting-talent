@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import type { Answers } from "@/content/form";
 import { stateForCity } from "@/content/cities";
@@ -9,6 +10,11 @@ import { scoreApplication } from "@/lib/scoring";
 import { isLikelyBot } from "@/lib/antispam";
 import { isRateLimited } from "@/lib/ratelimit";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
+import {
+  emailApplicationReceived,
+  firstNameOf,
+  sendEmail,
+} from "@/lib/assessment/emails";
 
 /*
   Server Functions are reachable by direct POST, not just through our UI, so
@@ -144,10 +150,34 @@ export async function submitApplication(
     };
   }
 
-  // No email-address verification step: it was dropped rather than deferred, so
-  // the application is live for review as soon as it is saved. Reachability is
-  // instead confirmed at Stage 2, where a bounced assessment invite marks the
-  // address dead (see the Resend bounce webhook).
+  // There is no email-address verification step: it was dropped rather than
+  // deferred, so the application is live for review as soon as it is saved.
+  // Instead we send a best-effort confirmation (not a verification) after the
+  // response — it never blocks or fails the submission — and reachability is
+  // confirmed later at Stage 2, where a bounced invite marks the address dead
+  // (see the Resend bounce webhook). A bounced confirmation surfaces the same way.
+  const applicantEmail = row.email;
+  if (applicantEmail) {
+    after(async () => {
+      try {
+        const result = await sendEmail(
+          applicantEmail,
+          emailApplicationReceived({ first_name: firstNameOf(row.full_name) }),
+        );
+        if (!result.ok) {
+          console.error(
+            `[apply] confirmation send failed to=${applicantEmail}: ${result.error}`,
+          );
+        }
+      } catch (e) {
+        console.error(
+          `[apply] confirmation send failed to=${applicantEmail}`,
+          e,
+        );
+      }
+    });
+  }
+
   return { status: "success" };
 }
 

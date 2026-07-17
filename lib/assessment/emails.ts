@@ -53,6 +53,35 @@ export async function sendEmail(to: string, email: Composed): Promise<SendResult
   }
 }
 
+// Applicant's first name for the greeting, falling back to a friendly default.
+// Shared by the Stage 1 confirmation and the Stage 2 assessment emails.
+export function firstNameOf(fullName: string | null | undefined): string {
+  const first = (fullName ?? "").trim().split(/\s+/)[0];
+  return first || "there";
+}
+
+// ---- Stage 1: application received ---------------------------------------
+// Sent best-effort the moment an application is saved (see app/actions.ts).
+// Honest and low-promise on purpose: it acknowledges receipt without implying a
+// job exists or that everyone advances to the assessment.
+export function emailApplicationReceived(vars: { first_name: string }): Composed {
+  return {
+    subject: "We've got your AccountingTalent.in application",
+    text: `Hi ${vars.first_name},
+
+Thanks for applying to AccountingTalent.in — your application is in.
+
+What happens next: we review applications over the next few days. Shortlisted applicants get a short skills assessment by email — a writing prompt plus a 10-question US accounting quiz — within 3 days. Passing it earns the Verified badge, the thing US firms filter for first when hiring begins in late 2026.
+
+To be straight with you: there's no job to apply for today. We're building the verified talent pool that US firms will hire from at launch, and verified profiles are shown first. If you're not shortlisted for the assessment right away, your application stays on file.
+
+Nothing to do for now — just keep an eye on your inbox (and your spam folder, in case we land there). Questions? Reply to this email and a person will answer.
+
+— AccountingTalent.in
+Free for accounting professionals. Always.`,
+  };
+}
+
 // The reviewer's fail_reason maps to exactly one sentence from the spec.
 export const FAIL_REASON_SENTENCE: Record<string, string> = {
   quiz_score:

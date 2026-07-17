@@ -6,6 +6,7 @@ import {
   emailInvite,
   emailPass,
   FAIL_REASON_SENTENCE,
+  firstNameOf,
   sendEmail,
 } from "@/lib/assessment/emails";
 
@@ -22,11 +23,6 @@ import {
 export type AdminResult =
   | { ok: true; detail: string }
   | { ok: false; status: number; error: string };
-
-function firstNameOf(fullName: string | null | undefined): string {
-  const first = (fullName ?? "").trim().split(/\s+/)[0];
-  return first || "there";
-}
 
 function requireDb() {
   if (!supabaseConfigured || !supabase) {
