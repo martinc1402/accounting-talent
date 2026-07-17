@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check } from "@phosphor-icons/react/dist/ssr";
-import { CITY_NAMES, stateForCity } from "@/content/cities";
+import { CITY_NAMES, FEATURED_CITIES, stateForCity } from "@/content/cities";
 
 /*
   Every control here follows the same rules: label above (never a placeholder
@@ -181,8 +181,17 @@ export function CityField({
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return CITY_NAMES.slice(0, 8);
-    return CITY_NAMES.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
+    if (!q) return FEATURED_CITIES.slice(0, 8);
+    // Rank prefix matches above mid-string matches so "kolh" surfaces Kolhapur
+    // rather than burying it in the long list.
+    const starts: string[] = [];
+    const contains: string[] = [];
+    for (const c of CITY_NAMES) {
+      const lc = c.toLowerCase();
+      if (lc.startsWith(q)) starts.push(c);
+      else if (lc.includes(q)) contains.push(c);
+    }
+    return [...starts, ...contains].slice(0, 8);
   }, [query]);
 
   const state = stateForCity(value);
