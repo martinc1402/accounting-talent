@@ -10,8 +10,9 @@ import { track } from "@vercel/analytics";
   components. Recording requires Web Analytics enabled on the Vercel project.
 */
 
-/** Where a "Become a founding firm" CTA was clicked. */
-export type CtaPosition = "membership" | "pool" | "final" | "sticky";
+/** Where a "Become a founding firm" CTA was clicked. `hero` is the nav CTA at
+ *  the top of the page. */
+export type CtaPosition = "hero" | "membership" | "pool" | "final" | "sticky";
 
 export function trackCta(position: CtaPosition): void {
   track("cta_click", { position });

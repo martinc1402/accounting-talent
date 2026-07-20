@@ -3,6 +3,7 @@ import { List } from "@phosphor-icons/react/dist/ssr";
 import { nav, primaryCta, employerCta } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { Cta } from "@/components/firms/Cta";
 
 /*
   The mobile menu is a native <details> disclosure, so the whole nav ships with
@@ -75,7 +76,14 @@ export function Nav({ active }: { active?: string }) {
         </nav>
 
         <div className="flex items-center gap-1">
-          <Button href={cta.href}>{cta.label}</Button>
+          {/* On /employers the nav CTA is the top-of-page ("hero") founding CTA,
+              so it fires cta_click{position:hero}; elsewhere it's the plain worker
+              CTA. Same button styling either way. */}
+          {active === "/employers" ? (
+            <Cta position="hero" />
+          ) : (
+            <Button href={cta.href}>{cta.label}</Button>
+          )}
 
           <details className="relative lg:hidden">
             <summary
