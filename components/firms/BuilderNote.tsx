@@ -5,11 +5,14 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
 /*
-  Section 8. "Who's building this": a note, not an About page. The only human
-  signal on the old page was a footer line about an Australian operator, which
-  reads as a mystery to a US firm owner; this puts a face, a name, and a direct
-  email in front of them. The photo and name sit as a signed byline at the top,
-  the way a letter is signed, and the note reads as the letter below it.
+  Section 11. "Who's building this": a note, not an About page. The only human
+  signal on the old page was a footer line about an Australian operator; this puts
+  a face, a name, and a direct email in front of a firm owner.
+
+  It sits in a navy card on the white section (a blue box in the white box), which
+  echoes the profile-card language elsewhere on the page: navy body, cream type,
+  photo. Fitting, since this is Martin's own profile. Cream tones throughout for
+  contrast on the navy.
 */
 export function BuilderNote() {
   const { builder } = firms;
@@ -17,39 +20,38 @@ export function BuilderNote() {
   return (
     <section className="py-16 lg:py-24">
       <Container>
-        <div className="max-w-[640px]">
-          <SectionHeading>{builder.heading}</SectionHeading>
+        <div className="max-w-[920px] rounded-[1.75rem] bg-navy p-8 shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)] sm:p-10 lg:p-12">
+          <SectionHeading tone="white">{builder.heading}</SectionHeading>
 
-          {/* Signed byline: photo left, name + role beside it. Square source, so
-              object-cover needs no special position; the hairline ring gives the
-              B&W photo an edge on the white band. */}
+          {/* Signed byline: photo left, name + role beside it. */}
           <div className="mt-6 flex items-center gap-5">
-            {/* width/height match the rendered size (source is 600x600), so
-                next/image serves a crisp 1x/2x candidate, not a 64px thumbnail. */}
             <Image
               src={builder.photo.src}
               alt={builder.photo.alt}
               width={104}
               height={104}
-              className="size-[104px] shrink-0 rounded-card object-cover ring-1 ring-line"
+              className="size-[104px] shrink-0 rounded-card object-cover ring-1 ring-white/15"
             />
             <div>
-              <p className="text-body font-medium text-ink">{builder.name}</p>
-              <p className="text-small text-subtle">{builder.role}</p>
+              <p className="text-body font-medium text-paper">{builder.name}</p>
+              <p className="text-small text-paper/65">{builder.role}</p>
             </div>
           </div>
 
           {builder.body.map((para) => (
-            <p key={para.slice(0, 24)} className="mt-5 text-body text-muted">
+            <p
+              key={para.slice(0, 24)}
+              className="mt-5 max-w-[62ch] text-body text-paper/80"
+            >
               {para}
             </p>
           ))}
 
-          <p className="mt-5 text-body text-muted">
+          <p className="mt-5 max-w-[62ch] text-body text-paper/80">
             {builder.contactLead}{" "}
             <a
               href={`mailto:${builder.email}`}
-              className="text-navy underline underline-offset-2 hover:text-navy-deep"
+              className="text-paper underline underline-offset-2 hover:text-white"
             >
               {builder.email}
             </a>
@@ -60,7 +62,7 @@ export function BuilderNote() {
             href={builder.linkedin.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="group mt-6 inline-flex items-center gap-1.5 text-caption font-medium text-navy"
+            className="group mt-6 inline-flex items-center gap-1.5 text-caption font-medium text-paper hover:text-white"
           >
             {builder.linkedin.label}
             <ArrowUpRight
