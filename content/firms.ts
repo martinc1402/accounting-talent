@@ -71,7 +71,10 @@ export const firms = {
       timingQ: "When?",
       timingOptions: ["Before tax season", "At launch", "Just watching for now"],
       skip: "Skip",
-      // Selecting this timing shows the closing line below.
+      // Shown once an answer is given (there is no submit button, taps save
+      // live), so the step reads as finished rather than waiting on the reader.
+      saved: "Thanks, that helps us match you first. We'll be in touch before launch.",
+      // Selecting this timing shows this closing line instead of the generic one.
       beforeSeasonValue: "Before tax season",
       beforeSeasonClose:
         "We'll email you within a few days with hand‑matched profiles.",

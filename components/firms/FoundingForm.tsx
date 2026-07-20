@@ -159,6 +159,8 @@ function Concierge({ email }: { email: string }) {
       void saveFirmConcierge({ email, ...patch });
     });
 
+  const answered = Boolean(role || timing);
+
   if (skipped) return <Confirmation />;
 
   return (
@@ -203,20 +205,26 @@ function Concierge({ email }: { email: string }) {
         </div>
       </div>
 
-      {timing === c.beforeSeasonValue && (
-        <p className="mt-5 flex items-start gap-2 text-small text-navy">
-          <CheckCircle size={18} weight="light" className="mt-0.5 shrink-0" />
-          {c.beforeSeasonClose}
+      {/*
+        There is no submit button by design: each tap saves. So once an answer is
+        given the step needs to say it is done, or it reads as still waiting. The
+        confirmation replaces the Skip link (skipping only makes sense before you
+        have answered).
+      */}
+      {answered ? (
+        <p className="mt-6 flex items-start gap-2 text-small text-navy">
+          <CheckCircle size={18} weight="fill" className="mt-0.5 shrink-0" />
+          {timing === c.beforeSeasonValue ? c.beforeSeasonClose : c.saved}
         </p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setSkipped(true)}
+          className="mt-6 text-caption text-subtle underline underline-offset-2 hover:text-navy"
+        >
+          {c.skip}
+        </button>
       )}
-
-      <button
-        type="button"
-        onClick={() => setSkipped(true)}
-        className="mt-6 text-caption text-subtle underline underline-offset-2 hover:text-navy"
-      >
-        {c.skip}
-      </button>
     </div>
   );
 }
