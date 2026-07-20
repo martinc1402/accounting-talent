@@ -144,14 +144,19 @@ function Confirmation() {
 /*
   The post-submit concierge. Two single-select questions, each tap persisting
   that one answer (fire-and-forget, so a slow write never blocks the taps). Both
-  are optional; Skip collapses the card. Reuses the SelectField control the
-  application form uses, so the chips look and behave the same across the site.
+  are optional.
+
+  When the reader answers both, the card transitions in place to a done panel
+  after a short beat (so the second selection registers before it collapses),
+  which is what makes the step read as finished rather than still waiting. They
+  can also finish early: "Done" once at least one answer is given, "Skip" if
+  none. No navigation, and the answers have already persisted regardless.
 */
 function Concierge({ email }: { email: string }) {
   const c = firms.founding.concierge;
   const [role, setRole] = useState("");
   const [timing, setTiming] = useState("");
-  const [skipped, setSkipped] = useState(false);
+  const [done, setDone] = useState(false);
   const [, startTransition] = useTransition();
 
   const save = (patch: { role?: string; timing?: string }) =>
@@ -161,7 +166,38 @@ function Concierge({ email }: { email: string }) {
 
   const answered = Boolean(role || timing);
 
-  if (skipped) return <Confirmation />;
+  // Auto-advance to the done panel once both are answered. The beat lets the
+  // second selection show before the card collapses; editing within it resets
+  // the timer (deps change -> cleanup) so a change never transitions early.
+  useEffect(() => {
+    if (!(role && timing) || done) return;
+    const t = setTimeout(() => setDone(true), 600);
+    return () => clearTimeout(t);
+  }, [role, timing, done]);
+
+  if (done) {
+    // Pure skip (nothing answered) gets the plain confirmation; an answered
+    // reader gets the tailored message plus an echo of what we captured.
+    if (!answered) return <Confirmation />;
+    const summary = [
+      role && `${c.summaryRoleLabel}: ${role}`,
+      timing && `${c.summaryTimingLabel}: ${timing}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return (
+      <div>
+        <p className="flex items-center gap-2 text-body font-medium text-navy">
+          <CheckCircle size={20} weight="fill" className="shrink-0" />
+          {c.successHeading}
+        </p>
+        <p className="mt-3 max-w-[40ch] text-small text-navy">
+          {timing === c.beforeSeasonValue ? c.beforeSeasonClose : c.saved}
+        </p>
+        <p className="mt-4 text-caption text-subtle">{summary}</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -205,21 +241,20 @@ function Concierge({ email }: { email: string }) {
         </div>
       </div>
 
-      {/*
-        There is no submit button by design: each tap saves. So once an answer is
-        given the step needs to say it is done, or it reads as still waiting. The
-        confirmation replaces the Skip link (skipping only makes sense before you
-        have answered).
-      */}
+      {/* Finish early / opt out. Both land on the done panel; answering both
+          auto-advances there without needing this. */}
       {answered ? (
-        <p className="mt-6 flex items-start gap-2 text-small text-navy">
-          <CheckCircle size={18} weight="fill" className="mt-0.5 shrink-0" />
-          {timing === c.beforeSeasonValue ? c.beforeSeasonClose : c.saved}
-        </p>
+        <button
+          type="button"
+          onClick={() => setDone(true)}
+          className="mt-6 text-caption font-medium text-navy hover:text-navy-deep"
+        >
+          {c.done}
+        </button>
       ) : (
         <button
           type="button"
-          onClick={() => setSkipped(true)}
+          onClick={() => setDone(true)}
           className="mt-6 text-caption text-subtle underline underline-offset-2 hover:text-navy"
         >
           {c.skip}
