@@ -5,34 +5,44 @@ import { CONTACT_EMAIL, LAUNCH_EMPLOYER, POOL_APPLICANT_COUNT } from "./site";
   resolves from here, the same content-driven discipline the homepage uses, so a
   copy edit is a data change rather than a JSX rewrite.
 
+  This is the persuasion-first order: pain-led hero, pain mirror, three benefit
+  pillars, the membership story as the centrepiece, then proof/logistics, with a
+  founding-firm CTA repeated down the page.
+
   The employer page can say "Q4 2026": US readers parse that as calendar Q4.
   Worker-facing pages must not, because the Indian financial year runs April to
   March and Q4 reads as January to March 2027 there.
 
   Dash convention, held to throughout: no em dashes and no en-dash separators.
-  Ranges use a hyphen ("Sep-Oct", "$500-800"); a pause that an em dash would
-  carry becomes a period, comma, colon, or parentheses. The   (non-breaking
-  space) and ‑ (non-breaking hyphen) escapes weld a number or a compound to
-  its neighbour so a line never ends on a dangling "US" or splits "1120-S".
+  Ranges use "to" or a hyphen; a pause that an em dash would carry becomes a
+  period, comma, colon, or parentheses. The   (non-breaking space) and ‑
+  (non-breaking hyphen) escapes weld a number or a compound to its neighbour so a
+  line never ends on a dangling "US" or splits "1120-S".
 */
 export const firms = {
-  // Section 1: hero.
+  // Section 1: pain-led hero.
   hero: {
-    h1: "Hire India's accounting talent. Directly.",
-    sub: "A verified database of Indian bookkeepers, staff accountants, and US tax preparers. Every profile has passed a written‑English assessment and a US accounting exam, and shows the software they work in and the returns they've actually prepared. No agency markup. No per‑hire fees.",
+    eyebrow: "For US CPA & accounting firms",
+    h1: "Stop turning away 1040 work.",
+    sub: "AccountingTalent is a verified pool of Indian tax preparers, staff accountants, and bookkeepers you hire directly: no agency, no markup, no per‑hire fees. Roughly half the cost of offshore staffing firms. And because your hire keeps every dollar you pay them, they're still on your team next January.",
     // The pull-line states the whole model in one breath, set as its own serif
     // navy line on the page.
     pullLine: "You search, you interview, you hire, you pay them directly.",
-    subNote: "Flat subscription. Cancel anytime.",
+    // Rendered with check icons. Item 2 pulls the one hard stat.
+    microProof: [
+      "Every profile assessed: written English + US accounting",
+      `${POOL_APPLICANT_COUNT} in the pool and growing`,
+      "Full‑time, US‑overlap hours",
+    ],
   },
 
-  // Section 2: the founding-firm card (#founding). Replaces the old waitlist
-  // card. The card is the page's one conversion, so it carries the offer, the
-  // form, and the post-submit concierge questions.
+  // Section 2 (in the hero's right column): the founding-firm card (#founding).
+  // The card is the page's one conversion, so it carries the offer, the form,
+  // and the post-submit concierge questions.
   founding: {
     eyebrow: "Founding firms",
     headline: "Founding firms get first pick of the pool.",
-    intro: `The database opens to every US firm in ${LAUNCH_EMPLOYER}. Founding firms get in earlier, and on better terms:`,
+    intro: `The database opens to every US firm in ${LAUNCH_EMPLOYER}. Founding firms get in earlier, and on better terms:`,
     points: [
       {
         title: "Search first.",
@@ -47,7 +57,8 @@ export const firms = {
         body: "Tell us the role and we'll hand‑match you with verified candidates now. You interview and hire exactly as you would at launch, we just do the searching for you until the doors open.",
       },
     ],
-    scarcity: "Founding pricing is limited to the first 50 firms.",
+    scarcity:
+      "Founding terms lock for both phases of the membership: $49/month while you search, founding rates on the per‑hire plan after. Limited to the first 50 firms.",
     label: "Work email",
     placeholder: "you@yourfirm.com",
     cta: "Become a founding firm",
@@ -63,7 +74,7 @@ export const firms = {
       roleQ: "What role would you hire first?",
       roleOptions: [
         "Bookkeeper",
-        "Tax preparer",
+        "Tax preparer",
         "Staff accountant",
         "Senior / reviewer",
         "Not sure yet",
@@ -87,8 +98,217 @@ export const firms = {
     },
   },
 
-  // Section 3: why now (#timeline).
+  // Section 3: pain mirror. Short, full-width, directly under the hero.
+  painMirror: {
+    heading: "You know the season you just had.",
+    beats: [
+      "Returns you declined because nobody was free to prepare them.",
+      "The senior you offered $85K who took $95K across town.",
+      'The agency hire you spent three months training, reassigned in a "reallocation," training gone with them.',
+    ],
+    pivot:
+      "The shortage isn't ending. The middleman isn't helping. There's a third option.",
+  },
+
+  // Section 4: the model in three pillars. Pillar 2 carries the bar chart and the
+  // salary bands.
+  pillars: {
+    heading: "Why direct hiring wins",
+    items: [
+      {
+        title: "Say yes again.",
+        body: "A verified preparer or bookkeeper, full‑time for $500 to $1,500 a month, working your busy season at US‑overlap hours. The work you've been declining becomes margin instead of apologies.",
+      },
+      {
+        title: "Keep the middleman's margin.",
+        body: "Offshore agencies bill $1,200 to $2,500 a seat and pass roughly $600 to the person doing the work. Hire directly and you pay about $1,200, all of which reaches your accountant. You bank about $800 a month, per seat, every month.",
+        // Employer point of view of the homepage bar chart. Same scale: 100% of
+        // the track is $2,000, every width is amount / 2000.
+        comparison: {
+          agency: {
+            label: "Through an agency",
+            firmPays: "You pay $2,000/mo",
+            you: { amount: "$600", label: "your accountant receives", pct: 30 },
+            keeps: {
+              amount: "the middle keeps $1,400",
+              sub: "recruiting · office · margin",
+              pct: 70,
+            },
+          },
+          direct: {
+            label: "Hired directly",
+            firmPays: "You pay $1,200/mo",
+            you: { amount: "$1,200", label: "your accountant receives", pct: 60 },
+            saves: { amount: "you save $800/mo", pct: 40 },
+          },
+          caption:
+            "Illustrative figures based on typical offshore staffing rates · bars drawn to scale ($2,000 = full width). Per the AICPA, a quarter of US firms already offshore.",
+        },
+        salaryChips: [
+          "$500-800 · bookkeepers",
+          "$800-1,500 · experienced accountants and tax preparers",
+          "$1,500-2,500+ · senior and reviewer roles",
+        ],
+        salaryNote:
+          "Full-time monthly salaries, paid by you, to them. Typical, not guaranteed.",
+      },
+      {
+        title: "Well‑paid people stay.",
+        body: "Your hire keeps 100% of what you pay, roughly double agency take‑home for the same desk. That's not generosity; it's retention strategy. The real cost of offshoring was never the salary. It's retraining a stranger every January.",
+      },
+    ],
+  },
+
+  // Section 5: the membership story band (centrepiece, cream). Carries the second
+  // chart and the closing kicker.
+  membership: {
+    heading: "One membership. It gets cheaper when it works.",
+    blocks: [
+      {
+        label: "While you search",
+        body: "$99/month ($49 founding). Full access to the verified pool, contact anyone, cancel anytime.",
+      },
+      {
+        label: "When you hire",
+        body: "Your membership steps down to a small flat per‑hire plan: we run the monthly payment, the remittance paperwork, and the annual compliance renewals, and search stays on for hire #2. Arrives with launch; founding firms get founding rates on this too.",
+      },
+      {
+        label: "Always",
+        body: "Your accountant keeps 100% of their salary. No placement fees, no percentages, nothing that grows when their pay does.",
+      },
+    ],
+    chart: {
+      title: "What the middleman takes, over time.",
+      agencyLabel: "Offshore agency",
+      usLabel: "AccountingTalent",
+      hireLabel: "you hire",
+      yTop: "$800",
+      yBottom: "$0",
+      xStart: "now",
+      xEnd: "24 months",
+      caption:
+        "Illustrative. Agency line is a typical per‑seat margin; our line is the membership fee. Your accountant's salary is identical in both worlds, except in ours, they receive all of it.",
+    },
+    kicker:
+      "Agencies charge you more the longer you stay. This is the only membership that gets smaller when it succeeds.",
+  },
+
+  // Section 6: the pool (#pool). Momentum line, process line, then a grid of
+  // clearly-labelled sample profiles, with an inline CTA under the grid.
+  pool: {
+    heading: "The pool is filling before the doors open.",
+    momentum: `${POOL_APPLICANT_COUNT} accountants applied in the first days, before a single US firm had been announced. Applications are open and the pool grows weekly.`,
+    process:
+      "None of them lists without passing the written‑English assessment and the US accounting exam. Firms browse the passes, not the pile.",
+    // v1 caption, while the grid shows samples. When real consented profiles
+    // replace the samples, swap `sampleCaption` for `realCaption` below and pass
+    // `sample={false}` to the cards. Never label a fictional card "a verified
+    // profile from the pool".
+    sampleCaption:
+      "Sample profiles with illustrative photos: this is the format every verified profile follows. Real profiles open to founding firms first.",
+    realCaption:
+      "From the verified pool. Names abbreviated; full profiles open to founding firms first.",
+    // Inline CTA lead under the grid (the link itself appends "Become a founding
+    // firm").
+    ctaLead: "Founding firms get first pick of these profiles",
+
+    // Fictional samples until consented profiles land, each with a stock
+    // portrait (gender-matched to the name) and the "sample" caption below the
+    // grid keeping it honest. The role line carries credential and years the way
+    // the homepage card does, so no per-field divergence is needed. Salaries sit
+    // inside the rate bands.
+    samples: [
+      {
+        name: "Arjun S.",
+        photo: { src: "/images/portrait-m-1.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Tax preparer · CA Inter · 4 yrs",
+        location: "Ahmedabad · US‑overlap hours",
+        softwareLabel: "Software",
+        software: ["QuickBooks Online", "Drake", "Lacerte"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1040", "1120‑S", "1065"],
+        salaryLabel: "Expected salary",
+        salary: "$900‑1,200",
+        salarySuffix: "/mo",
+      },
+      {
+        name: "Priya M.",
+        photo: { src: "/images/portrait-f-1.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Bookkeeper · CMA · 5 yrs",
+        location: "Kochi · IST + overnight turnaround",
+        softwareLabel: "Software",
+        software: ["QuickBooks Online", "Xero", "Bill.com"],
+        returnsLabel: "Bookkeeping scope",
+        returns: ["Monthly close", "Catch‑up / cleanup", "AP & AR"],
+        salaryLabel: "Expected salary",
+        salary: "$700‑950",
+        salarySuffix: "/mo",
+      },
+      {
+        name: "Rahul K.",
+        photo: { src: "/images/portrait-m-2.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Senior accountant · CA · 7 yrs",
+        location: "Pune · US‑overlap hours",
+        softwareLabel: "Software",
+        software: ["QuickBooks", "CCH Axcess", "UltraTax"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1040", "1120", "1065"],
+        salaryLabel: "Expected salary",
+        salary: "$1,600‑2,100",
+        salarySuffix: "/mo",
+      },
+      {
+        name: "Sneha R.",
+        photo: { src: "/images/portrait-f-2.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Staff accountant · M.Com · 3 yrs",
+        location: "Bengaluru · IST + overnight turnaround",
+        softwareLabel: "Software",
+        software: ["QuickBooks Online", "Xero"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1040", "1120‑S"],
+        salaryLabel: "Expected salary",
+        salary: "$800‑1,100",
+        salarySuffix: "/mo",
+      },
+      {
+        name: "Vikram D.",
+        photo: { src: "/images/portrait-m-3.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Tax preparer · CA Inter · 5 yrs",
+        location: "Jaipur · US‑overlap hours",
+        softwareLabel: "Software",
+        software: ["Drake", "Lacerte", "ProSeries"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1040", "1065"],
+        salaryLabel: "Expected salary",
+        salary: "$1,000‑1,400",
+        salarySuffix: "/mo",
+      },
+      {
+        name: "Ananya P.",
+        photo: { src: "/images/portrait-f-3.jpg", alt: "Sample profile portrait" },
+        verified: "English + US tax assessment",
+        role: "Bookkeeper · B.Com · 4 yrs",
+        location: "Indore · IST + overnight turnaround",
+        softwareLabel: "Software",
+        software: ["QuickBooks Online", "Dext", "Gusto payroll"],
+        returnsLabel: "Bookkeeping scope",
+        returns: ["Monthly close", "Payroll", "Sales tax filings"],
+        salaryLabel: "Expected salary",
+        salary: "$650‑900",
+        salarySuffix: "/mo",
+      },
+    ],
+  },
+
+  // Section 7: tax-season urgency band. The lead line's {weeks} is replaced at
+  // render with weeks-to-next-Jan-1; the rest is fixed.
   timeline: {
+    leadTemplate: "Tax season starts in {weeks} weeks.",
     heading: "Tax season doesn't wait for launch day.",
     body: "A direct hire isn't instant. Realistically: a week or two to search and interview, then four to six weeks of onboarding into your software, your workpapers, and your way of doing things. Count backwards from January and the math is clear: a preparer who's productive for busy season gets found in the fall.",
     steps: [
@@ -107,176 +327,7 @@ export const firms = {
       "One more thing worth knowing: every profile in the pool can be hired exactly once. When a firm hires someone, the profile comes down. Founding firms search first.",
   },
 
-  // Section 4: the pool (#pool). Momentum line, process line, then a grid of
-  // clearly-labelled sample profiles.
-  pool: {
-    heading: "The pool is filling before the doors open.",
-    momentum: `${POOL_APPLICANT_COUNT} accountants applied in the first days, before a single US firm had been announced. Applications are open and the pool grows weekly.`,
-    process:
-      "None of them lists without passing the written‑English assessment and the US accounting exam. Firms browse the passes, not the pile.",
-    // v1 caption, while the grid shows samples. When real consented profiles
-    // replace the samples, swap `sampleCaption` for `realCaption` below and pass
-    // `sample={false}` to the cards. Never label a fictional card "a verified
-    // profile from the pool".
-    sampleCaption:
-      "Sample profiles with illustrative photos: this is the format every verified profile follows. Real profiles open to founding firms first.",
-    realCaption:
-      "From the verified pool. Names abbreviated; full profiles open to founding firms first.",
-
-    // Fictional samples until consented profiles land, each with a stock
-    // portrait (gender-matched to the name) and the "sample" caption below the
-    // grid keeping it honest. The role line carries credential and years the way
-    // the homepage card does, so no per-field divergence is needed. Salaries sit
-    // inside the rate bands.
-    samples: [
-      {
-        name: "Arjun S.",
-        photo: { src: "/images/portrait-m-1.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Tax preparer · CA Inter · 4 yrs",
-        location: "Ahmedabad · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Drake", "Lacerte"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120‑S", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$900‑1,200",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Priya M.",
-        photo: { src: "/images/portrait-f-1.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Bookkeeper · CMA · 5 yrs",
-        location: "Kochi · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Xero", "Bill.com"],
-        returnsLabel: "Bookkeeping scope",
-        returns: ["Monthly close", "Catch‑up / cleanup", "AP & AR"],
-        salaryLabel: "Expected salary",
-        salary: "$700‑950",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Rahul K.",
-        photo: { src: "/images/portrait-m-2.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Senior accountant · CA · 7 yrs",
-        location: "Pune · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["QuickBooks", "CCH Axcess", "UltraTax"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$1,600‑2,100",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Sneha R.",
-        photo: { src: "/images/portrait-f-2.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Staff accountant · M.Com · 3 yrs",
-        location: "Bengaluru · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Xero"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120‑S"],
-        salaryLabel: "Expected salary",
-        salary: "$800‑1,100",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Vikram D.",
-        photo: { src: "/images/portrait-m-3.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Tax preparer · CA Inter · 5 yrs",
-        location: "Jaipur · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["Drake", "Lacerte", "ProSeries"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$1,000‑1,400",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Ananya P.",
-        photo: { src: "/images/portrait-f-3.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Bookkeeper · B.Com · 4 yrs",
-        location: "Indore · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Dext", "Gusto payroll"],
-        returnsLabel: "Bookkeeping scope",
-        returns: ["Monthly close", "Payroll", "Sales tax filings"],
-        salaryLabel: "Expected salary",
-        salary: "$650‑900",
-        salarySuffix: "/mo",
-      },
-    ],
-  },
-
-  // Section 5: the proof triad. Three blocks with rule dividers. Block 2 embeds
-  // the bar chart (the same component the homepage uses) from the employer's
-  // point of view, plus the salary bands.
-  proof: {
-    blocks: [
-      {
-        title: "The talent is real",
-        body: "Every listed profile passes a written‑English assessment and a US accounting exam. Filter by QuickBooks, Xero, Drake, Lacerte, and CCH experience, and by the forms they've actually prepared: 1040, 1120‑S, 1065.",
-      },
-      {
-        title: "The math is obvious. And it compounds.",
-        body: [
-          "Offshore agencies bill $1,200 to $2,500 per person per month, with recruiting, office, and margin baked in. Per the AICPA, a quarter of US firms already offshore: this is the same work, without the middleman.",
-          "But the bigger number is the second bar. A direct hire keeps everything you pay, roughly double the take‑home of agency staff sitting at the same desk. Underpaid people leave after one busy season. Well‑paid people stay. The most expensive thing in offshoring was never the salary; it's retraining someone new every January.",
-        ],
-        // Employer point of view of the homepage bar chart. Same scale: 100% of
-        // the track is $2,000, every width is amount / 2000.
-        comparison: {
-          agency: {
-            label: "Through an agency",
-            firmPays: "You pay $2,000/mo",
-            you: {
-              amount: "$600",
-              label: "your accountant receives",
-              pct: 30,
-            },
-            keeps: {
-              amount: "the middle keeps $1,400",
-              sub: "recruiting · office · margin",
-              pct: 70,
-            },
-          },
-          direct: {
-            label: "Hired directly",
-            firmPays: "You pay $1,200/mo",
-            you: {
-              amount: "$1,200",
-              label: "your accountant receives",
-              pct: 60,
-            },
-            saves: { amount: "you save $800/mo", pct: 40 },
-          },
-          caption:
-            "Illustrative figures based on typical offshore staffing rates · bars drawn to scale ($2,000 = full width).",
-        },
-        salaryChips: [
-          "$500-800 · bookkeepers",
-          "$800-1,500 · experienced accountants and tax preparers",
-          "$1,500-2,500+ · senior and reviewer roles",
-        ],
-        salaryNote:
-          "Full-time monthly salaries, paid by you, to them. Typical, not guaranteed.",
-      },
-      {
-        title: "Compliance handled",
-        body: "Section 7216 consent templates, engagement‑letter and contractor‑agreement language, a client‑data access checklist, and payment guidance that satisfies Indian remittance paperwork. Built in, not your problem.",
-      },
-    ],
-  },
-
-  // Section 6: how hiring works (#how-it-works). Three steps in the homepage
+  // Section 8: how hiring works (#how-it-works). Three steps in the homepage
   // step style. This page's nav "How it works" item points here.
   hiring: {
     heading: "How hiring works",
@@ -296,7 +347,7 @@ export const firms = {
     ],
   },
 
-  // Section 7: what your hire actually does. Two quiet lists and a closing line.
+  // Section 9: what your hire actually does. Two quiet lists and a closing line.
   scope: {
     heading: "What your hire actually does",
     movesLabel: "Moves to your hire",
@@ -315,11 +366,17 @@ export const firms = {
       "Final judgment",
     ],
     closing:
-      "Production moves. Judgment stays. That's the whole model, and it's how a ten‑person firm stops turning away 1040 work without adding a tenth US salary.",
+      "Production moves. Judgment stays. That's the whole model, and it's how a ten‑person firm stops turning away 1040 work without adding a tenth US salary.",
   },
 
-  // Section 8: who's building this. A note, not an About page. No photo yet; the
-  // page leaves a slot for one.
+  // Section 10: compliance handled (slim full-width band; the old proof block's
+  // copy, unchanged).
+  compliance: {
+    title: "Compliance handled",
+    body: "Section 7216 consent templates, engagement‑letter and contractor‑agreement language, a client‑data access checklist, and payment guidance that satisfies Indian remittance paperwork. Built in, not your problem.",
+  },
+
+  // Section 11: who's building this. A note, not an About page.
   builder: {
     heading: "Who's building this",
     photo: {
@@ -329,8 +386,8 @@ export const firms = {
     name: "Martin Casey",
     role: "Founder, AccountingTalent",
     body: [
-      "I'm Martin Casey. I build software for a living, not a staffing agency, and that's the point. AccountingTalent exists because the offshore math bothered me: US firms paying $2,000 a month for accountants who see $600 of it.",
-      "Both sides deserve a better deal, and a verified direct‑hire database (the model that's worked for 15 years in the Philippines) is the simplest way to give it to them.",
+      "I'm Martin Casey. I build software for a living, not a staffing agency, and that's the point. AccountingTalent exists because the offshore math bothered me: US firms paying $2,000 a month for accountants who see $600 of it.",
+      "Both sides deserve a better deal, and a verified direct‑hire database (the model that's worked for 15 years in the Philippines) is the simplest way to give it to them.",
     ],
     contactLead: "If you run a firm and have questions, write to me:",
     email: CONTACT_EMAIL,
@@ -341,13 +398,22 @@ export const firms = {
     },
   },
 
-  // Section 10: final CTA band. Mirrors the homepage closer.
+  // Section 13: final CTA band (navy).
   finalCta: {
-    heading: "The database opens in Q4. Founding firms don't wait that long.",
-    sub: "$49/month for year one · first access to the verified pool · hand‑matched before launch if you're hiring now · limited to the first 50 firms.",
+    heading: "The database opens in Q4. January doesn't wait.",
+    sub: "$49/month for year one · founding rates on both phases · hand‑matched before launch if you're hiring now · limited to the first 50 firms.",
     button: { label: "Become a founding firm", href: "#founding" },
   },
 
-  // Section 9 heading (the FAQ items live in content/faq.ts as employerFaq).
+  // Section 12 heading (the FAQ items live in content/faq.ts as employerFaq).
   faqHeading: "Questions firms ask us",
+
+  // Shown under every button CTA.
+  trustRow: "Free to join · No card · One email a month.",
+
+  // Mobile-only sticky CTA bar.
+  stickyBar: {
+    label: "Founding firms: $49/mo",
+    cta: "Join",
+  },
 } as const;

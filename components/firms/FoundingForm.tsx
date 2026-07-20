@@ -10,6 +10,11 @@ import {
 import { firms } from "@/content/firms";
 import { ButtonAction } from "@/components/ui/Button";
 import { SelectField } from "@/components/apply/Controls";
+import {
+  trackEmailSubmit,
+  trackRoleChip,
+  trackTimingChip,
+} from "@/lib/analytics";
 
 const initial: WaitlistState = { status: "idle" };
 const f = firms.founding;
@@ -31,6 +36,13 @@ export function FoundingForm() {
   useEffect(() => {
     if (tsRef.current) tsRef.current.value = String(Date.now());
   }, []);
+
+  // Fire the analytics event once, only on a real success (guard/bot successes
+  // carry no email and never reach the concierge).
+  const submitted = state.status === "success" && Boolean(state.email);
+  useEffect(() => {
+    if (submitted) trackEmailSubmit();
+  }, [submitted]);
 
   if (state.status === "success") {
     // A real success carries the email, so the card swaps to the concierge step.
@@ -219,6 +231,7 @@ function Concierge({ email }: { email: string }) {
             onChange={(v) => {
               setRole(v);
               save({ role: v });
+              trackRoleChip(v);
             }}
           />
         </div>
@@ -236,6 +249,7 @@ function Concierge({ email }: { email: string }) {
             onChange={(v) => {
               setTiming(v);
               save({ timing: v });
+              trackTimingChip(v);
             }}
           />
         </div>
