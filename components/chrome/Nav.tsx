@@ -25,9 +25,22 @@ import { Button } from "@/components/ui/Button";
 */
 export function Nav({ active }: { active?: string }) {
   // The one place the CTA changes by route: a firm reading /employers is sold the
-  // waitlist, not the worker application. Driven by the existing `active` prop, so
-  // this needs no client-side routing and the header stays zero-JS.
+  // founding-firm offer, not the worker application. Driven by the existing
+  // `active` prop, so this needs no client-side routing and the header stays
+  // zero-JS.
   const cta = active === "/employers" ? employerCta : primaryCta;
+
+  // On /employers the "How it works" item must point at this page's own section
+  // (#how-it-works, the employer pitch). Its default href is the homepage anchor
+  // (/#how-it-works), which would send a firm to the accountant-facing steps.
+  const items =
+    active === "/employers"
+      ? nav.map((item) =>
+          item.href === "/#how-it-works"
+            ? { ...item, href: "#how-it-works" }
+            : item,
+        )
+      : nav;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white">
@@ -38,7 +51,7 @@ export function Nav({ active }: { active?: string }) {
         <Logo compact />
 
         <nav className="hidden items-center gap-8 lg:flex">
-          {nav.map((item) => {
+          {items.map((item) => {
             const isActive = item.href === active;
             return (
               <Link
@@ -72,7 +85,7 @@ export function Nav({ active }: { active?: string }) {
               <List size={22} weight="light" />
             </summary>
             <nav className="absolute right-0 top-full z-50 mt-2 w-60 rounded-card border border-line bg-white p-2 shadow-[0_16px_40px_-12px_rgba(19,31,91,0.18)]">
-              {nav.map((item) => {
+              {items.map((item) => {
                 const isActive = item.href === active;
                 return (
                   <Link

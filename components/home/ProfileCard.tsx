@@ -20,28 +20,38 @@ import { LogoMark } from "@/components/ui/LogoMark";
 
   Not built on components/ui/Card: that bakes padding into the base, and the
   photo panel has to run to the card's edges.
+
+  Parameterized so /employers can render a grid of these. It defaults to the
+  homepage hero profile (so <ProfileCard /> is unchanged), but the employer pool
+  passes its own `profile` and `sample` (which swaps the real headshot for a
+  silhouette placeholder, because those profiles are fictional until real
+  consented ones replace them). `compact` shortens the top panel for the grid.
 */
 
-/*
-  Shrinks the photo panel by 20% (8:5 -> 2:1). Flip this one const to try it.
-
-  It does not clip the head: at 2:1 the frame top lands at 10% of the photograph
-  and the hair starts at 11%, so it survives on a 1% margin. What it loses is the
-  shoulders, cropping at ~43% instead of ~51%. That is exactly the framing the
-  card had before, and the reason it was changed: cutting at 40-43% lands on the
-  shoulder line itself, which reads as an abrupt cut rather than as a crop.
-
-  Off by default.
-*/
-const COMPACT_HERO_CARD = false;
+export type ProfileCardData = {
+  name: string;
+  photo?: { src: string; alt: string };
+  verified: string;
+  role: string;
+  location: string;
+  // Optional: the homepage card carries an availability row; the compact pool
+  // samples omit it, so the Clock row only renders when present.
+  availability?: string;
+  softwareLabel: string;
+  software: readonly string[];
+  returnsLabel: string;
+  returns: readonly string[];
+  salaryLabel: string;
+  salary: string;
+  salarySuffix: string;
+};
 
 /*
   Row, PillGroup and Label are exported because ProfileDetail is the same KIND of
   card at a bigger scale (a different person, but the same navy shell, the same
   icon rows, the same software pills). Sharing the components rather than copying
   them is the only thing that actually guarantees the two cards cannot drift into
-  lookalikes, which is the same argument components/ui/Card.tsx makes about the
-  white cards.
+  lookalikes.
 */
 export function Label({ children }: { children: ReactNode }) {
   return (
@@ -84,70 +94,69 @@ export function PillGroup({
   );
 }
 
-export function ProfileCard() {
-  const p = hero.sampleProfile;
+/*
+  A head-and-shoulders silhouette for the sample profiles. Not a face: putting an
+  invented face on a fictional person is exactly the overstatement this site
+  avoids, so the sample cards carry a neutral placeholder and the caption says
+  "sample". A muted navy glyph on the cream panel reads as "photo goes here"
+  rather than as a real photograph.
+*/
+function Silhouette() {
+  return (
+    <div
+      aria-hidden
+      className="absolute inset-0 flex items-end justify-center bg-paper"
+    >
+      <svg
+        viewBox="0 0 64 48"
+        className="h-[85%] text-navy/15"
+        fill="currentColor"
+        role="presentation"
+      >
+        <circle cx="32" cy="18" r="11" />
+        <path d="M11 48c0-11.6 9.4-21 21-21s21 9.4 21 21z" />
+      </svg>
+    </div>
+  );
+}
+
+export function ProfileCard({
+  profile = hero.sampleProfile,
+  sample = false,
+  compact = false,
+}: {
+  profile?: ProfileCardData;
+  sample?: boolean;
+  compact?: boolean;
+}) {
+  const p = profile;
 
   return (
     /*
-      border-line is what gives the card an edge. Without it the photo half is a
-      near-white wall sitting on a white page, so the top of the card simply had
-      no boundary. overflow-hidden + the radius on this container (not on the
-      children) means the border traces one continuous rounded rectangle across
-      both the photo and the navy body.
+      border-line is what gives the card an edge. overflow-hidden + the radius on
+      this container (not on the children) means the border traces one continuous
+      rounded rectangle across both the photo and the navy body.
     */
     <div className="overflow-hidden rounded-card border border-line bg-navy shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
-      {/*
-        bg-paper here is a fallback, not a visual: the photograph is an opaque
-        JPEG that covers the whole panel, so a background behind it is painted
-        over. It only shows if the image fails to load.
-
-        8:5, not 2:1. A row-by-row scan of the photograph puts the hair at 11%,
-        the chin at 38%, the shoulder line at 40.5% and the shirt filling the
-        frame by 48%. A 2:1 panel shows only 33% of the image height, and its
-        crop landed at 40.7% — within 0.2% of the shoulder line itself, cutting
-        the subject exactly where the shoulders begin. That is what read as an
-        abrupt cut rather than as a crop. Head-and-shoulders spans 11%-50%, which
-        simply does not fit a 2:1 panel.
-
-        object-[53%_15%] holds at every breakpoint. The source is 2:3 portrait, so
-        under object-cover the WIDTH binds: for a card of width W the image
-        renders 1.5W tall in a 0.625W panel, so the scroll range is 0.875W. Putting
-        the frame's top edge at 9% of the image needs an offset of
-        0.09 x 1.5W = 0.135W, and 0.135W / 0.875W = 15%. The W cancels, so one
-        value works at 1440 and at 375. The frame runs 9% to 51%: headroom above
-        the hair, and the shoulders fully settled.
-      */}
       <div
-        className={`relative bg-paper ${
-          COMPACT_HERO_CARD ? "aspect-[2/1]" : "aspect-[8/5]"
-        }`}
+        className={`relative bg-paper ${compact ? "aspect-[2/1]" : "aspect-[8/5]"}`}
       >
-        {/*
-          A 10% sepia, which is a colour-temperature correction rather than an
-          effect. The photograph's wall is cool: sampled at rgb(238,247,247), so
-          R minus B = -9, i.e. cyan-leaning, sitting right next to a warm cream
-          tile (+4). At 10% the wall lands on +2 and matches the cream; the skin
-          moves by 3 points and is imperceptible. A cream overlay was tried first
-          and does nothing at low alpha (cream is barely warm) and washes the face
-          at high alpha. Anything above ~15% clips the wall to pure white.
-        */}
-        <Image
-          src={p.photo.src}
-          alt={p.photo.alt}
-          fill
-          priority
-          sizes="(max-width: 1024px) 100vw, 42vw"
-          className="object-cover object-[53%_15%] sepia-[10%]"
-        />
+        {sample || !p.photo ? (
+          <Silhouette />
+        ) : (
+          <Image
+            src={p.photo.src}
+            alt={p.photo.alt}
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 42vw"
+            className="object-cover object-[53%_15%] sepia-[10%]"
+          />
+        )}
 
         {/*
-          Cream tile, navy glyph: the reverse of what it was. As a navy tile it
-          measured 1.14:1 against the navy body it half sits on, which is to say
-          it vanished. Cream reads against both halves of the seam: 13.9:1 on the
-          navy body, and the hairline ring holds its edge against the near-white
-          wall in the photograph.
-
-          LogoMark strokes currentColor, so the glyph just follows text-navy.
+          Cream tile, navy glyph. LogoMark strokes currentColor, so the glyph
+          just follows text-navy. It reads against both halves of the seam.
         */}
         <div className="absolute -bottom-5 left-6 flex size-11 items-center justify-center rounded-card bg-paper text-navy ring-1 ring-line">
           <LogoMark className="size-7" />
@@ -160,8 +169,6 @@ export function ProfileCard() {
         {/*
           The one place on this site that is not navy. Verified is what US firms
           filter for first, so the colour carries meaning rather than decorating.
-          #22c55e at its rendered 17px measures 6.70:1 on navy: comfortably past
-          AA, so it stays as it is.
         */}
         <p className="mt-1.5 flex items-center gap-1.5 text-small font-medium text-verified">
           <SealCheck size={17} weight="fill" className="shrink-0" aria-hidden />
@@ -171,7 +178,11 @@ export function ProfileCard() {
         <ul className="mt-5 space-y-2.5">
           <Row icon={<Briefcase size={16} weight="light" />}>{p.role}</Row>
           <Row icon={<MapPin size={16} weight="light" />}>{p.location}</Row>
-          <Row icon={<Clock size={16} weight="light" />}>{p.availability}</Row>
+          {p.availability && (
+            <Row icon={<Clock size={16} weight="light" />}>
+              {p.availability}
+            </Row>
+          )}
         </ul>
 
         <div className="mt-6 space-y-4">

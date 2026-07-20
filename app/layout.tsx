@@ -12,6 +12,9 @@ import "./globals.css";
 const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
+  // Italic is loaded so the display serif can carry a real italic (the employer
+  // hero pull-line), rather than the browser synthesising a slant from the roman.
+  style: ["normal", "italic"],
   display: "swap",
 });
 

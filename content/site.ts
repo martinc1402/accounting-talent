@@ -29,6 +29,16 @@ export const LAUNCH_MONTH = "October\u00A02026";
 export const CONTACT_EMAIL = "contact@accountingtalent.in";
 export const OPERATOR = "Kaya Virtual (Australia)";
 
+/*
+  The real applicant count, shown on /employers ("N accountants applied..."). It
+  is a hand-maintained constant on purpose: it must never inflate, so it is a
+  one-line edit a human makes as the pool grows rather than a number the page
+  invents. A live head-count of the `applications` table (the count query in
+  lib/assessment/service.ts) could replace it later; kept static for now so the
+  page has no request-time dependency and cannot drift upward on its own.
+*/
+export const POOL_APPLICANT_COUNT = 58;
+
 export const nav = [
   { label: "How it works", href: "/#how-it-works" },
   { label: "FAQ", href: "/faq" },
@@ -43,12 +53,14 @@ export const primaryCta = {
 /*
   The nav CTA on the employer page. Everywhere else the nav sells the worker
   application ("Apply free"); on /employers the reader is a firm, so it points at
-  the waitlist form on the same page rather than the worker funnel. Nav swaps to
-  this purely off its `active` prop, so it stays a zero-JS server component.
+  the founding-firm form on the same page rather than the worker funnel. Nav
+  swaps to this purely off its `active` prop, so it stays a zero-JS server
+  component. Target is #founding (the founding-firm card), the page's one
+  conversion.
 */
 export const employerCta = {
-  label: "Join the waitlist",
-  href: "#waitlist",
+  label: "Become a founding firm",
+  href: "#founding",
 } as const;
 
 export const footer = {

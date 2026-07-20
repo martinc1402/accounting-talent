@@ -10,6 +10,7 @@ import { scoreApplication } from "@/lib/scoring";
 import { isLikelyBot } from "@/lib/antispam";
 import { isRateLimited } from "@/lib/ratelimit";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { firms } from "@/content/firms";
 import {
   emailApplicationReceived,
   firstNameOf,
@@ -186,6 +187,10 @@ const firmEmail = z.email();
 export type WaitlistState = {
   status: "idle" | "success" | "error";
   message?: string;
+  // The normalized email, returned on a real success so the client can drive the
+  // post-submit concierge step (saveFirmConcierge keys on it). Absent on the
+  // silent-success guard paths, which is fine: those never reach the concierge.
+  email?: string;
 };
 
 export async function joinFirmWaitlist(
@@ -233,7 +238,7 @@ export async function joinFirmWaitlist(
 
   if (!supabaseConfigured || !supabase) {
     console.info("[waitlist] Supabase not configured. Email:", email);
-    return { status: "success" };
+    return { status: "success", email };
   }
 
   const { error } = await supabase
@@ -248,5 +253,74 @@ export async function joinFirmWaitlist(
     };
   }
 
-  return { status: "success" };
+  return { status: "success", email };
+}
+
+/*
+  Section 2 concierge: the two single-select answers a firm can give right after
+  joining (which role they'd hire first, and when). Each tap calls this to
+  persist that one field. Keyed on the email the join step already stored, which
+  the client holds from the joinFirmWaitlist success. Both answers are optional.
+
+  Reachable by direct POST like every Server Function, so it re-validates: the
+  email must parse, and role/timing must be one of the offered options (anything
+  else is dropped, not stored). Rate limited on its own bucket. It updates by
+  email, so it never inserts, a call for an email not on the list is a silent
+  no-op. That, plus low-sensitivity fields (a role and a timing, no PII), is why
+  keying on the client-held email is acceptable here.
+*/
+const ROLE_OPTIONS = firms.founding.concierge.roleOptions as readonly string[];
+const TIMING_OPTIONS = firms.founding.concierge
+  .timingOptions as readonly string[];
+
+export type ConciergeInput = {
+  email: string;
+  role?: string;
+  timing?: string;
+};
+
+export async function saveFirmConcierge(
+  input: ConciergeInput,
+): Promise<{ ok: boolean }> {
+  // Silent throttle, generous because two legitimate taps are two calls.
+  const ip = await clientIp();
+  const rl = await isRateLimited("concierge", ip, {
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("concierge", "rate_limit", rl.ipHash);
+    return { ok: true };
+  }
+
+  const email = String(input.email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!firmEmail.safeParse(email).success) return { ok: false };
+
+  const update: { first_role?: string; hire_timing?: string } = {};
+  if (input.role && ROLE_OPTIONS.includes(input.role)) {
+    update.first_role = input.role;
+  }
+  if (input.timing && TIMING_OPTIONS.includes(input.timing)) {
+    update.hire_timing = input.timing;
+  }
+  if (Object.keys(update).length === 0) return { ok: false };
+
+  if (!supabaseConfigured || !supabase) {
+    console.info("[concierge] (no db)", email, JSON.stringify(update));
+    return { ok: true };
+  }
+
+  const { error } = await supabase
+    .from("firm_waitlist")
+    .update(update)
+    .eq("email", email);
+
+  if (error) {
+    console.error("[concierge] update failed", error);
+    return { ok: false };
+  }
+
+  return { ok: true };
 }

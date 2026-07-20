@@ -135,34 +135,61 @@ export const homepageFaq: FaqItem[] = [
   The employer FAQ, rendered on /employers under the proof blocks. Same FaqItem
   shape and the same Accordion component the homepage uses. Kept separate from
   `faq` (the worker FAQ) because the two audiences ask different questions and
-  /faq should not show firm-side answers. These carry no ids: the employer page
-  links to the FAQ section as a whole (#faq), not to individual questions.
+  /faq should not show firm-side answers. Ids are stable kebab-case so a future
+  deep-link can land on a specific question; the page currently links to the FAQ
+  section as a whole (#faq).
 
-  Dashes conformed to the site convention (no em dashes; ranges use "to").
+  Dashes conformed to the site convention (no em dashes; ranges use "to" or a
+  plain hyphen; an em-dash pause becomes a comma, colon, or parentheses).
 */
 export const employerFaq: FaqItem[] = [
   {
+    id: "pay-in-india",
     q: "How do I actually pay someone in India?",
     a: [
-      "Directly, in USD, via international transfer or platforms like Wise, the same way thousands of US\u00A0firms already pay offshore contractors. At launch we provide payment guidance that satisfies Indian remittance paperwork (FIRC), and payment rails with compliance documentation built in are on our roadmap.",
+      "Directly, in USD, via international transfer or platforms like Wise, the same way thousands of US\u00A0firms already pay offshore contractors. At launch we provide payment guidance that satisfies Indian remittance paperwork (FIRC); payment rails with the compliance documentation built in are on the roadmap.",
     ],
   },
   {
+    id: "section-7216",
     q: "What about IRS Section\u00A07216?",
     a: [
-      "If you outsource tax preparation offshore, §7216 requires your client's written consent: a signature line in your engagement letter. Firms that offshore already do this routinely. We provide consent templates and plain-English guidance; your E&O carrier and counsel have the final word.",
+      "If you outsource tax preparation offshore, §7216 requires your client's written consent, a signature line in your engagement letter. Firms that offshore already do this routinely. We provide consent templates and plain-English guidance; your E&O carrier and counsel have the final word.",
     ],
   },
   {
+    id: "data-safety",
+    q: "How do I keep client data safe with a direct hire?",
+    a: [
+      "The same way careful firms handle any remote staff: least-privilege access. Your hire works inside your systems (a hosted desktop or remote environment, their own user accounts in your tax and bookkeeping software, no client files stored locally, and access revoked the day the engagement ends). We provide a plain-English data-access checklist and a confidentiality agreement template. As with §7216, your E&O carrier and counsel have the final word, but none of this is exotic. It's the same setup offshore agencies use, minus the agency.",
+    ],
+  },
+  {
+    id: "employee-or-contractor",
+    q: "Is my hire an employee or a contractor?",
+    a: [
+      "Almost always an independent contractor: they invoice you, you pay them directly, and the contractor-agreement template we provide reflects that. Some firms later move long-term hires onto an employer-of-record platform for extra formality, an option, not a requirement. We're a database, not a party to the engagement, so structure it with your counsel's blessing.",
+    ],
+  },
+  {
+    id: "if-it-doesnt-work-out",
     q: "What if the hire doesn't work out?",
     a: [
-      "You hire directly, so it's your engagement to end, with no agency contract and no buyout clause. Most firms interview two or three candidates from the database before committing, and your subscription lets you go straight back to the pool.",
+      "You hire directly, so it's your engagement to end, no agency contract, no buyout clause. Most firms interview two or three candidates from the database before committing, and your subscription lets you go straight back to the pool.",
     ],
   },
   {
+    id: "why-cheaper",
     q: "Why is this so much cheaper than an agency?",
     a: [
       "Because nothing sits in the middle. Agencies bill $1,200 to $2,500 per person per month with recruiting, office, and margin baked in. Here the worker's salary goes to the worker, and you pay us a flat subscription for access and verification. That's the whole model.",
+    ],
+  },
+  {
+    id: "hire-before-launch",
+    q: "Can I hire before the Q4 launch?",
+    a: [
+      "Yes, that's the founding-firm perk. Tell us the role when you join and we'll hand-match you with verified candidates before the database opens publicly. You interview and hire exactly as you would at launch; we just do the searching until then. Concierge now, self-serve at launch.",
     ],
   },
 ];
