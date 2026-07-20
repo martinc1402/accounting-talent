@@ -380,7 +380,7 @@ export const firms = {
   builder: {
     heading: "Who's building this",
     photo: {
-      src: "/images/martin-headshot-bw.jpg",
+      src: "/images/martin-headshot.jpg",
       alt: "Martin Casey, founder of AccountingTalent.",
     },
     name: "Martin Casey",
