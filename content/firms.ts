@@ -71,9 +71,15 @@ export const firms = {
       timingQ: "When?",
       timingOptions: ["Before tax season", "At launch", "Just watching for now"],
       skip: "Skip",
-      // Shown once an answer is given (there is no submit button, taps save
-      // live), so the step reads as finished rather than waiting on the reader.
+      // Finish early (answered at least one) vs. opt out (answered none); both
+      // land on the done panel.
+      done: "Done",
+      // Shown on the done panel once an answer is given (there is no submit
+      // button, taps save live), so the step reads as finished, not waiting.
       saved: "Thanks, that helps us match you first. We'll be in touch before launch.",
+      // Short labels for the picks echo on the done panel.
+      summaryRoleLabel: "Role",
+      summaryTimingLabel: "When",
       // Selecting this timing shows this closing line instead of the generic one.
       beforeSeasonValue: "Before tax season",
       beforeSeasonClose:
