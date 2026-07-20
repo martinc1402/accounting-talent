@@ -23,13 +23,15 @@ export function BuilderNote() {
           {/* Signed byline: photo left, name + role beside it. Square source, so
               object-cover needs no special position; the hairline ring gives the
               B&W photo an edge on the white band. */}
-          <div className="mt-6 flex items-center gap-4">
+          <div className="mt-6 flex items-center gap-5">
+            {/* width/height match the rendered size (source is 600x600), so
+                next/image serves a crisp 1x/2x candidate, not a 64px thumbnail. */}
             <Image
               src={builder.photo.src}
               alt={builder.photo.alt}
-              width={64}
-              height={64}
-              className="size-16 shrink-0 rounded-card object-cover ring-1 ring-line"
+              width={104}
+              height={104}
+              className="size-[104px] shrink-0 rounded-card object-cover ring-1 ring-line"
             />
             <div>
               <p className="text-body font-medium text-ink">{builder.name}</p>
