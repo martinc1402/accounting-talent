@@ -110,7 +110,7 @@ export const firms = {
     // `sample={false}` to the cards. Never label a fictional card "a verified
     // profile from the pool".
     sampleCaption:
-      "Sample profiles. This is the format every verified profile follows. Real profiles open to founding firms first.",
+      "Sample profiles with illustrative photos: this is the format every verified profile follows. Real profiles open to founding firms first.",
     realCaption:
       "From the verified pool. Names abbreviated; full profiles open to founding firms first.",
 

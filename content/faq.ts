@@ -182,7 +182,7 @@ export const employerFaq: FaqItem[] = [
     id: "why-cheaper",
     q: "Why is this so much cheaper than an agency?",
     a: [
-      "Because nothing sits in the middle. Agencies bill $1,200 to $2,500 per person per month with recruiting, office, and margin baked in. Here the worker's salary goes to the worker, and you pay us a flat subscription for access and verification. That's the whole model.",
+      "Because nothing sits in the middle. Agencies bill $1,200 to $2,500 per person per month with recruiting, office, and margin baked in. Here the worker's salary goes to the worker, and you pay us a flat subscription for access and verification. That's the whole model. And when you hire, your membership steps down, not up: a small flat per-hire plan covering payments and compliance arrives with launch.",
     ],
   },
   {

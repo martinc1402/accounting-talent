@@ -22,23 +22,28 @@ import { employerFaq } from "@/content/faq";
   match the ones below; the dash in the supplied title tag is a comma here, per
   the site's no-em-dash convention.
 */
+const OG_TITLE = "Hire Verified Indian Accountants Directly, No Agency Markup";
+const OG_DESCRIPTION =
+  "A verified database of Indian bookkeepers, staff accountants, and US tax preparers. You search, interview, hire, and pay them directly. Flat subscription, no per-hire fees. Founding firms get first access.";
+
 export const metadata: Metadata = {
-  title: {
-    absolute:
-      "Hire Verified Indian Accountants Directly, No Agency Markup | AccountingTalent.in",
-  },
-  description:
-    "A verified database of Indian bookkeepers, staff accountants, and US tax preparers. You search, interview, hire, and pay them directly. Flat subscription, no per-hire fees. Founding firms get first access.",
+  title: { absolute: `${OG_TITLE} | AccountingTalent.in` },
+  description: OG_DESCRIPTION,
   openGraph: {
-    // A page openGraph replaces the root's (Next does not deep-merge it), so
-    // siteName and locale are repeated here to match the rest of the site.
-    title: "Hire Verified Indian Accountants Directly, No Agency Markup",
-    description:
-      "A verified database of Indian bookkeepers, staff accountants, and US tax preparers. You search, interview, hire, and pay them directly. Flat subscription, no per-hire fees. Founding firms get first access.",
+    // A page openGraph (and twitter) replaces the root's (Next does not
+    // deep-merge them), so siteName/locale are repeated to match the rest of the
+    // site, and twitter is set here rather than inherited from the homepage.
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
     url: "https://accountingtalent.in/employers",
     siteName: "AccountingTalent.in",
     locale: "en_IN",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
   },
 };
 

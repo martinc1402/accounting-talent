@@ -50,3 +50,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Untracked backup of original sample portraits (pre realism pass)
+.portrait-originals/
