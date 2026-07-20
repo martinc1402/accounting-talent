@@ -50,14 +50,11 @@ export function MembershipChart() {
       {/* Legend */}
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-caption text-subtle">
         <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-0.5 w-5 bg-navy" aria-hidden />
+          <span className="inline-block h-[3px] w-5 bg-navy" aria-hidden />
           {c.usLabel}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span
-            className="inline-block h-0.5 w-5 bg-subtle/60"
-            aria-hidden
-          />
+          <span className="inline-block h-[3px] w-5 bg-ink" aria-hidden />
           {c.agencyLabel}
         </span>
       </div>
@@ -126,15 +123,16 @@ export function MembershipChart() {
           {c.hireLabel}
         </text>
 
-        {/* Agency line: flat at the top. */}
+        {/* Agency line: flat at the top, as dark and weighted as the our-line so
+            it reads as the $800 the middleman keeps forever. */}
         <line
           x1={PL}
           y1={agencyY}
           x2={x(24)}
           y2={agencyY}
-          className="text-subtle/60"
+          className="text-ink"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={2.5}
         />
 
         {/* AccountingTalent line: $99, then stepping down at "you hire". */}
@@ -147,6 +145,9 @@ export function MembershipChart() {
           strokeLinejoin="round"
           strokeLinecap="round"
         />
+        {/* The step-down point: a dot at the elbow where the line drops, under the
+            "you hire" marker. */}
+        <circle cx={hireX} cy={startY} r={4.5} className="fill-navy" />
         {/* $99 start (a real, stated figure); the low line stays unlabeled. */}
         <text
           x={PL + 4}

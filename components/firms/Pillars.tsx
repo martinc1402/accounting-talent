@@ -17,10 +17,13 @@ export function Pillars() {
       <Container>
         <SectionHeading>{pillars.heading}</SectionHeading>
 
+        {/* py-10 + the top rule on each pillar keep a clear gap between the chart
+            (inside pillar 2) and pillar 3, so "Well-paid people stay." reads as a
+            third argument, not a caption under the chart. */}
         <div className="mt-4 max-w-[820px]">
           {pillars.items.map((pillar) => (
-            <div key={pillar.title} className="border-t border-line py-8">
-              <h3 className="display text-2xl text-ink">{pillar.title}</h3>
+            <div key={pillar.title} className="border-t border-line py-10">
+              <h3 className="display text-2xl text-navy">{pillar.title}</h3>
               <p className="mt-3 max-w-[64ch] text-body text-muted">
                 {pillar.body}
               </p>
