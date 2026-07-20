@@ -114,13 +114,15 @@ export const firms = {
     realCaption:
       "From the verified pool. Names abbreviated; full profiles open to founding firms first.",
 
-    // Fictional samples until consented profiles land. Each renders through the
-    // shared ProfileCard in `sample` mode (silhouette in place of a face). The
-    // role line carries credential and years the way the homepage card does, so
-    // no per-field divergence is needed. Salaries sit inside the rate bands.
+    // Fictional samples until consented profiles land, each with a stock
+    // portrait (gender-matched to the name) and the "sample" caption below the
+    // grid keeping it honest. The role line carries credential and years the way
+    // the homepage card does, so no per-field divergence is needed. Salaries sit
+    // inside the rate bands.
     samples: [
       {
         name: "Arjun S.",
+        photo: { src: "/images/portrait-m-1.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Tax preparer · CA Inter · 4 yrs",
         location: "Ahmedabad · US‑overlap hours",
@@ -134,6 +136,7 @@ export const firms = {
       },
       {
         name: "Priya M.",
+        photo: { src: "/images/portrait-f-1.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Bookkeeper · CMA · 5 yrs",
         location: "Kochi · IST + overnight turnaround",
@@ -147,6 +150,7 @@ export const firms = {
       },
       {
         name: "Rahul K.",
+        photo: { src: "/images/portrait-m-2.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Senior accountant · CA · 7 yrs",
         location: "Pune · US‑overlap hours",
@@ -160,6 +164,7 @@ export const firms = {
       },
       {
         name: "Sneha R.",
+        photo: { src: "/images/portrait-f-2.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Staff accountant · M.Com · 3 yrs",
         location: "Bengaluru · IST + overnight turnaround",
@@ -173,6 +178,7 @@ export const firms = {
       },
       {
         name: "Vikram D.",
+        photo: { src: "/images/portrait-m-3.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Tax preparer · CA Inter · 5 yrs",
         location: "Jaipur · US‑overlap hours",
@@ -186,6 +192,7 @@ export const firms = {
       },
       {
         name: "Ananya P.",
+        photo: { src: "/images/portrait-f-3.jpg", alt: "Sample profile portrait" },
         verified: "English + US tax assessment",
         role: "Bookkeeper · B.Com · 4 yrs",
         location: "Indore · IST + overnight turnaround",

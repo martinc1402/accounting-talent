@@ -23,9 +23,10 @@ import { LogoMark } from "@/components/ui/LogoMark";
 
   Parameterized so /employers can render a grid of these. It defaults to the
   homepage hero profile (so <ProfileCard /> is unchanged), but the employer pool
-  passes its own `profile` and `sample` (which swaps the real headshot for a
-  silhouette placeholder, because those profiles are fictional until real
-  consented ones replace them). `compact` shortens the top panel for the grid.
+  passes its own `profile` and `sample`. `sample` only changes the image
+  treatment (framing tuned for the pool portraits, and lazy loading since the
+  grid is below the fold); it does not gate the photo. The silhouette is a
+  fallback for any profile that has no photo yet.
 */
 
 export type ProfileCardData = {
@@ -34,8 +35,8 @@ export type ProfileCardData = {
   verified: string;
   role: string;
   location: string;
-  // Optional: the homepage card carries an availability row; the compact pool
-  // samples omit it, so the Clock row only renders when present.
+  // Optional: the homepage card carries an availability row; the pool samples
+  // omit it, so the Clock row only renders when present.
   availability?: string;
   softwareLabel: string;
   software: readonly string[];
@@ -123,11 +124,9 @@ function Silhouette() {
 export function ProfileCard({
   profile = hero.sampleProfile,
   sample = false,
-  compact = false,
 }: {
   profile?: ProfileCardData;
   sample?: boolean;
-  compact?: boolean;
 }) {
   const p = profile;
 
@@ -138,20 +137,29 @@ export function ProfileCard({
       rounded rectangle across both the photo and the navy body.
     */
     <div className="overflow-hidden rounded-card border border-line bg-navy shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
-      <div
-        className={`relative bg-paper ${compact ? "aspect-[2/1]" : "aspect-[8/5]"}`}
-      >
-        {sample || !p.photo ? (
-          <Silhouette />
-        ) : (
+      <div className="relative aspect-[8/5] bg-paper">
+        {p.photo ? (
           <Image
             src={p.photo.src}
             alt={p.photo.alt}
             fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 42vw"
-            className="object-cover object-[53%_15%] sepia-[10%]"
+            // The hero card is above the fold on the homepage; the pool grid is
+            // below the fold on /employers, so those load lazily.
+            priority={!sample}
+            sizes={
+              sample
+                ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                : "(max-width: 1024px) 100vw, 42vw"
+            }
+            // Hero headshot is a 2:3 portrait tuned with object-[53%_15%] and a
+            // warmth correction. The pool portraits are 4:3, face-centred, so
+            // they sit on object-[center_35%] with no sepia.
+            className={`object-cover ${
+              sample ? "object-[center_35%]" : "object-[53%_15%] sepia-[10%]"
+            }`}
           />
+        ) : (
+          <Silhouette />
         )}
 
         {/*

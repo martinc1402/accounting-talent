@@ -27,7 +27,6 @@ export function PoolGrid() {
               key={sampleProfile.name}
               profile={sampleProfile}
               sample
-              compact
             />
           ))}
         </div>
