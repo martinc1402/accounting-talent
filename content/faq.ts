@@ -186,6 +186,13 @@ export const employerFaq: FaqItem[] = [
     ],
   },
   {
+    id: "cost-after-hire",
+    q: "What does it cost after I hire?",
+    a: [
+      "Less. Your membership steps down to a small flat per-hire plan that covers running the monthly payment, the Indian remittance paperwork, and annual compliance renewals (§7216 consent, W-8BEN expiry), with search access staying on for your next hire. It's optional: you hired directly, so you're free to simply cancel instead. It will never be a percentage of salary or a placement fee. Exact pricing lands at launch; founding firms get founding rates on it.",
+    ],
+  },
+  {
     id: "hire-before-launch",
     q: "Can I hire before the Q4 launch?",
     a: [

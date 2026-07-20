@@ -2,13 +2,14 @@ import { firms } from "@/content/firms";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ProfileCard } from "@/components/home/ProfileCard";
+import { Cta } from "@/components/firms/Cta";
 
 /*
-  Section 4 (#pool). The momentum line and the process line, then a grid of the
-  actual product: verified-profile cards. v1 ships clearly-labelled samples (the
-  ProfileCard renders a silhouette in place of a face, and the caption says
-  "sample"). When real consented profiles replace `firms.pool.samples`, drop the
-  `sample` flag on the cards and swap `sampleCaption` for `realCaption`.
+  Section 6 (#pool). The momentum line and the process line, then a grid of the
+  actual product: verified-profile cards (clearly-labelled samples with stock
+  portraits; the caption says "sample"), then an inline CTA. When real consented
+  profiles replace `firms.pool.samples`, drop the `sample` flag on the cards and
+  swap `sampleCaption` for `realCaption`.
 */
 export function PoolGrid() {
   const { pool } = firms;
@@ -32,6 +33,11 @@ export function PoolGrid() {
         </div>
 
         <p className="mt-6 text-caption text-subtle">{pool.sampleCaption}</p>
+
+        <p className="mt-8 text-body text-muted">
+          {pool.ctaLead}{" "}
+          <Cta position="pool" variant="link" />
+        </p>
       </Container>
     </section>
   );

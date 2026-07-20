@@ -1,22 +1,34 @@
 import { firms } from "@/content/firms";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { weeksUntilNextJan1 } from "@/lib/weeks-to-jan";
 
 /*
-  Section 3 (#timeline). The "why now" band: the argument on the left, a four-step
+  Section 7 (#timeline). The "why now" band: the argument on the left, a four-step
   horizontal timeline on the right that stacks to one column on a phone. The steps
   are plain text nodes on a hairline rule, no illustration: the rule reads as the
   run-up to January, and each node is a month range.
+
+  The opening line counts the weeks to the next 1 January. It is computed here (a
+  server component); the /employers page sets `revalidate` so the static page
+  regenerates and the number stays current.
 */
 export function WhyNowTimeline() {
   const { timeline } = firms;
+  const lead = timeline.leadTemplate.replace(
+    "{weeks}",
+    String(weeksUntilNextJan1()),
+  );
 
   return (
     <section id="timeline" className="scroll-mt-24 bg-paper py-16 lg:py-28">
       <Container>
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
-            <SectionHeading>{timeline.heading}</SectionHeading>
+            <p className="display text-[1.5rem] leading-tight text-navy">
+              {lead}
+            </p>
+            <SectionHeading className="mt-3">{timeline.heading}</SectionHeading>
             <p className="mt-6 max-w-[46ch] text-body text-muted">
               {timeline.body}
             </p>

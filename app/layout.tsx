@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Newsreader } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
 import "./globals.css";
 
@@ -66,6 +67,10 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col bg-white">
         {children}
+        {/* Vercel Web Analytics: self-detects the environment (no-ops off Vercel
+            / in dev), so it renders unconditionally. Custom events fire via
+            lib/analytics.ts. Enable Web Analytics in the Vercel dashboard. */}
+        <Analytics />
         {pixelEnabled && <MetaPixel pixelId={pixelId!} />}
       </body>
     </html>
