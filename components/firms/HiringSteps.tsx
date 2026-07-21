@@ -3,13 +3,12 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
 /*
-  Section 6 (#how-it-works). Employer-facing steps (Search / Interview / Hire and
-  pay directly). This page's nav "How it works" item points here.
+  How it works (#how-it-works). The four concierge steps (tell us / shortlist in
+  72 hours / interview / hire). This page's nav "How it works" item points here.
 
-  Large serif numerals carry the sequence: the display-stat size (the same big-
-  number treatment the salary figures use) in a muted navy, so the number
-  structures each step without competing with its title. The <ol> keeps the order
-  semantic, so the visible numerals are decorative (aria-hidden).
+  Large serif numerals carry the sequence: the display-stat size in a muted navy,
+  so the number structures each step without competing with its title. The <ol>
+  keeps the order semantic, so the visible numerals are decorative (aria-hidden).
 */
 export function HiringSteps() {
   const { hiring } = firms;

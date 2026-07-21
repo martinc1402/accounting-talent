@@ -10,9 +10,9 @@ import { track } from "@vercel/analytics";
   components. Recording requires Web Analytics enabled on the Vercel project.
 */
 
-/** Where a "Become a founding firm" CTA was clicked. `hero` is the nav CTA at
- *  the top of the page. */
-export type CtaPosition = "hero" | "membership" | "pool" | "final" | "sticky";
+/** Where a "Get matched candidates" CTA was clicked. `hero` is the nav CTA at
+ *  the top of the page; `final` the closing band; `sticky` the mobile bar. */
+export type CtaPosition = "hero" | "final" | "sticky";
 
 export function trackCta(position: CtaPosition): void {
   track("cta_click", { position });
@@ -20,6 +20,12 @@ export function trackCta(position: CtaPosition): void {
 
 export function trackEmailSubmit(): void {
   track("email_submit");
+}
+
+/** An employer submitted the "Tell us who you need" role brief: the primary
+ *  conversion on /employers. */
+export function trackLeadSubmit(): void {
+  track("lead_submit");
 }
 
 export function trackRoleChip(role: string): void {

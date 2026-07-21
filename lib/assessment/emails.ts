@@ -82,6 +82,26 @@ Free for accounting professionals. Always.`,
   };
 }
 
+// ---- Employer lead: role brief received ----------------------------------
+// Sent best-effort the moment an employer submits the "Tell us who you need"
+// brief on /employers (see app/actions.ts submitEmployerLead). Sets the 72-hour
+// expectation the page promises, without overselling.
+export function emailEmployerLeadReceived(vars: { firm_name: string }): Composed {
+  return {
+    subject: "We've got your brief, AccountingTalent",
+    text: `Hi there,
+
+Thanks for sending your hiring brief for ${vars.firm_name}. It's in, and we're on it.
+
+What happens next: we review your requirements and put together a shortlist of matched accounting professionals for your firm. You'll hear back from us within 72 hours (usually sooner) with candidates to review. You interview them directly, and you only pay when you hire.
+
+If anything changes in the meantime, or you want to add detail to the role, just reply to this email and a person will answer.
+
+Talk soon,
+AccountingTalent`,
+  };
+}
+
 // The reviewer's fail_reason maps to exactly one sentence from the spec.
 export const FAIL_REASON_SENTENCE: Record<string, string> = {
   quiz_score:

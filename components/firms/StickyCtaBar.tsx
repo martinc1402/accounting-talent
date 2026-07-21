@@ -7,9 +7,9 @@ import { trackCta } from "@/lib/analytics";
 
 /*
   Mobile-only (<768px) sticky CTA bar. Fixed to the bottom, dismissible, and hidden
-  whenever the #founding form is on screen, since a bar pointing at a form the
+  whenever the #get-matched brief is on screen, since a bar pointing at a form the
   reader is already looking at is just noise. Visibility is driven by an
-  IntersectionObserver on #founding (the effect+cleanup pattern
+  IntersectionObserver on #get-matched (the effect+cleanup pattern
   components/faq/FaqDeepLinks.tsx uses); the setState lives in the observer
   callback (an external event), not the effect body. Sits below the sticky header
   (z-30). Dismissal lasts for the current view.
@@ -19,7 +19,7 @@ export function StickyCtaBar() {
   const [formInView, setFormInView] = useState(false);
 
   useEffect(() => {
-    const el = document.getElementById("founding");
+    const el = document.getElementById("get-matched");
     if (!el) return;
     const obs = new IntersectionObserver(
       ([entry]) => setFormInView(entry.isIntersecting),
@@ -39,7 +39,7 @@ export function StickyCtaBar() {
         </p>
         <div className="flex items-center gap-1">
           <a
-            href="#founding"
+            href="#get-matched"
             onClick={() => trackCta("sticky")}
             className="rounded-full bg-navy px-5 py-2.5 text-[15px] font-medium text-white transition-colors hover:bg-navy-deep active:translate-y-px"
           >

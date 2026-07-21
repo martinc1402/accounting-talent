@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check } from "@phosphor-icons/react/dist/ssr";
+import { CaretDown, Check } from "@phosphor-icons/react/dist/ssr";
 import { CITY_NAMES, FEATURED_CITIES, stateForCity } from "@/content/cities";
 
 /*
@@ -62,6 +62,40 @@ const AUTOCOMPLETE: Record<string, string> = {
   whatsapp: "tel",
   city: "address-level2",
 };
+
+/** Multi-line free text. Same field styling as TextField, taller and resizable
+ *  vertically only. Used by the employer brief's "Anything else?" field. */
+export function TextAreaField({
+  id,
+  value,
+  placeholder,
+  rows = 4,
+  invalid,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  placeholder?: string;
+  rows?: number;
+  invalid?: boolean;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <textarea
+      id={id}
+      name={id}
+      value={value}
+      rows={rows}
+      placeholder={placeholder}
+      aria-invalid={invalid || undefined}
+      aria-describedby={invalid ? `${id}-error` : undefined}
+      onChange={(e) => onChange(e.target.value)}
+      className={`${fieldBase} resize-y ${
+        invalid ? "border-red-700" : "border-line hover:border-navy/40"
+      }`}
+    />
+  );
+}
 
 /** Single select. Tapping an option advances the form, which is what keeps 19
  *  screens inside the promised three minutes. */
@@ -154,6 +188,108 @@ export function MultiField({
             >
               {selected && <Check size={13} weight="bold" className="text-navy" />}
             </span>
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Compact single-choice dropdown. The pill SelectField advances a one-question
+ *  wizard; this is for a multi-field form on a single page, where five stacked
+ *  radio groups would be a wall. Native <select> for keyboard and mobile
+ *  behaviour, styled to match the text fields. */
+export function SelectMenu({
+  id,
+  value,
+  placeholder = "Select one",
+  options,
+  invalid,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  placeholder?: string;
+  options: readonly string[];
+  invalid?: boolean;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        name={id}
+        value={value}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? `${id}-error` : undefined}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${fieldBase} cursor-pointer appearance-none pr-11 ${
+          value ? "text-ink" : "text-subtle/70"
+        } ${invalid ? "border-red-700" : "border-line hover:border-navy/40"}`}
+      >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="text-ink">
+            {opt}
+          </option>
+        ))}
+      </select>
+      <CaretDown
+        aria-hidden
+        size={16}
+        weight="bold"
+        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-subtle"
+      />
+    </div>
+  );
+}
+
+/** Multi-select as wrapping toggle chips. Compact where MultiField's stacked
+ *  full-width buttons would be too tall (the employer brief's software and
+ *  work-type pickers). */
+export function ChipMultiField({
+  name,
+  options,
+  values,
+  onChange,
+}: {
+  name: string;
+  options: readonly string[];
+  values: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const toggle = (opt: string) =>
+    onChange(
+      values.includes(opt)
+        ? values.filter((v) => v !== opt)
+        : [...values, opt],
+    );
+
+  return (
+    <div
+      role="group"
+      aria-labelledby={`${name}-label`}
+      className="flex flex-wrap gap-2"
+    >
+      {options.map((opt) => {
+        const selected = values.includes(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            role="checkbox"
+            aria-checked={selected}
+            onClick={() => toggle(opt)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-small transition-all active:translate-y-px ${
+              selected
+                ? "border-navy bg-navy text-white"
+                : "border-line bg-white text-muted hover:border-navy/40 hover:bg-mist"
+            }`}
+          >
+            {selected && <Check size={13} weight="bold" aria-hidden />}
             {opt}
           </button>
         );

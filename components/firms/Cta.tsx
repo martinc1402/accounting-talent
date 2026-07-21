@@ -6,12 +6,12 @@ import { firms } from "@/content/firms";
 import { trackCta, type CtaPosition } from "@/lib/analytics";
 
 /*
-  The repeated "Become a founding firm" CTA. One mechanism everywhere: a hash
-  link to the #founding form (which already carries scroll-mt to clear the sticky
-  header), with an onClick that fires the cta_click event so the smoke test can
-  see which position converts. `variant="button"` for the section CTAs (tone
-  switches to the inverse white-on-navy button on the final band); `variant="link"`
-  for the quiet inline CTA under the pool grid.
+  The repeated primary CTA. One mechanism everywhere: a hash link to the
+  #get-matched brief (which carries scroll-mt to clear the sticky header), with an
+  onClick that fires cta_click so the smoke test can see which position converts.
+  `variant="button"` for section CTAs (tone switches to white-on-navy on the final
+  band); `variant="link"` for a quiet inline CTA. Label and target come from
+  firms.getMatched.
 */
 export function Cta({
   position,
@@ -24,16 +24,17 @@ export function Cta({
   tone?: "primary" | "inverse";
   className?: string;
 }) {
+  const { label, href } = firms.getMatched;
   const onClick = () => trackCta(position);
 
   if (variant === "link") {
     return (
       <a
-        href="#founding"
+        href={href}
         onClick={onClick}
         className={`group inline-flex items-center gap-1.5 text-body font-medium text-navy transition-colors hover:text-navy-deep ${className}`}
       >
-        {firms.founding.cta}
+        {label}
         <ArrowRight
           size={16}
           weight="light"
@@ -44,8 +45,8 @@ export function Cta({
   }
 
   return (
-    <Button href="#founding" variant={tone} onClick={onClick} className={className}>
-      {firms.founding.cta}
+    <Button href={href} variant={tone} onClick={onClick} className={className}>
+      {label}
     </Button>
   );
 }
