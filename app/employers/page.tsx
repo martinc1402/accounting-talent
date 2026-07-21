@@ -52,10 +52,13 @@ export const metadata: Metadata = {
 };
 
 /*
-  Regenerate daily so the live talent-snapshot count (read from the applications
-  table in TalentSnapshot) stays current without the page going dynamic.
+  ISR window governing how fresh the live talent-snapshot count (read from the
+  applications table in TalentSnapshot) is. The page stays static: ISR
+  regenerates it in the background on the first visit after the window expires,
+  so the cost is ~one cheap count query per interval, independent of traffic.
+  One tunable number: 3600 for hourly, 60 for near-instant.
 */
-export const revalidate = 86400;
+export const revalidate = 300;
 
 /*
   The employer page, concierge-matching model. Order: hero -> pain mirror ->
