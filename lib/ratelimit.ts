@@ -24,7 +24,13 @@ const hashIp = (ip: string): string =>
   createHash("sha256").update(SALT + ip).digest("hex");
 
 export async function isRateLimited(
-  bucket: "apply" | "waitlist" | "concierge" | "assessment_submit" | "admin",
+  bucket:
+    | "apply"
+    | "waitlist"
+    | "concierge"
+    | "assessment_submit"
+    | "admin"
+    | "employer_lead",
   ip: string,
   { limit, windowMs }: { limit: number; windowMs: number },
 ): Promise<{ limited: boolean; ipHash: string }> {

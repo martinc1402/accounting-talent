@@ -5,39 +5,27 @@
   content-driven makes that flip a data change rather than a rewrite.
 */
 
-/**
- * Worker-facing pages say "late 2026" rather than "Q4 2026": the Indian
- * financial year runs April to March, so "Q4" reads as Jan-Mar 2027 to many
- * applicants. The employer page can safely say Q4, US readers parse it as
- * calendar Q4.
- */
 /*
-  The \u00A0 (non-breaking space) escapes below keep a number welded to its unit,
-  so a line can never end on a dangling "late" or "Q4". These four constants are
-  the single source of every launch date on the site, so fixing them here fixes
-  the hero fine print, the steps, the closing CTA and the FAQ at once.
+  Worker-facing launch dates. Kept as the single source so a change fixes the
+  hero fine print, the steps, and the FAQ at once. Worker pages say "late 2026"
+  rather than "Q4 2026": the Indian financial year runs April to March, so "Q4"
+  reads as Jan-Mar 2027 to many applicants.
 
-  Written as escapes rather than literal non-breaking spaces on purpose: a raw
-  NBSP pasted into source looks exactly like a normal space, cannot be grepped,
-  and the next person to edit this line would delete it without knowing.
+  Written as \u00A0 (non-breaking space) escapes rather than literal NBSPs on
+  purpose: a raw NBSP pasted into source looks exactly like a normal space,
+  cannot be grepped, and the next person to edit the line would delete it without
+  knowing. The escapes weld a number to its unit so a line never ends on a
+  dangling "late".
+
+  The employer page no longer references a launch date: concierge matching is
+  open now, so LAUNCH_EMPLOYER / LAUNCH_MONTH were removed with the old
+  subscription model.
 */
 export const LAUNCH_WORKER = "late\u00A02026 (October\u00A0to\u00A0December)";
 export const LAUNCH_WORKER_SHORT = "late\u00A02026";
-export const LAUNCH_EMPLOYER = "Q4\u00A02026";
-export const LAUNCH_MONTH = "October\u00A02026";
 
 export const CONTACT_EMAIL = "contact@accountingtalent.in";
 export const OPERATOR = "Kaya Virtual (Australia)";
-
-/*
-  The real applicant count, shown on /employers ("N accountants applied..."). It
-  is a hand-maintained constant on purpose: it must never inflate, so it is a
-  one-line edit a human makes as the pool grows rather than a number the page
-  invents. A live head-count of the `applications` table (the count query in
-  lib/assessment/service.ts) could replace it later; kept static for now so the
-  page has no request-time dependency and cannot drift upward on its own.
-*/
-export const POOL_APPLICANT_COUNT = 58;
 
 export const nav = [
   { label: "How it works", href: "/#how-it-works" },
@@ -53,14 +41,18 @@ export const primaryCta = {
 /*
   The nav CTA on the employer page. Everywhere else the nav sells the worker
   application ("Apply free"); on /employers the reader is a firm, so it points at
-  the founding-firm form on the same page rather than the worker funnel. Nav
-  swaps to this purely off its `active` prop, so it stays a zero-JS server
-  component. Target is #founding (the founding-firm card), the page's one
+  the role-brief form on the same page rather than the worker funnel. Nav swaps
+  to this purely off its `active` prop, so it stays a zero-JS server component.
+  Target is #get-matched (the "Tell us who you need" brief), the page's one
   conversion.
+
+  Note: the Nav renders <Cta position="hero"> for /employers, which sources its
+  own label and href from firms.getMatched, so this constant is the fallback and
+  its label/href are kept in sync with that.
 */
 export const employerCta = {
-  label: "Become a founding firm",
-  href: "#founding",
+  label: "Get matched candidates",
+  href: "#get-matched",
 } as const;
 
 export const footer = {

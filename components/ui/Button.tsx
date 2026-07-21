@@ -15,6 +15,9 @@ const variants = {
   primary: "bg-navy text-white hover:bg-navy-deep",
   inverse: "bg-white text-navy hover:bg-mist",
   outline: "border border-navy/25 bg-transparent text-navy hover:bg-mist",
+  // Secondary CTA on a navy band: white outline, no fill.
+  outlineInverse:
+    "border border-white/40 bg-transparent text-white hover:bg-white/10",
 } as const;
 
 type Variant = keyof typeof variants;

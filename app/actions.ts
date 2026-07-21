@@ -13,6 +13,7 @@ import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { firms } from "@/content/firms";
 import {
   emailApplicationReceived,
+  emailEmployerLeadReceived,
   firstNameOf,
   sendEmail,
 } from "@/lib/assessment/emails";
@@ -183,6 +184,143 @@ export async function submitApplication(
 }
 
 const firmEmail = z.email();
+const websiteUrl = z.url();
+
+/*
+  The employer role brief (Section "Tell us who you need" on /employers). The
+  page's primary conversion: a firm tells us the role, software, experience,
+  schedule and budget, and we come back with a matched shortlist. Same shape and
+  discipline as submitApplication (guards -> rate limit -> validate -> insert ->
+  best-effort confirmation), writing to employer_leads. Reachable by direct POST
+  like every Server Function, so it re-validates and never trusts the client.
+*/
+export type EmployerLeadInput = {
+  full_name: string;
+  work_email: string;
+  firm_name: string;
+  firm_website?: string;
+  role: string;
+  experience_required?: string;
+  software?: string[];
+  tax_forms?: string[];
+  hours_overlap?: string;
+  budget?: string;
+  start_timeframe?: string;
+  details?: string;
+};
+
+export async function submitEmployerLead(
+  raw: EmployerLeadInput,
+  utm: Utm = {},
+  guard: Guard = {},
+): Promise<ApplyState> {
+  const ip = await clientIp();
+
+  // The brief takes a minute or two to fill; a 3s floor is comfortably below any
+  // human speed. Guards return the normal success shape without persisting.
+  if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 3000 })) {
+    logDrop("employer_lead", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("employer_lead", ip, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("employer_lead", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
+  const clean = (v: string | undefined) => (v ?? "").trim();
+  const full_name = clean(raw.full_name);
+  const work_email = clean(raw.work_email).toLowerCase();
+  const firm_name = clean(raw.firm_name);
+  const firm_website = clean(raw.firm_website);
+  const role = clean(raw.role);
+
+  const errors: Record<string, string> = {};
+  if (!full_name) errors.full_name = "Please tell us your name.";
+  if (!firmEmail.safeParse(work_email).success) {
+    errors.work_email = "Please enter a valid work email address.";
+  }
+  if (!firm_name) errors.firm_name = "Please tell us your firm's name.";
+  if (!role) errors.role = "Please tell us which role you're hiring for.";
+  // Website is optional, but if given it must look like a URL. Accept a bare
+  // domain by prepending https:// before validating.
+  const normalizedWebsite = firm_website
+    ? firm_website.match(/^https?:\/\//i)
+      ? firm_website
+      : `https://${firm_website}`
+    : "";
+  if (normalizedWebsite && !websiteUrl.safeParse(normalizedWebsite).success) {
+    errors.firm_website = "Please enter a valid website, or leave it blank.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      status: "error",
+      message: "A few details need fixing before we can send this.",
+      errors,
+    };
+  }
+
+  const row = {
+    full_name,
+    work_email,
+    firm_name,
+    firm_website: normalizedWebsite || null,
+    role,
+    experience_required: clean(raw.experience_required) || null,
+    software: raw.software ?? [],
+    tax_forms: raw.tax_forms ?? [],
+    hours_overlap: clean(raw.hours_overlap) || null,
+    budget: clean(raw.budget) || null,
+    start_timeframe: clean(raw.start_timeframe) || null,
+    details: clean(raw.details) || null,
+    utm_source: utm.source ?? null,
+    utm_medium: utm.medium ?? null,
+    utm_campaign: utm.campaign ?? null,
+  };
+
+  if (!supabaseConfigured || !supabase) {
+    console.info("[employer-lead] Supabase not configured, brief not persisted.");
+    console.info("[employer-lead]", row);
+    return { status: "success" };
+  }
+
+  const { error } = await supabase.from("employer_leads").insert(row);
+  if (error) {
+    console.error("[employer-lead] insert failed", error);
+    return {
+      status: "error",
+      message:
+        "We couldn't send your brief just now. Please try again in a moment, or email contact@accountingtalent.in.",
+    };
+  }
+
+  // Best-effort confirmation after the response; never blocks or fails the submit.
+  after(async () => {
+    try {
+      const result = await sendEmail(
+        work_email,
+        emailEmployerLeadReceived({ firm_name }),
+      );
+      if (!result.ok) {
+        console.error(
+          `[employer-lead] confirmation send failed to=${work_email}: ${result.error}`,
+        );
+      }
+    } catch (e) {
+      console.error(
+        `[employer-lead] confirmation send failed to=${work_email}`,
+        e,
+      );
+    }
+  });
+
+  return { status: "success" };
+}
 
 export type WaitlistState = {
   status: "idle" | "success" | "error";

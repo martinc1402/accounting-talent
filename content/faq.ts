@@ -144,59 +144,74 @@ export const homepageFaq: FaqItem[] = [
 */
 export const employerFaq: FaqItem[] = [
   {
-    id: "pay-in-india",
-    q: "How do I actually pay someone in India?",
+    id: "how-fast",
+    q: "How quickly can I receive candidates?",
     a: [
-      "Directly, in USD, via international transfer or platforms like Wise, the same way thousands of US\u00A0firms already pay offshore contractors. At launch we provide payment guidance that satisfies Indian remittance paperwork (FIRC); payment rails with the compliance documentation built in are on the roadmap.",
+      "Send us your role brief and we come back with a shortlist of matched candidates within 72 hours, usually sooner. From there you interview at your own pace.",
     ],
   },
   {
-    id: "section-7216",
-    q: "What about IRS Section\u00A07216?",
+    id: "who-is-available",
+    q: "What kinds of accounting professionals are available?",
     a: [
-      "If you outsource tax preparation offshore, §7216 requires your client's written consent, a signature line in your engagement letter. Firms that offshore already do this routinely. We provide consent templates and plain-English guidance; your E&O carrier and counsel have the final word.",
+      "US tax preparers, bookkeepers, staff and senior accountants, AP/AR and payroll specialists, audit support, and accounting operations staff. Experience with tools like QuickBooks Online, Xero, Drake, Lacerte, UltraTax, ProSeries, and NetSuite varies by candidate, so tell us what your firm runs and we match to it.",
     ],
   },
   {
-    id: "data-safety",
-    q: "How do I keep client data safe with a direct hire?",
+    id: "interview-before-paying",
+    q: "Can I interview candidates before paying?",
     a: [
-      "The same way careful firms handle any remote staff: least-privilege access. Your hire works inside your systems (a hosted desktop or remote environment, their own user accounts in your tax and bookkeeping software, no client files stored locally, and access revoked the day the engagement ends). We provide a plain-English data-access checklist and a confidentiality agreement template. As with §7216, your E&O carrier and counsel have the final word, but none of this is exotic. It's the same setup offshore agencies use, minus the agency.",
+      "Yes. You review the shortlist and interview candidates directly, at no cost. You pay only when you decide to hire someone.",
     ],
   },
   {
-    id: "employee-or-contractor",
-    q: "Is my hire an employee or a contractor?",
+    id: "who-employs",
+    q: "Who employs or contracts with the accountant?",
     a: [
-      "Almost always an independent contractor: they invoice you, you pay them directly, and the contractor-agreement template we provide reflects that. Some firms later move long-term hires onto an employer-of-record platform for extra formality, an option, not a requirement. We're a database, not a party to the engagement, so structure it with your counsel's blessing.",
+      "You do, directly. Most firms engage the accountant as an independent contractor who invoices them; some move a long-term hire onto an employer-of-record platform. How you classify and structure the relationship is a decision for you and your advisor. AccountingTalent introduces the candidate and is not a party to the engagement.",
+    ],
+  },
+  {
+    id: "how-compensation",
+    q: "How is compensation agreed?",
+    a: [
+      "You and the accountant agree on pay directly, the same way you would with any hire. We can share typical market ranges to help you set an offer, but the number is yours to negotiate.",
+    ],
+  },
+  {
+    id: "salary-cut",
+    q: "Does AccountingTalent take part of the accountant's salary?",
+    a: [
+      "No. The accountant keeps 100% of what you pay them. We are paid a one-time success fee by the firm when you hire, never a recurring percentage of anyone's salary.",
     ],
   },
   {
     id: "if-it-doesnt-work-out",
-    q: "What if the hire doesn't work out?",
+    q: "What happens if the hire doesn't work out?",
     a: [
-      "You hire directly, so it's your engagement to end, no agency contract, no buyout clause. Most firms interview two or three candidates from the database before committing, and your subscription lets you go straight back to the pool.",
+      "You hire directly, so it is your engagement to end, with no agency contract or buyout clause. If a placement does not work out during the guarantee period, we put together a replacement shortlist so you can find a better fit.",
     ],
   },
   {
-    id: "why-cheaper",
-    q: "Why is this so much cheaper than an agency?",
+    id: "us-hours",
+    q: "Can candidates work US hours?",
     a: [
-      "Because nothing sits in the middle. Agencies bill $1,200 to $2,500 per person per month with recruiting, office, and margin baked in. Here the worker's salary goes to the worker, and you pay us a flat subscription for access and verification. That's the whole model. And when you hire, your membership steps down, not up: a small flat per-hire plan covering payments and compliance arrives with launch.",
+      "Many can. Availability ranges from full US business-hours overlap to a partial morning or afternoon overlap to overnight turnaround on Indian hours, which suits a lot of bookkeeping and tax-prep work. Tell us what you need and we match candidates to it.",
     ],
   },
   {
-    id: "cost-after-hire",
-    q: "What does it cost after I hire?",
+    id: "how-assessed",
+    q: "How are candidates assessed?",
     a: [
-      "Less. Your membership steps down to a small flat per-hire plan that covers running the monthly payment, the Indian remittance paperwork, and annual compliance renewals (§7216 consent, W-8BEN expiry), with search access staying on for your next hire. It's optional: you hired directly, so you're free to simply cancel instead. It will never be a percentage of salary or a placement fee. Exact pricing lands at launch; founding firms get founding rates on it.",
+      "Before we introduce someone, our review may include written English, accounting knowledge, relevant software experience, US accounting or tax experience, work history, availability, and compensation expectations, with references or identity verification where completed. Not every check applies to every candidate; we tell you what has been verified for the people on your shortlist.",
     ],
   },
   {
-    id: "hire-before-launch",
-    q: "Can I hire before the Q4 launch?",
+    id: "security-compliance",
+    q: "What security and compliance measures should my firm consider?",
     a: [
-      "Yes, that's the founding-firm perk. Tell us the role when you join and we'll hand-match you with verified candidates before the database opens publicly. You interview and hire exactly as you would at launch; we just do the searching until then. Concierge now, self-serve at launch.",
+      "Treat a remote accountant the way careful firms treat any remote staff: a confidentiality agreement, least-privilege system access, multi-factor authentication, sensible device and password policies, client-consent procedures where required (for example IRS Section 7216 when offshoring tax preparation), and a plan for how data is handled and access is revoked when an engagement ends.",
+      "Employment, contractor classification, taxpayer-data consent, and professional obligations vary by firm and jurisdiction. We are not your legal, tax, or compliance advisor; obtain advice appropriate to your circumstances.",
     ],
   },
 ];

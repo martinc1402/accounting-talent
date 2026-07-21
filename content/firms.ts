@@ -1,73 +1,438 @@
-import { CONTACT_EMAIL, LAUNCH_EMPLOYER, POOL_APPLICANT_COUNT } from "./site";
+import { CONTACT_EMAIL } from "./site";
 
 /*
   The employer page, top to bottom. Every string the /employers route renders
   resolves from here, the same content-driven discipline the homepage uses, so a
   copy edit is a data change rather than a JSX rewrite.
 
-  This is the persuasion-first order: pain-led hero, pain mirror, three benefit
-  pillars, the membership story as the centrepiece, then proof/logistics, with a
-  founding-firm CTA repeated down the page.
+  The model this page sells is concierge matching, open now: a firm tells us the
+  role, we send a shortlist of assessed candidates within 72 hours, they
+  interview and hire directly, and pay only when they hire. There is no
+  self-service database, no subscription, and no launch-date gate in this copy. A
+  self-service candidate search may follow later; it is not the offer here.
 
-  The employer page can say "Q4 2026": US readers parse that as calendar Q4.
-  Worker-facing pages must not, because the Indian financial year runs April to
-  March and Q4 reads as January to March 2027 there.
+  American English throughout (this audience is US accounting firms).
 
   Dash convention, held to throughout: no em dashes and no en-dash separators.
   Ranges use "to" or a hyphen; a pause that an em dash would carry becomes a
-  period, comma, colon, or parentheses. The   (non-breaking space) and ‑
-  (non-breaking hyphen) escapes weld a number or a compound to its neighbour so a
-  line never ends on a dangling "US" or splits "1120-S".
+  period, comma, colon, or parentheses. The   (non-breaking space) escapes
+  weld a number or a compound to its neighbor so a line never ends on a dangling
+  "US" or "72".
+
+  `founding` and `scope` are kept intact: `founding` still backs the dormant
+  FoundingForm and the saveFirmConcierge option lists in app/actions.ts; `scope`
+  backs HireScope.
 */
 export const firms = {
-  // Section 1: pain-led hero.
+  // Section 1: hero.
   hero: {
-    eyebrow: "For US CPA & accounting firms",
-    h1: "Stop turning away 1040 work.",
-    sub: "AccountingTalent is a verified pool of Indian tax preparers, staff accountants, and bookkeepers you hire directly: no agency, no markup, no per‑hire fees. Roughly half the cost of offshore staffing firms. And because your hire keeps every dollar you pay them, they're still on your team next January.",
-    // The pull-line states the whole model in one breath, set as its own serif
-    // navy line on the page.
-    pullLine: "You search, you interview, you hire, you pay them directly.",
-    // Rendered with check icons. Item 2 pulls the one hard stat.
-    microProof: [
-      "Every profile assessed: written English + US accounting",
-      `${POOL_APPLICANT_COUNT} in the pool and growing`,
-      "Full‑time, US‑overlap hours",
+    eyebrow: "Direct hiring for US accounting firms",
+    h1: "Hire an assessed Indian accountant without the agency markup",
+    sub: "Tell us the role, software, and experience you need. We'll introduce you to a shortlist of matched accounting professionals within 72 hours. Interview and hire them directly.",
+    trustLine: "No upfront fee. Direct hire. Pay only when you hire.",
+    // Right-column card: the offer stated plainly, replacing the old email form.
+    promise: {
+      title: "What you get",
+      points: [
+        "A shortlist of matched candidates within 72 hours",
+        "Every candidate assessed for accounting knowledge, written English, and relevant experience",
+        "Full-time professionals available for US-overlap hours",
+        "You interview directly and pay only when you hire",
+      ],
+    },
+  },
+
+  // Primary and secondary calls to action, reused across the page.
+  getMatched: { label: "Get matched candidates", href: "#get-matched" },
+  seeHow: { label: "See how it works", href: "#how-it-works" },
+  // Rendered as a mailto in the components that use them (built from
+  // CONTACT_EMAIL); no scheduling tool is wired up yet.
+  bookCall: { label: "Book a hiring call" },
+  discuss: { label: "Discuss your hiring need" },
+  contactEmail: CONTACT_EMAIL,
+
+  // Section 2a: pain mirror. Short, full-width, directly under the hero.
+  painMirror: {
+    heading: "You know the season you just had.",
+    beats: [
+      "Returns you declined because nobody was free to prepare them.",
+      "The senior you offered $85K who took $95K across town.",
+      'The agency hire you spent three months training, reassigned in a "reallocation," training gone with them.',
+    ],
+    pivot:
+      "The shortage isn't easing, and the agency keeps its margin. There's a better way to staff the work.",
+  },
+
+  // Section 2b: value proposition with benefit cards.
+  benefits: {
+    heading: "Add capacity without adding another US-sized salary",
+    intro:
+      "Access experienced accounting professionals who can support bookkeeping, tax preparation, reconciliations, workpapers, monthly close, and other repeatable accounting workflows.",
+    items: [
+      {
+        title: "Assessed talent",
+        body: "Candidates are screened for accounting knowledge, communication, and relevant experience.",
+      },
+      {
+        title: "Relevant experience",
+        body: "Match by software, work type, tax forms, seniority, and working-hour availability.",
+      },
+      {
+        title: "Direct employment relationship",
+        body: "Interview and engage the professional directly rather than paying an ongoing salary markup.",
+      },
+      {
+        title: "Lower hiring risk",
+        body: "Receive a replacement shortlist if the original placement does not work out during the guarantee period.",
+      },
     ],
   },
 
-  // Section 2 (in the hero's right column): the founding-firm card (#founding).
-  // The card is the page's one conversion, so it carries the offer, the form,
-  // and the post-submit concierge questions.
+  // Section 3: how it works (#how-it-works). This page's nav "How it works" item
+  // points here.
+  hiring: {
+    heading: "How it works",
+    steps: [
+      {
+        title: "Tell us what you need",
+        body: "Share the role, software, experience, schedule, and budget.",
+      },
+      {
+        title: "Receive a shortlist",
+        body: "We identify and present the strongest matching candidates within 72 hours.",
+      },
+      {
+        title: "Interview directly",
+        body: "Meet candidates, review their experience, and choose who fits your firm.",
+      },
+      {
+        title: "Hire with confidence",
+        body: "Agree on compensation directly and pay AccountingTalent only after a successful hire.",
+      },
+    ],
+  },
+
+  // The employer brief (#get-matched): the page's primary conversion. Field
+  // config is data so options tune without touching the component. Keys match
+  // the EmployerLeadInput shape in app/actions.ts.
+  brief: {
+    heading: "Tell us who you need",
+    sub: "Share your requirements and we'll identify the strongest available candidates for your firm.",
+    submit: "Request candidate matches",
+    submitting: "Sending...",
+    requiredNote: "A star marks a required field.",
+    success: {
+      heading: "Your brief is in.",
+      body: "We'll review your requirements and come back within 72 hours with a shortlist of matched candidates. Keep an eye on your inbox.",
+    },
+    genericError: "Something went wrong. Please try again.",
+    fields: {
+      full_name: {
+        label: "Your name",
+        required: true,
+        placeholder: "Jane Cooper",
+      },
+      work_email: {
+        label: "Work email",
+        required: true,
+        placeholder: "you@yourfirm.com",
+      },
+      firm_name: {
+        label: "Firm name",
+        required: true,
+        placeholder: "Cooper & Associates CPA",
+      },
+      firm_website: {
+        label: "Firm website",
+        required: false,
+        placeholder: "yourfirm.com",
+      },
+      role: {
+        label: "Role you're hiring for",
+        required: true,
+        options: [
+          "Bookkeeper",
+          "Tax preparer",
+          "Staff accountant",
+          "Senior accountant",
+          "AP / AR specialist",
+          "Payroll specialist",
+          "Audit support",
+          "Not sure yet",
+        ],
+      },
+      experience_required: {
+        label: "Accounting experience",
+        required: false,
+        options: ["No preference", "1 to 2 years", "3 to 5 years", "5+ years"],
+      },
+      software: {
+        label: "Software they should know",
+        required: false,
+        help: "Select any that apply.",
+        options: [
+          "QuickBooks Online",
+          "Xero",
+          "Drake",
+          "Lacerte",
+          "UltraTax",
+          "ProSeries",
+          "NetSuite",
+          "Other",
+        ],
+      },
+      tax_forms: {
+        label: "Tax forms or work types",
+        required: false,
+        help: "Where relevant.",
+        options: [
+          "1040 individual",
+          "1120 / 1120-S corporate",
+          "1065 partnership",
+          "Bookkeeping and close",
+          "Payroll",
+          "AP / AR",
+          "Audit support",
+          "Not tax-specific",
+        ],
+      },
+      hours_overlap: {
+        label: "Preferred US working-hour overlap",
+        required: false,
+        options: [
+          "Full US business hours",
+          "Partial morning overlap",
+          "Partial afternoon overlap",
+          "Flexible / overnight turnaround",
+        ],
+      },
+      budget: {
+        label: "Approximate monthly budget",
+        required: false,
+        options: [
+          "$500 to $1,000 / mo",
+          "$1,000 to $1,500 / mo",
+          "$1,500 to $2,500 / mo",
+          "$2,500+ / mo",
+          "Not sure yet",
+        ],
+      },
+      start_timeframe: {
+        label: "Desired start date",
+        required: false,
+        options: [
+          "As soon as possible",
+          "Within 2 to 4 weeks",
+          "1 to 2 months",
+          "Just exploring",
+        ],
+      },
+      details: {
+        label: "Anything else?",
+        required: false,
+        help: "Optional.",
+        placeholder:
+          "Client types, must-haves, the tools your firm runs, anything that helps us match.",
+      },
+    },
+  },
+
+  // Section 4: roles available (#roles). Talent categories and the software
+  // candidates commonly work in. Replaces the old sample-profile grid.
+  roles: {
+    heading: "Roles we place",
+    intro:
+      "Concierge matching is open now for US firms hiring across the accounting workflow.",
+    categories: [
+      "US tax preparers",
+      "Bookkeepers",
+      "Staff accountants",
+      "Senior accountants",
+      "Accounts payable and receivable specialists",
+      "Payroll specialists",
+      "Audit support professionals",
+      "Accounting operations staff",
+    ],
+    softwareLabel: "Software our candidates work in",
+    software: [
+      "QuickBooks Online",
+      "Xero",
+      "Drake",
+      "Lacerte",
+      "UltraTax",
+      "ProSeries",
+      "NetSuite",
+    ],
+    softwareNote:
+      "Experience varies by candidate. Tell us the tools your firm runs and we match to them, rather than assuming everyone knows every platform.",
+  },
+
+  // Section 5: what your hire actually does. Two quiet lists and a closing line.
+  scope: {
+    heading: "What your hire actually does",
+    movesLabel: "Moves to your hire",
+    moves: [
+      "1040, 1120-S, and 1065 prep",
+      "Monthly bookkeeping and close",
+      "Cleanup and catch-up projects",
+      "Workpaper prep and tie-outs",
+      "AP/AR and payroll support",
+    ],
+    staysLabel: "Stays with you",
+    stays: [
+      "Review and sign-off",
+      "Client relationships",
+      "Pricing and advisory",
+      "Final judgment",
+    ],
+    closing:
+      "Production moves. Judgment stays. That's how a ten-person firm stops turning away 1040 work without adding a tenth US salary.",
+  },
+
+  // Section 6: candidate quality and assessment. Careful "may include" wording:
+  // not every check is completed for every candidate.
+  assessment: {
+    heading: "More than a résumé database",
+    intro:
+      "Before we introduce a candidate, we look past the résumé. Depending on the role and how far a candidate has progressed, our review may include:",
+    dimensions: [
+      "Written English",
+      "Accounting knowledge",
+      "Relevant software experience",
+      "US accounting or tax experience",
+      "Work history",
+      "Availability and working-hour overlap",
+      "Compensation expectations",
+      "References or identity verification, where completed",
+    ],
+    note: "Not every check applies to every candidate. We tell you what has been verified for the people on your shortlist, so you can interview with the full picture.",
+  },
+
+  // Section 7: live talent snapshot. The count is read from the database at
+  // render (see TalentSnapshot); the copy here is the framing only, never a
+  // hard-coded figure.
+  snapshot: {
+    heading: "The talent pool, right now",
+    intro:
+      "Applications from accounting professionals across India, and the pool grows every week.",
+    totalLabel: "accounting professionals applied",
+    fallback: "Applications are open and the pool grows every week.",
+  },
+
+  // Section 8: economics. A balanced comparison, no published fee.
+  economics: {
+    heading: "Build offshore capacity without a permanent agency margin",
+    intro:
+      "Offshore staffing agencies add a recurring markup on top of the salary, for as long as the person works for you. Direct hiring keeps that margin in your firm.",
+    traditional: {
+      label: "Traditional staffing model",
+      points: [
+        "Ongoing agency markup on every hour worked",
+        "Limited visibility into what the worker is actually paid",
+        "Less direct ownership of the relationship",
+      ],
+    },
+    direct: {
+      label: "AccountingTalent direct-hire model",
+      points: [
+        "Transparent compensation, agreed directly with the accountant",
+        "A direct relationship with the person doing the work",
+        "A one-time success fee, paid only when you hire",
+        "No recurring percentage added to the salary",
+      ],
+    },
+    pricingNote:
+      "Introductory success-fee pricing is available for early hiring partners.",
+  },
+
+  // Section 9: security and compliance. Acknowledges concerns, claims no legal or
+  // tax advice, and carries the required disclaimer.
+  security: {
+    heading: "Designed for responsible remote hiring",
+    intro:
+      "Hiring a remote accountant is routine for US firms, and it works best with the basics in place. As you would with any remote staff, your firm should establish appropriate:",
+    items: [
+      "Confidentiality agreements",
+      "System access controls",
+      "Multi-factor authentication",
+      "Device and password policies",
+      "Client-consent procedures where required",
+      "Data-handling practices",
+      "Worker-classification arrangements",
+    ],
+    disclaimer:
+      "Employment, contractor classification, taxpayer-data consent, and professional obligations vary by firm and jurisdiction. Employers should obtain advice appropriate to their circumstances.",
+  },
+
+  // Section 10: who's building this. A note, not an About page.
+  builder: {
+    heading: "Who's building this",
+    photo: {
+      src: "/images/martin-headshot.jpg",
+      alt: "Martin Casey, founder of AccountingTalent.",
+    },
+    name: "Martin Casey",
+    role: "Founder, AccountingTalent",
+    body: [
+      "I'm Martin Casey. I build software for a living, not a staffing agency, and that's the point. AccountingTalent exists because the offshore math bothered me: US firms paying $2,000 a month for accountants who see $600 of it.",
+      "Both sides deserve a better deal. We match you with assessed candidates, you interview and hire them directly, and nobody skims a permanent margin off the salary. That's the whole idea.",
+    ],
+    contactLead: "If you run a firm and have questions, write to me:",
+    email: CONTACT_EMAIL,
+    contactTail: "You'll get me, not a sales team.",
+    linkedin: {
+      href: "https://www.linkedin.com/company/142887530",
+      label: "AccountingTalent on LinkedIn",
+    },
+  },
+
+  // Final CTA band (navy).
+  finalCta: {
+    heading: "Tell us the role. We'll find the match.",
+    sub: "Share your hiring requirements and receive a shortlist of relevant Indian accounting professionals.",
+  },
+
+  // FAQ heading (items live in content/faq.ts as employerFaq).
+  faqHeading: "Questions firms ask us",
+
+  // Shown under primary button CTAs.
+  trustRow: "No upfront fee. Direct hire. Pay only when you hire.",
+
+  // Mobile-only sticky CTA bar.
+  stickyBar: {
+    label: "Hiring? Get matched candidates.",
+    cta: "Get matched",
+  },
+
+  // ---------------------------------------------------------------------------
+  // Dormant. Not rendered on the concierge page. Kept because the FoundingForm
+  // component and the saveFirmConcierge option lists in app/actions.ts still
+  // reference these keys. Safe to delete once the firm_waitlist path is retired.
   founding: {
     eyebrow: "Founding firms",
     headline: "Founding firms get first pick of the pool.",
-    intro: `The database opens to every US firm in ${LAUNCH_EMPLOYER}. Founding firms get in earlier, and on better terms:`,
+    intro:
+      "Founding firms get in earlier, and on better terms:",
     points: [
       {
         title: "Search first.",
-        body: "Day‑one access to the verified pool, before it gets picked over.",
+        body: "Day-one access to the verified pool, before it gets picked over.",
       },
       {
-        title: "50% off year one.",
-        body: "$49/month instead of $99. Cancel anytime.",
+        title: "Better terms.",
+        body: "Founding rates on the plan that arrives at launch.",
       },
       {
-        title: "Hiring before launch?",
-        body: "Tell us the role and we'll hand‑match you with verified candidates now. You interview and hire exactly as you would at launch, we just do the searching for you until the doors open.",
+        title: "Hiring now?",
+        body: "Tell us the role and we'll hand-match you with verified candidates today.",
       },
     ],
-    scarcity:
-      "Founding terms lock for both phases of the membership: $49/month while you search, founding rates on the per‑hire plan after. Limited to the first 50 firms.",
+    scarcity: "Limited to the first 50 firms.",
     label: "Work email",
     placeholder: "you@yourfirm.com",
-    cta: "Become a founding firm",
+    cta: "Join as a founding firm",
     microcopy:
       "One short email a month: new verified profiles and pool salary data, nothing else. No sales calls. Unsubscribe anytime.",
-
-    // Post-submit concierge. After the email is accepted the card swaps to these
-    // two single-select questions, which feed the hand-match pipeline. Both are
-    // optional; each tap saves that answer.
     concierge: {
       successHeading: "You're in.",
       intro: "One question while you're here, it helps us match you first:",
@@ -82,338 +447,13 @@ export const firms = {
       timingQ: "When?",
       timingOptions: ["Before tax season", "At launch", "Just watching for now"],
       skip: "Skip",
-      // Finish early (answered at least one) vs. opt out (answered none); both
-      // land on the done panel.
       done: "Done",
-      // Shown on the done panel once an answer is given (there is no submit
-      // button, taps save live), so the step reads as finished, not waiting.
-      saved: "Thanks, that helps us match you first. We'll be in touch before launch.",
-      // Short labels for the picks echo on the done panel.
+      saved: "Thanks, that helps us match you first. We'll be in touch soon.",
       summaryRoleLabel: "Role",
       summaryTimingLabel: "When",
-      // Selecting this timing shows this closing line instead of the generic one.
       beforeSeasonValue: "Before tax season",
       beforeSeasonClose:
-        "We'll email you within a few days with hand‑matched profiles.",
+        "We'll email you within a few days with hand-matched profiles.",
     },
-  },
-
-  // Section 3: pain mirror. Short, full-width, directly under the hero.
-  painMirror: {
-    heading: "You know the season you just had.",
-    beats: [
-      "Returns you declined because nobody was free to prepare them.",
-      "The senior you offered $85K who took $95K across town.",
-      'The agency hire you spent three months training, reassigned in a "reallocation," training gone with them.',
-    ],
-    pivot:
-      "The shortage isn't ending. The middleman isn't helping. There's a third option.",
-  },
-
-  // Section 4: the model in three pillars. Pillar 2 carries the bar chart and the
-  // salary bands.
-  pillars: {
-    heading: "Why direct hiring wins",
-    items: [
-      {
-        title: "Say yes again.",
-        body: "A verified preparer or bookkeeper, full‑time for $500 to $1,500 a month, working your busy season at US‑overlap hours. The work you've been declining becomes margin instead of apologies.",
-      },
-      {
-        title: "Keep the middleman's margin.",
-        body: "Offshore agencies bill $1,200 to $2,500 a seat and pass roughly $600 to the person doing the work. Hire directly and you pay about $1,200, all of which reaches your accountant. You bank about $800 a month, per seat, every month.",
-        // Employer point of view of the homepage bar chart. Same scale: 100% of
-        // the track is $2,000, every width is amount / 2000.
-        comparison: {
-          agency: {
-            label: "Through an agency",
-            firmPays: "You pay $2,000/mo",
-            you: { amount: "$600", label: "your accountant receives", pct: 30 },
-            keeps: {
-              amount: "the middle keeps $1,400",
-              sub: "recruiting · office · margin",
-              pct: 70,
-            },
-          },
-          direct: {
-            label: "Hired directly",
-            firmPays: "You pay $1,200/mo",
-            you: { amount: "$1,200", label: "your accountant receives", pct: 60 },
-            saves: { amount: "you save $800/mo", pct: 40 },
-          },
-          caption:
-            "Illustrative figures based on typical offshore staffing rates · bars drawn to scale ($2,000 = full width). Per the AICPA, a quarter of US firms already offshore.",
-        },
-        salaryChips: [
-          "$500-800 · bookkeepers",
-          "$800-1,500 · experienced accountants and tax preparers",
-          "$1,500-2,500+ · senior and reviewer roles",
-        ],
-        salaryNote:
-          "Full-time monthly salaries, paid by you, to them. Typical, not guaranteed.",
-      },
-      {
-        title: "Well‑paid people stay.",
-        body: "Your hire keeps 100% of what you pay, roughly double agency take‑home for the same desk. That's not generosity; it's retention strategy. The real cost of offshoring was never the salary. It's retraining a stranger every January.",
-      },
-    ],
-  },
-
-  // Section 5: the membership story band (centrepiece, cream). Carries the second
-  // chart and the closing kicker.
-  membership: {
-    heading: "One membership. It gets cheaper when it works.",
-    blocks: [
-      {
-        label: "While you search",
-        body: "$99/month ($49 founding). Full access to the verified pool, contact anyone, cancel anytime.",
-      },
-      {
-        label: "When you hire",
-        body: "Your membership steps down to a small flat per‑hire plan: we run the monthly payment, the remittance paperwork, and the annual compliance renewals, and search stays on for hire #2. Arrives with launch; founding firms get founding rates on this too.",
-      },
-      {
-        label: "Always",
-        body: "Your accountant keeps 100% of their salary. No placement fees, no percentages, nothing that grows when their pay does.",
-      },
-    ],
-    chart: {
-      title: "What the middleman takes, over time.",
-      agencyLabel: "Offshore agency",
-      usLabel: "AccountingTalent",
-      hireLabel: "you hire",
-      yTop: "$800",
-      yBottom: "$0",
-      xStart: "now",
-      xEnd: "24 months",
-      caption:
-        "Illustrative. Agency line is a typical per‑seat margin; our line is the membership fee. Your accountant's salary is identical in both worlds, except in ours, they receive all of it.",
-    },
-    kicker:
-      "Agencies charge you more the longer you stay. This is the only membership that gets smaller when it succeeds.",
-  },
-
-  // Section 6: the pool (#pool). Momentum line, process line, then a grid of
-  // clearly-labelled sample profiles, with an inline CTA under the grid.
-  pool: {
-    heading: "The pool is filling before the doors open.",
-    momentum: `${POOL_APPLICANT_COUNT} accountants applied in the first days, before a single US firm had been announced. Applications are open and the pool grows weekly.`,
-    process:
-      "None of them lists without passing the written‑English assessment and the US accounting exam. Firms browse the passes, not the pile.",
-    // v1 caption, while the grid shows samples. When real consented profiles
-    // replace the samples, swap `sampleCaption` for `realCaption` below and pass
-    // `sample={false}` to the cards. Never label a fictional card "a verified
-    // profile from the pool".
-    sampleCaption:
-      "Sample profiles with illustrative photos: this is the format every verified profile follows. Real profiles open to founding firms first.",
-    realCaption:
-      "From the verified pool. Names abbreviated; full profiles open to founding firms first.",
-    // Inline CTA lead under the grid (the link itself appends "Become a founding
-    // firm").
-    ctaLead: "Founding firms get first pick of these profiles",
-
-    // Fictional samples until consented profiles land, each with a stock
-    // portrait (gender-matched to the name) and the "sample" caption below the
-    // grid keeping it honest. The role line carries credential and years the way
-    // the homepage card does, so no per-field divergence is needed. Salaries sit
-    // inside the rate bands.
-    samples: [
-      {
-        name: "Arjun S.",
-        photo: { src: "/images/portrait-m-1.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Tax preparer · CA Inter · 4 yrs",
-        location: "Ahmedabad · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Drake", "Lacerte"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120‑S", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$900‑1,200",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Priya M.",
-        photo: { src: "/images/portrait-f-1.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Bookkeeper · CMA · 5 yrs",
-        location: "Kochi · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Xero", "Bill.com"],
-        returnsLabel: "Bookkeeping scope",
-        returns: ["Monthly close", "Catch‑up / cleanup", "AP & AR"],
-        salaryLabel: "Expected salary",
-        salary: "$700‑950",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Rahul K.",
-        photo: { src: "/images/portrait-m-2.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Senior accountant · CA · 7 yrs",
-        location: "Pune · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["QuickBooks", "CCH Axcess", "UltraTax"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$1,600‑2,100",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Sneha R.",
-        photo: { src: "/images/portrait-f-2.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Staff accountant · M.Com · 3 yrs",
-        location: "Bengaluru · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Xero"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1120‑S"],
-        salaryLabel: "Expected salary",
-        salary: "$800‑1,100",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Vikram D.",
-        photo: { src: "/images/portrait-m-3.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Tax preparer · CA Inter · 5 yrs",
-        location: "Jaipur · US‑overlap hours",
-        softwareLabel: "Software",
-        software: ["Drake", "Lacerte", "ProSeries"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form 1040", "1065"],
-        salaryLabel: "Expected salary",
-        salary: "$1,000‑1,400",
-        salarySuffix: "/mo",
-      },
-      {
-        name: "Ananya P.",
-        photo: { src: "/images/portrait-f-3.jpg", alt: "Sample profile portrait" },
-        verified: "English + US tax assessment",
-        role: "Bookkeeper · B.Com · 4 yrs",
-        location: "Indore · IST + overnight turnaround",
-        softwareLabel: "Software",
-        software: ["QuickBooks Online", "Dext", "Gusto payroll"],
-        returnsLabel: "Bookkeeping scope",
-        returns: ["Monthly close", "Payroll", "Sales tax filings"],
-        salaryLabel: "Expected salary",
-        salary: "$650‑900",
-        salarySuffix: "/mo",
-      },
-    ],
-  },
-
-  // Section 7: tax-season urgency band. The lead line's {weeks} is replaced at
-  // render with weeks-to-next-Jan-1; the rest is fixed.
-  timeline: {
-    leadTemplate: "Tax season starts in {weeks} weeks.",
-    heading: "Tax season doesn't wait for launch day.",
-    body: "A direct hire isn't instant. Realistically: a week or two to search and interview, then four to six weeks of onboarding into your software, your workpapers, and your way of doing things. Count backwards from January and the math is clear: a preparer who's productive for busy season gets found in the fall.",
-    steps: [
-      {
-        when: "Sep-Oct",
-        text: "Search the pool, interview two or three candidates",
-      },
-      { when: "Oct-Nov", text: "Hire, onboard, train on your systems" },
-      {
-        when: "Dec",
-        text: "First live work: extensions, cleanup, year‑end close",
-      },
-      { when: "Jan", text: "Full speed for busy season" },
-    ],
-    closing:
-      "One more thing worth knowing: every profile in the pool can be hired exactly once. When a firm hires someone, the profile comes down. Founding firms search first.",
-  },
-
-  // Section 8: how hiring works (#how-it-works). Three steps in the homepage
-  // step style. This page's nav "How it works" item points here.
-  hiring: {
-    heading: "How hiring works",
-    steps: [
-      {
-        title: "Search",
-        body: "Filter the verified pool by software, forms prepared, credential, experience, salary range, and working hours. Every profile is structured the same way, so comparing five candidates takes minutes, not a folder of resumes.",
-      },
-      {
-        title: "Interview",
-        body: "Contact candidates directly and run your normal process. No coordinator in the middle, no markup on the other side of the table. Most firms interview two or three before choosing.",
-      },
-      {
-        title: "Hire and pay directly",
-        body: "You make the offer, you set the terms, they work for you. We hand you the paperwork: §7216 consent, contractor‑agreement and engagement‑letter language, and payment guidance (Wise or international transfer, with the Indian remittance paperwork covered).",
-      },
-    ],
-  },
-
-  // Section 9: what your hire actually does. Two quiet lists and a closing line.
-  scope: {
-    heading: "What your hire actually does",
-    movesLabel: "Moves to your hire",
-    moves: [
-      "1040, 1120‑S, and 1065 prep",
-      "Monthly bookkeeping and close",
-      "Cleanup and catch‑up projects",
-      "Workpaper prep and tie‑outs",
-      "AP/AR and payroll support",
-    ],
-    staysLabel: "Stays with you",
-    stays: [
-      "Review and sign‑off",
-      "Client relationships",
-      "Pricing and advisory",
-      "Final judgment",
-    ],
-    closing:
-      "Production moves. Judgment stays. That's the whole model, and it's how a ten‑person firm stops turning away 1040 work without adding a tenth US salary.",
-  },
-
-  // Section 10: compliance handled (slim full-width band; the old proof block's
-  // copy, unchanged).
-  compliance: {
-    title: "Compliance handled",
-    body: "Section 7216 consent templates, engagement‑letter and contractor‑agreement language, a client‑data access checklist, and payment guidance that satisfies Indian remittance paperwork. Built in, not your problem.",
-  },
-
-  // Section 11: who's building this. A note, not an About page.
-  builder: {
-    heading: "Who's building this",
-    photo: {
-      src: "/images/martin-headshot.jpg",
-      alt: "Martin Casey, founder of AccountingTalent.",
-    },
-    name: "Martin Casey",
-    role: "Founder, AccountingTalent",
-    body: [
-      "I'm Martin Casey. I build software for a living, not a staffing agency, and that's the point. AccountingTalent exists because the offshore math bothered me: US firms paying $2,000 a month for accountants who see $600 of it.",
-      "Both sides deserve a better deal, and a verified direct‑hire database (the model that's worked for 15 years in the Philippines) is the simplest way to give it to them.",
-    ],
-    contactLead: "If you run a firm and have questions, write to me:",
-    email: CONTACT_EMAIL,
-    contactTail: "You'll get me, not a sales team.",
-    linkedin: {
-      href: "https://www.linkedin.com/company/142887530",
-      label: "AccountingTalent on LinkedIn",
-    },
-  },
-
-  // Section 13: final CTA band (navy).
-  finalCta: {
-    heading: "The database opens in Q4. January doesn't wait.",
-    sub: "$49/month for year one · founding rates on both phases · hand‑matched before launch if you're hiring now · limited to the first 50 firms.",
-    button: { label: "Become a founding firm", href: "#founding" },
-  },
-
-  // Section 12 heading (the FAQ items live in content/faq.ts as employerFaq).
-  faqHeading: "Questions firms ask us",
-
-  // Shown under every button CTA.
-  trustRow: "Free to join · No card · One email a month.",
-
-  // Mobile-only sticky CTA bar.
-  stickyBar: {
-    label: "Founding firms: $49/mo",
-    cta: "Join",
   },
 } as const;
