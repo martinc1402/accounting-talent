@@ -5,6 +5,7 @@ import {
   emailFail,
   emailInvite,
   emailPass,
+  emailReminder,
   FAIL_REASON_SENTENCE,
   firstNameOf,
   sendEmail,
@@ -111,6 +112,76 @@ export async function sendAssessmentInvite(
   return {
     ok: true,
     detail: `invited attempt ${attemptNumber}${sent.mocked ? " (email mocked)" : ""}`,
+  };
+}
+
+// ---- Reminder -------------------------------------------------------------
+// Nudge an applicant who was invited but hasn't submitted. Reuses the EXISTING
+// live assessment token (never creates a new attempt) and refuses when there's
+// nothing live to remind about (already submitted, expired, or never invited).
+export async function sendAssessmentReminder(
+  applicationId: string,
+  baseUrl: string,
+): Promise<AdminResult> {
+  const db = requireDb();
+
+  const { data: app, error: appErr } = await db
+    .from("applications")
+    .select("id, full_name, email")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (appErr) return { ok: false, status: 500, error: appErr.message };
+  if (!app) return { ok: false, status: 404, error: "No such application" };
+
+  // The one live, unsubmitted invite for this application. A reminder only makes
+  // sense while a link still works, so we require status invited/started and a
+  // future expiry — the newest such row if there's more than one.
+  const nowIso = new Date().toISOString();
+  const { data: active, error: activeErr } = await db
+    .from("assessments")
+    .select("id, token, expires_at")
+    .eq("application_id", applicationId)
+    .in("status", ["invited", "started"])
+    .gt("expires_at", nowIso)
+    .order("invited_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeErr) return { ok: false, status: 500, error: activeErr.message };
+  if (!active) {
+    return {
+      ok: false,
+      status: 409,
+      error: "No live, unsubmitted assessment to remind about",
+    };
+  }
+
+  const link = `${baseUrl.replace(/\/$/, "")}/assessment/${active.token}`;
+  const expiryDate = new Date(active.expires_at).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const sent = await sendEmail(
+    app.email,
+    emailReminder({
+      first_name: firstNameOf(app.full_name),
+      assessment_link: link,
+      expiry_date: expiryDate,
+    }),
+  );
+  if (!sent.ok) {
+    return { ok: false, status: 502, error: `Email not sent: ${sent.error}` };
+  }
+
+  // No status change and no new column: a reminder reuses the live invite as-is.
+  // The durable "already reminded" signal is the admin_actions log the route
+  // writes (action: "remind"), which a future pass can read to exclude repeats.
+  return {
+    ok: true,
+    detail: `reminded (expires ${expiryDate})${sent.mocked ? " (email mocked)" : ""}`,
   };
 }
 

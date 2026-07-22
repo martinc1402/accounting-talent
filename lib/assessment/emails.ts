@@ -142,6 +142,32 @@ Free for accounting professionals. Always.`,
   };
 }
 
+// ---- Reminder: nudge a non-submitter whose link is still live ------------
+// A short, low-pressure follow-up to Email A. Reuses the applicant's EXISTING
+// assessment token (never mints a new invite), names their real expiry date,
+// and gives an explicit easy out so it doesn't read as nagging.
+export function emailReminder(vars: {
+  first_name: string;
+  assessment_link: string;
+  expiry_date: string;
+}): Composed {
+  return {
+    subject: "A quick nudge — your AccountingTalent.in assessment link is still open",
+    text: `Hi ${vars.first_name},
+
+Just a friendly reminder: your AccountingTalent.in skills assessment is still waiting, and your link closes on ${vars.expiry_date}. If you'd still like your profile in the verified pool that US firms will hire from, this is the one step that gets you there.
+
+It's short — one written question about a real accounting problem you've solved, plus 10 multiple-choice questions on US accounting and tax. Most people finish in 20–30 minutes, and there's no timer.
+
+Your assessment link: ${vars.assessment_link}
+
+If the timing doesn't work or you've decided not to continue, no problem at all — you can ignore this. If you've hit a snag, just reply and a person will help.
+
+— AccountingTalent.in
+Free for accounting professionals. Always.`,
+  };
+}
+
 // ---- Email B: pass / verified --------------------------------------------
 export function emailPass(vars: {
   first_name: string;
