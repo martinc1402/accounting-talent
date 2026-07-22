@@ -38,10 +38,20 @@ import type {
 
 // --- shared bits -----------------------------------------------------------
 
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+function SectionCard({
+  title,
+  id,
+  children,
+}: {
+  title: string;
+  id?: string;
+  children: ReactNode;
+}) {
   return (
     <Card>
-      <h2 className="font-display text-[1.35rem] font-medium text-ink">{title}</h2>
+      <h2 id={id} className="scroll-mt-24 font-display text-[1.35rem] font-medium text-ink">
+        {title}
+      </h2>
       <div className="mt-4">{children}</div>
     </Card>
   );
@@ -72,16 +82,29 @@ function Hero({ p }: { p: CandidateProfileData }) {
         {/* Portrait / initials */}
         <div className="relative aspect-[3/2] bg-navy-deep sm:aspect-auto sm:w-56 sm:flex-none">
           {p.photo ? (
-            <Image
-              src={p.photo.src}
-              alt={p.photo.alt}
-              fill
-              sizes="(max-width: 640px) 100vw, 224px"
-              className="object-cover object-[center_20%]"
-            />
+            <>
+              <Image
+                src={p.photo.src}
+                alt={p.photo.alt}
+                fill
+                priority
+                sizes="(max-width: 640px) 100vw, 224px"
+                style={{ objectPosition: p.photo.focal ?? "center 22%" }}
+                className="object-cover"
+              />
+              {/* Navy-tinted inset scrim blends the photo edge into the hero panel
+                  (bottom seam on mobile, right seam on desktop) so it reads as one
+                  surface, not a pasted-in card. A tinted shadow, not a gradient. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 shadow-[inset_0_-44px_48px_-30px_rgba(13,22,66,0.9)] sm:shadow-[inset_-44px_0_48px_-30px_rgba(13,22,66,0.9)]"
+              />
+            </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="font-display text-[3.5rem] text-paper/50">{p.initials}</span>
+              <span className="font-display text-[3.75rem] leading-none text-paper/70">
+                {p.initials}
+              </span>
             </div>
           )}
           {/* Logo tile straddling the seam: bottom edge on mobile, right edge on desktop */}
@@ -92,15 +115,15 @@ function Hero({ p }: { p: CandidateProfileData }) {
 
         {/* Info. Extra left padding on desktop clears the seam tile. */}
         <div className="min-w-0 flex-1 px-6 pt-12 pb-7 sm:py-8 sm:pr-8 sm:pl-12 lg:py-9 lg:pr-9 lg:pl-14">
-          <p className="text-caption font-semibold tracking-wide text-paper/50 uppercase">
+          <p className="text-caption font-semibold tracking-wide text-paper/70 uppercase">
             {p.eyebrow}
           </p>
           <h1 className="mt-2 display display-figure text-paper">{p.name}</h1>
-          <p className="mt-1.5 font-display text-lede leading-snug text-paper/85">{p.role}</p>
+          <p className="mt-1.5 font-display text-lede leading-snug text-paper/90">{p.role}</p>
 
           {p.qualLine && (
-            <p className="mt-4 flex items-start gap-2.5 text-small text-paper/80">
-              <GraduationCap size={16} weight="light" className="mt-0.5 shrink-0 text-paper/55" />
+            <p className="mt-4 flex items-start gap-2.5 text-small text-paper/85">
+              <GraduationCap size={16} weight="light" className="mt-0.5 shrink-0 text-paper/70" />
               {p.qualLine}
             </p>
           )}
@@ -119,22 +142,47 @@ function Hero({ p }: { p: CandidateProfileData }) {
             </div>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-small text-paper/80">
+          {/* Anchors to the full verification section further down the page. */}
+          <a
+            href="#verified"
+            className="mt-3 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+          >
+            What we checked
+            <CaretRight size={11} weight="bold" aria-hidden className="shrink-0" />
+          </a>
+
+          {p.evidence && p.evidence.length > 0 && (
+            <dl className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
+              {p.evidence.map((e) => (
+                <div
+                  key={e.label}
+                  className="border-l border-paper/20 pl-4 first:border-l-0 first:pl-0"
+                >
+                  <dd className="font-display text-[1.55rem] leading-none text-paper">
+                    {e.value}
+                  </dd>
+                  <dt className="mt-1.5 text-caption text-paper/75">{e.label}</dt>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-small text-paper/85">
             {p.location && (
               <span className="inline-flex items-center gap-2">
-                <MapPin size={15} weight="light" className="shrink-0 text-paper/55" />
+                <MapPin size={15} weight="light" className="shrink-0 text-paper/70" />
                 {p.location}
               </span>
             )}
             {p.overlap && (
               <span className="inline-flex items-center gap-2">
-                <Clock size={15} weight="light" className="shrink-0 text-paper/55" />
+                <Clock size={15} weight="light" className="shrink-0 text-paper/70" />
                 {p.overlap}
               </span>
             )}
             {p.availability && (
               <span className="inline-flex items-center gap-2">
-                <CalendarBlank size={15} weight="light" className="shrink-0 text-paper/55" />
+                <CalendarBlank size={15} weight="light" className="shrink-0 text-paper/70" />
                 {p.availability}
               </span>
             )}
@@ -143,14 +191,14 @@ function Hero({ p }: { p: CandidateProfileData }) {
           <div className="mt-6 flex flex-wrap items-end justify-between gap-5 border-t border-paper/15 pt-5">
             {p.compensation && (
               <div>
-                <p className="text-caption font-semibold tracking-wide text-paper/50 uppercase">
+                <p className="text-caption font-semibold tracking-wide text-paper/70 uppercase">
                   Expected compensation
                 </p>
                 <p className="mt-1.5 font-display text-[clamp(1.6rem,1.4rem+1vw,2rem)] leading-none tracking-[-0.01em] whitespace-nowrap text-paper">
                   {p.compensation.value}
                 </p>
                 {p.compensation.unit && (
-                  <p className="mt-1 text-caption text-paper/60">{p.compensation.unit}</p>
+                  <p className="mt-1 text-caption text-paper/75">{p.compensation.unit}</p>
                 )}
               </div>
             )}
@@ -182,9 +230,10 @@ function Capabilities({ p }: { p: CandidateProfileData }) {
 function VerifiedChecks({ items }: { items: ProfileVerification[] }) {
   if (!items.length) return null;
   return (
-    <SectionCard title="Verified by AccountingTalent">
-      <p className="-mt-2 mb-2 text-caption text-muted">
-        Only completed checks are shown.
+    <SectionCard title="Verified by AccountingTalent" id="verified">
+      <p className="-mt-2 mb-3 max-w-[62ch] text-caption text-muted">
+        Independently verified by AccountingTalent. Everything else on this page is
+        provided by the candidate. Only completed checks are shown.
       </p>
       <div className="divide-y divide-line">
         {items.map((v) => (
@@ -199,6 +248,7 @@ function VerifiedChecks({ items }: { items: ProfileVerification[] }) {
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                 <span className="text-small font-semibold text-ink">{v.label}</span>
                 <VerifiedBadge>{v.status}</VerifiedBadge>
+                {v.date && <span className="text-caption text-subtle">{v.date}</span>}
               </div>
               <p className="mt-0.5 text-caption text-muted">{v.detail}</p>
             </div>
@@ -286,24 +336,82 @@ function EducationCredentials({ items }: { items: ProfileEducationEntry[] }) {
 function DecisionPanel({ p }: { p: CandidateProfileData }) {
   return (
     <div className="rounded-card bg-navy p-6 text-paper shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
-      <p className="text-caption font-semibold tracking-wide text-paper/50 uppercase">
+      <p className="text-caption font-semibold tracking-wide text-paper/70 uppercase">
         Decision summary
       </p>
-      <dl className="mt-3 divide-y divide-paper/12">
+      <dl className="mt-3 divide-y divide-paper/15">
         {p.decision.map((d) => (
-          <div key={d.label} className="flex items-baseline justify-between gap-4 py-2.5">
-            <dt className="text-caption text-paper/60">{d.label}</dt>
-            <dd className="max-w-[60%] text-right text-small font-medium text-paper">{d.value}</dd>
+          <div key={d.label} className="flex items-baseline justify-between gap-4 py-3">
+            <dt className="text-caption tracking-wide text-paper/65 uppercase">{d.label}</dt>
+            <dd className="max-w-[62%] text-right text-small font-semibold text-paper">
+              {d.value}
+            </dd>
           </div>
         ))}
       </dl>
       <div className="mt-5">
         <CandidateActions candidateId={p.id} candidateName={p.name} variant="panel" />
       </div>
-      <p className="mt-4 text-fine text-paper/50">
+      <a
+        href="#how-it-works"
+        className="mt-3.5 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+      >
+        What happens next?
+        <CaretRight size={11} weight="bold" aria-hidden />
+      </a>
+      <p className="mt-4 text-fine text-paper/70">
         Contact details are shared only after an introduction is accepted.
       </p>
     </div>
+  );
+}
+
+// --- process ---------------------------------------------------------------
+
+function HowItWorks({ p }: { p: CandidateProfileData }) {
+  const steps = [
+    {
+      title: "Request an introduction",
+      body: "Tell us about the role. Your firm's details are shared with the candidate.",
+    },
+    {
+      title: "We confirm availability and fit",
+      body: "AccountingTalent checks interest and timing before anything is shared.",
+    },
+    {
+      title: "Contact details are shared",
+      body: "Once the candidate accepts, you receive their details and take it from there.",
+    },
+  ];
+  return (
+    <section id="how-it-works" className="mt-6 scroll-mt-24">
+      <Card>
+        <h2 className="font-display text-[1.35rem] font-medium text-ink">
+          How introductions work
+        </h2>
+        <ol className="mt-5 grid gap-6 sm:grid-cols-3">
+          {steps.map((s, i) => (
+            <li key={s.title} className="flex gap-3.5 sm:flex-col sm:gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-navy font-display text-small text-paper">
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-small font-semibold text-ink">{s.title}</h3>
+                <p className="mt-1 max-w-[34ch] text-caption leading-relaxed text-muted">
+                  {s.body}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
+          <CandidateActions candidateId={p.id} candidateName={p.name} variant="cta" />
+          <p className="text-caption text-subtle">
+            No cost to introduce. Contact details stay private until acceptance.
+          </p>
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -347,11 +455,11 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
 
             {p.writingSample && (
               <SectionCard title="In their own words">
-                <blockquote className="border-l-2 border-line pl-5">
-                  <p className="max-w-[64ch] text-small leading-relaxed text-ink">
+                <blockquote className="border-l-2 border-navy/25 pl-5 sm:pl-6">
+                  <p className="max-w-[60ch] text-body leading-relaxed text-ink">
                     {p.writingSample.text}
                   </p>
-                  <footer className="mt-3 text-caption text-subtle">
+                  <footer className="mt-4 text-caption text-subtle">
                     {p.writingSample.attribution}
                   </footer>
                 </blockquote>
@@ -401,10 +509,12 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
             <DecisionPanel p={p} />
           </aside>
         </div>
+
+        <HowItWorks p={p} />
       </main>
 
       {/* Mobile sticky action bar */}
-      <div className="sticky bottom-0 z-20 border-t border-navy-deep bg-navy/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky bottom-0 z-20 border-t border-navy-deep bg-navy/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
         <div className="mx-auto max-w-[1160px]">
           <CandidateActions candidateId={p.id} candidateName={p.name} variant="mobile" />
         </div>

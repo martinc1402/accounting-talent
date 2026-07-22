@@ -45,7 +45,14 @@ const CAPABILITY_META: Record<RoleCategory, { title: string; subtitle: string }>
   other: { title: "Relevant experience", subtitle: "" },
 };
 
-export type ProfileVerification = { label: string; status: string; detail: string };
+export type ProfileStat = { value: string; label: string };
+export type ProfileVerification = {
+  label: string;
+  status: string;
+  detail: string;
+  // Independently-verified date, surfaced only when the gating timestamp exists.
+  date?: string;
+};
 export type ProfileHistoryEntry = {
   title: string;
   meta: string;
@@ -69,9 +76,11 @@ export type CandidateProfile = {
   name: string;
   initials: string;
   role: string;
-  photo?: { src: string; alt: string };
+  photo?: { src: string; alt: string; focal?: string };
   qualLine: string;
   heroVerifications: string[];
+  // Scannable, candidate-supplied proof points (e.g. "300+" / "US returns / season").
+  evidence?: ProfileStat[];
   location?: string;
   overlap?: string;
   availability?: string;
@@ -108,6 +117,8 @@ type SoftwareJson = { name?: string; level?: string; years?: number };
 export type ProfileRow = ApplicationRow & {
   start_date?: string | null;
   professional_summary?: string | null;
+  // Curated proof points, same jsonb pattern as the other 0008 columns.
+  highlights?: { value?: string; label?: string }[] | null;
   employment_history?: EmploymentJson[] | null;
   education?: EducationJson[] | null;
   employment_type?: string | null;
@@ -116,6 +127,10 @@ export type ProfileRow = ApplicationRow & {
   software_proficiency?: SoftwareJson[] | null;
   qualification_verified_at?: string | null;
   references_checked_at?: string | null;
+  // 0010 polish fields.
+  experience_focus?: string | null; // e.g. "US tax" -> "4 years' US tax experience"
+  english_assessed_at?: string | null;
+  photo_focal?: string | null; // CSS object-position, e.g. "center 20%"
 };
 
 /** The assessment payload for a profile: score is still gated by SHOW_ASSESSMENT;
@@ -125,6 +140,36 @@ export type ProfileAssessment = {
   score: number | null;
   writingSample?: string | null;
 };
+
+/** A verification timestamp formatted as an understated "Mon YYYY", or undefined. */
+function verifiedDate(ts?: string | null): string | undefined {
+  const t = (ts ?? "").trim();
+  if (!t) return undefined;
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+/** The hero experience line, with an optional role-specific focus injected.
+ *  "4 years' experience" + focus "US tax" -> "4 years' US tax experience".
+ *  yearsPhrase (shared with the card) stays generic; the focus is profile-only. */
+function experiencePhrase(row: ProfileRow): string | null {
+  const base = yearsPhrase(row);
+  if (!base) return null;
+  const focus = (row.experience_focus ?? "").trim();
+  if (!focus) return base;
+  return base.includes("experience")
+    ? base.replace("experience", `${focus} experience`)
+    : `${base}, ${focus}`;
+}
+
+/** Coerce the loosely-typed highlights column into proof-point stats. */
+function evidence(row: ProfileRow): ProfileStat[] | undefined {
+  const out = (row.highlights ?? [])
+    .filter((h) => h?.value?.trim() && h?.label?.trim())
+    .map((h) => ({ value: (h.value as string).trim(), label: (h.label as string).trim() }));
+  return out.length ? out : undefined;
+}
 
 function initialsOf(name: string): string {
   return name
@@ -175,11 +220,21 @@ function software(row: ProfileRow): ProfileSoftware[] {
 function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): ProfileVerification[] {
   const out: ProfileVerification[] = [];
   if (row.identity_verified_at) {
-    out.push({ label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified." });
+    out.push({
+      label: "Identity verified",
+      status: "Verified",
+      detail: "Government-issued photo ID verified.",
+      date: verifiedDate(row.identity_verified_at),
+    });
   }
   const eng = (row.english_level ?? "").trim();
   if (eng) {
-    out.push({ label: "English communication", status: eng, detail: "Assessed for written and spoken business English." });
+    out.push({
+      label: "English communication",
+      status: eng,
+      detail: "Assessed for written and spoken business English.",
+      date: verifiedDate(row.english_assessed_at),
+    });
   }
   // Assessment row withheld until the test is trusted (SHOW_ASSESSMENT).
   if (SHOW_ASSESSMENT && assessment) {
@@ -190,10 +245,20 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
     });
   }
   if (row.qualification_verified_at) {
-    out.push({ label: "Qualification checked", status: "Confirmed", detail: "Confirmed with the issuing institution." });
+    out.push({
+      label: "Qualification checked",
+      status: "Confirmed",
+      detail: "Confirmed with the issuing institution.",
+      date: verifiedDate(row.qualification_verified_at),
+    });
   }
   if (row.references_checked_at) {
-    out.push({ label: "Employment references", status: "Checked", detail: "Prior-employer references contacted." });
+    out.push({
+      label: "Employment references",
+      status: "Checked",
+      detail: "Prior-employer references contacted.",
+      date: verifiedDate(row.references_checked_at),
+    });
   }
   return out;
 }
@@ -260,7 +325,7 @@ export function applicationToProfile(
   if (overlap) decision.push({ label: "US overlap", value: overlap });
   if (employmentType) decision.push({ label: "Preference", value: employmentType });
 
-  const qualLine = [row.qualification?.trim(), yearsPhrase(row)].filter(Boolean).join(" · ");
+  const qualLine = [row.qualification?.trim(), experiencePhrase(row)].filter(Boolean).join(" · ");
   const ws = (assessment?.writingSample ?? "").trim();
 
   return {
@@ -269,9 +334,16 @@ export function applicationToProfile(
     name: row.full_name,
     initials: initialsOf(row.full_name),
     role: row.role,
-    photo: row.photo_url ? { src: row.photo_url, alt: `${row.full_name} portrait` } : undefined,
+    photo: row.photo_url
+      ? {
+          src: row.photo_url,
+          alt: `${row.full_name}, ${row.role}`,
+          focal: (row.photo_focal ?? "").trim() || undefined,
+        }
+      : undefined,
     qualLine,
     heroVerifications: heroVerifications(row, assessment),
+    evidence: evidence(row),
     location,
     overlap,
     availability,
@@ -300,17 +372,27 @@ export const sampleProfiles: CandidateProfile[] = [
   {
     id: "sample-arjun",
     eyebrow: "Verified candidate",
-    name: "Arjun S.",
-    initials: "AS",
+    name: "Priya S.",
+    initials: "PS",
     role: "US Tax Preparer",
-    qualLine: "CA Intermediate, India · 4 years' experience",
+    photo: {
+      src: "/images/candidate-headshot.jpg",
+      alt: "Priya S., US Tax Preparer",
+      focal: "center 20%",
+    },
+    qualLine: "CA Intermediate, India · 4 years' US tax experience",
     heroVerifications: ["Identity verified", "English: Advanced"],
+    evidence: [
+      { value: "300+", label: "US returns / season" },
+      { value: "40+", label: "clients managed" },
+      { value: "~30%", label: "fewer reviewer notes" },
+    ],
     location: "Ahmedabad, India",
     overlap: "4 hours ET overlap",
     availability: "Available within 30 days",
     compensation: { value: "$900‑$1,200", unit: "USD / month" },
     summary:
-      "Arjun is a US tax preparer with four busy seasons preparing federal and multi-state returns for an outsourced US CPA firm. He owns a book of 40+ small-business and individual clients end to end in Drake and Lacerte, from workpaper prep through review-ready filing, and is strongest on 1040, 1120-S and 1065 engagements.",
+      "Priya is a US tax preparer with four busy seasons preparing federal and multi-state returns for an outsourced US CPA firm. She owns a book of 40+ small-business and individual clients end to end in Drake and Lacerte, from workpaper prep through review-ready filing, and is strongest on 1040, 1120-S and 1065 engagements.",
     writingSample: {
       text: "A client came to us mid-season with two years of unfiled 1120-S returns and no clean workpapers. I rebuilt the trial balances from the bank feeds in QuickBooks, reconciled the shareholder basis, and got both years filed before the extended deadline. The owner had assumed the penalties were unavoidable; we abated most of them with a reasonable-cause letter.",
       attribution: "Written during the AccountingTalent skills assessment · unedited",
@@ -327,10 +409,10 @@ export const sampleProfiles: CandidateProfile[] = [
       { name: "Lacerte", meta: "Intermediate · 2 yrs" },
     ],
     verifications: [
-      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified." },
-      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English." },
-      { label: "Qualification checked", status: "Confirmed", detail: "CA Intermediate confirmed with the issuing institution." },
-      { label: "Employment references", status: "Checked", detail: "Prior-employer references contacted." },
+      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified.", date: "Mar 2026" },
+      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English.", date: "Feb 2026" },
+      { label: "Qualification checked", status: "Confirmed", detail: "CA Intermediate confirmed with the issuing institution.", date: "Feb 2026" },
+      { label: "Employment references", status: "Checked", detail: "Prior-employer references contacted.", date: "Mar 2026" },
     ],
     history: [
       {
@@ -389,6 +471,11 @@ export const sampleProfiles: CandidateProfile[] = [
     role: "Bookkeeper",
     qualLine: "B.Com, Philippines · 3 years' experience",
     heroVerifications: ["Identity verified", "English: Advanced"],
+    evidence: [
+      { value: "12", label: "SMB clients closed" },
+      { value: "30+", label: "accounts reconciled / mo" },
+      { value: "3", label: "years remote US" },
+    ],
     location: "Manila, Philippines",
     overlap: "6 hours ET overlap",
     availability: "Available immediately",
@@ -411,9 +498,9 @@ export const sampleProfiles: CandidateProfile[] = [
       { name: "Bill.com" },
     ],
     verifications: [
-      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified." },
-      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English." },
-      { label: "Qualification checked", status: "Confirmed", detail: "B.Com (Accountancy) confirmed with the issuing institution." },
+      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified.", date: "Apr 2026" },
+      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English.", date: "Mar 2026" },
+      { label: "Qualification checked", status: "Confirmed", detail: "B.Com (Accountancy) confirmed with the issuing institution.", date: "Mar 2026" },
     ],
     history: [
       {

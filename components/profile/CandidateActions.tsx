@@ -37,7 +37,7 @@ export function CandidateActions({
 }: {
   candidateId: string;
   candidateName: string;
-  variant: "hero" | "panel" | "mobile";
+  variant: "hero" | "panel" | "mobile" | "cta";
 }) {
   const [saved, setSaved] = useState(false);
   const [open, setOpen] = useState(false);
@@ -83,6 +83,17 @@ export function CandidateActions({
     </button>
   );
 
+  // Navy-filled request button for light backgrounds (the closing process CTA).
+  const requestBtnNavy = (extra: string) => (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className={`inline-flex items-center justify-center gap-2 rounded-card bg-navy px-6 py-3 text-small font-semibold text-paper transition hover:bg-navy-deep active:translate-y-px ${FOCUS_NAVY} ${extra}`}
+    >
+      Request introduction
+    </button>
+  );
+
   const saveBtn = (extra: string) => (
     <button
       type="button"
@@ -118,6 +129,8 @@ export function CandidateActions({
           {saveBtn("w-full")}
         </div>
       )}
+
+      {variant === "cta" && requestBtnNavy("")}
 
       {variant === "mobile" && (
         <div className="flex gap-2.5">
