@@ -322,6 +322,77 @@ export async function submitEmployerLead(
   return { status: "success" };
 }
 
+/*
+  A firm asking to be introduced to a verified candidate, from the profile page's
+  "Request introduction" modal. Same discipline as the other Server Functions
+  (guards -> rate limit -> validate -> insert), writing to introduction_requests.
+  There is no employer auth yet, so it records the candidate and an optional
+  message; the candidate's contact details are never returned here (they are
+  released only when an introduction is accepted, out of band). Reachable by
+  direct POST like every Server Function, so it re-validates and never trusts the
+  client. The application_id FK guarantees the candidate exists.
+*/
+export type IntroState = { status: "idle" | "success" | "error"; message?: string };
+
+const applicationUuid = z.uuid();
+
+export async function requestIntroduction(
+  applicationId: string,
+  message: string,
+  guard: Guard = {},
+): Promise<IntroState> {
+  const ip = await clientIp();
+
+  // The modal is a single optional field, so the floor is low (1.2s). Guards
+  // return the normal success shape without persisting.
+  if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 1200 })) {
+    logDrop("introduction", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("introduction", ip, {
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("introduction", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) {
+    return {
+      status: "error",
+      message:
+        "We couldn't identify that candidate. Please reopen the profile and try again.",
+    };
+  }
+  const msg = String(message ?? "").trim().slice(0, 4000) || null;
+
+  if (!supabaseConfigured || !supabase) {
+    console.info("[introduction] Supabase not configured, request not persisted.", {
+      id,
+      msg,
+    });
+    return { status: "success" };
+  }
+
+  const { error } = await supabase
+    .from("introduction_requests")
+    .insert({ application_id: id, message: msg, status: "new" });
+
+  if (error) {
+    console.error("[introduction] insert failed", error);
+    return {
+      status: "error",
+      message:
+        "We couldn't send your request just now. Please try again in a moment, or email contact@accountingtalent.in.",
+    };
+  }
+
+  return { status: "success" };
+}
+
 export type WaitlistState = {
   status: "idle" | "success" | "error";
   message?: string;

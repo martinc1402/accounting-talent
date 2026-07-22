@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BookmarkSimple,
@@ -98,8 +99,12 @@ export function CandidateSearchCard({
 }) {
   const c = candidate;
   const [saved, setSaved] = useState(false);
+  const router = useRouter();
 
-  const view = () => onViewProfile?.(c.id);
+  // Default destination is the profile page; an explicit onViewProfile overrides
+  // it (e.g. a future search grid that opens a drawer instead of navigating).
+  const view = () =>
+    onViewProfile ? onViewProfile(c.id) : router.push(`/candidates/${c.id}`);
   const toggleSave = () => {
     const next = !saved;
     setSaved(next);

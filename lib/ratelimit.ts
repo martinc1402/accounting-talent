@@ -30,7 +30,8 @@ export async function isRateLimited(
     | "concierge"
     | "assessment_submit"
     | "admin"
-    | "employer_lead",
+    | "employer_lead"
+    | "introduction",
   ip: string,
   { limit, windowMs }: { limit: number; windowMs: number },
 ): Promise<{ limited: boolean; ipHash: string }> {

@@ -75,9 +75,11 @@ export type ApplicationRow = {
 /** The assessment payload,only consumed while SHOW_ASSESSMENT is true. */
 export type CandidateAssessment = { name: string; score: number | null };
 
-type RoleCategory = "tax" | "bookkeeper" | "auditor" | "controller" | "other";
+// Exported so the profile view-model (lib/profile/candidate.ts) reuses the same
+// role classification, evidence labels, and formatting rather than drifting.
+export type RoleCategory = "tax" | "bookkeeper" | "auditor" | "controller" | "other";
 
-const EVIDENCE_LABEL: Record<RoleCategory, string> = {
+export const EVIDENCE_LABEL: Record<RoleCategory, string> = {
   tax: "US returns prepared",
   bookkeeper: "Core bookkeeping responsibilities",
   auditor: "Audit experience",
@@ -85,7 +87,7 @@ const EVIDENCE_LABEL: Record<RoleCategory, string> = {
   other: "Relevant experience",
 };
 
-function roleCategory(role: string): RoleCategory {
+export function roleCategory(role: string): RoleCategory {
   const r = role.toLowerCase();
   if (/tax|1040|1120|1065|preparer|return/.test(r)) return "tax";
   if (/book\s?keep|bookkeeper/.test(r)) return "bookkeeper";
@@ -94,7 +96,7 @@ function roleCategory(role: string): RoleCategory {
   return "other";
 }
 
-function yearsPhrase(row: ApplicationRow): string | null {
+export function yearsPhrase(row: ApplicationRow): string | null {
   if (row.experience_years_num != null) {
     const n = row.experience_years_num;
     return `${n} ${n === 1 ? "year" : "years"}' experience`;
@@ -105,7 +107,7 @@ function yearsPhrase(row: ApplicationRow): string | null {
   return /year|yr/i.test(t) ? t : `${t} years' experience`;
 }
 
-function overlapPhrase(row: ApplicationRow): string | null {
+export function overlapPhrase(row: ApplicationRow): string | null {
   if (row.et_overlap_hours != null) {
     return row.et_overlap_hours >= 8
       ? "Full US shift available"
@@ -114,7 +116,7 @@ function overlapPhrase(row: ApplicationRow): string | null {
   return (row.working_hours ?? "").trim() || null;
 }
 
-function compensation(row: ApplicationRow): Candidate["compensation"] {
+export function compensation(row: ApplicationRow): Candidate["compensation"] {
   const { salary_min_usd: min, salary_max_usd: max } = row;
   if (min != null && max != null) {
     // Non-breaking hyphen (‑) so the range never wraps mid-figure, matching
