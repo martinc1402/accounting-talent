@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { getViewer } from "@/lib/authz/viewer";
+import { getLocalTestEmployer } from "@/lib/authz/testEmployer";
 import { EmployerPanel } from "./EmployerPanel";
+import { AdminPlanToggle } from "./AdminPlanToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,9 @@ export default async function EmployerPage() {
       }
     : null;
 
+  // Admin-only local dev control for the test employer's plan.
+  const testEmployer = viewer.isAdmin ? await getLocalTestEmployer() : null;
+
   return (
     <div className="flex min-h-[100dvh] flex-col bg-mist">
       <header className="flex items-center justify-between border-b border-line bg-white">
@@ -37,6 +42,14 @@ export default async function EmployerPage() {
       </header>
       <main className="mx-auto w-full max-w-[520px] flex-1 px-5 py-12">
         <EmployerPanel account={account} />
+        {testEmployer && (
+          <AdminPlanToggle
+            accountId={testEmployer.accountId}
+            name={testEmployer.name}
+            email={testEmployer.email}
+            plan={testEmployer.plan}
+          />
+        )}
       </main>
     </div>
   );
