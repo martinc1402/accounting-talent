@@ -16,10 +16,22 @@ import { Card } from "@/components/ui/Card";
 import { CandidateActions } from "@/components/profile/CandidateActions";
 import type {
   CandidateProfile as CandidateProfileData,
+  ProfileAccess,
   ProfileEducationEntry,
   ProfileHistoryEntry,
   ProfileVerification,
 } from "@/lib/profile/candidate";
+
+// Save is a verified-employer capability; hidden for anon/unverified viewers.
+function canSaveOf(access?: ProfileAccess): boolean {
+  if (!access) return true;
+  return (
+    access.level === "free_verified_employer" ||
+    access.level === "paid_verified_employer" ||
+    access.level === "accepted_introduction" ||
+    access.level === "admin"
+  );
+}
 
 /*
   The full candidate profile page, ported from the CandidateProfile design.
@@ -89,6 +101,9 @@ function Hero({ p }: { p: CandidateProfileData }) {
                 fill
                 priority
                 sizes="(max-width: 640px) 100vw, 224px"
+                // The authorizing photo endpoint returns a per-viewer, short-lived
+                // redirect; don't run it through the image optimizer/cache.
+                unoptimized={p.photo.src.startsWith("/api/")}
                 style={{ objectPosition: p.photo.focal ?? "center 22%" }}
                 className="object-cover"
               />
@@ -189,7 +204,7 @@ function Hero({ p }: { p: CandidateProfileData }) {
           </div>
 
           <div className="mt-6 flex flex-wrap items-end justify-between gap-5 border-t border-paper/15 pt-5">
-            {p.compensation && (
+            {p.compensation ? (
               <div>
                 <p className="text-caption font-semibold tracking-wide text-paper/70 uppercase">
                   Expected compensation
@@ -201,8 +216,23 @@ function Hero({ p }: { p: CandidateProfileData }) {
                   <p className="mt-1 text-caption text-paper/75">{p.compensation.unit}</p>
                 )}
               </div>
-            )}
-            <CandidateActions candidateId={p.id} candidateName={p.name} variant="hero" />
+            ) : p.access?.compensationLocked ? (
+              <div className="max-w-[16rem]">
+                <p className="text-caption font-semibold tracking-wide text-paper/70 uppercase">
+                  Expected compensation
+                </p>
+                <p className="mt-1.5 text-small text-paper/85">
+                  Create a free employer account to view expected compensation.
+                </p>
+              </div>
+            ) : null}
+            <CandidateActions
+              candidateId={p.id}
+              candidateName={p.name}
+              variant="hero"
+              cta={p.access?.cta}
+              canSave={canSaveOf(p.access)}
+            />
           </div>
         </div>
       </div>
@@ -331,6 +361,51 @@ function EducationCredentials({ items }: { items: ProfileEducationEntry[] }) {
   );
 }
 
+// --- paid-tier tools (entitlement-gated; honest empty states) --------------
+
+function PaidFeatures({ p }: { p: CandidateProfileData }) {
+  const f = p.access?.paidFeatures;
+  if (!f || (!f.assessmentBreakdown && !f.referenceSummaries && !f.resumeDownload)) return null;
+  const rows: { on: boolean; label: string; note: string }[] = [
+    {
+      on: f.assessmentBreakdown,
+      label: "Detailed assessment breakdown",
+      note: "Section-by-section scoring — added once this candidate's assessment is reviewed.",
+    },
+    {
+      on: f.referenceSummaries,
+      label: "Redacted reference summaries",
+      note: "Referee feedback with identities removed — available on request.",
+    },
+    {
+      on: f.resumeDownload,
+      label: "AccountingTalent résumé (PDF)",
+      note: "Branded, anonymised résumé — generated on request.",
+    },
+  ].filter((r) => r.on);
+  return (
+    <SectionCard title="Plan tools">
+      <p className="-mt-2 mb-3 text-caption text-muted">
+        Included with your plan. Identity and contact remain gated until an introduction is
+        accepted.
+      </p>
+      <div className="divide-y divide-line">
+        {rows.map((r) => (
+          <div key={r.label} className="flex flex-wrap items-center justify-between gap-3 py-3.5">
+            <div className="min-w-0">
+              <div className="text-small font-semibold text-ink">{r.label}</div>
+              <div className="mt-0.5 text-caption text-muted">{r.note}</div>
+            </div>
+            <span className="rounded-full border border-line px-2.5 py-0.5 text-caption font-semibold text-subtle">
+              On request
+            </span>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
 // --- decision panel --------------------------------------------------------
 
 function DecisionPanel({ p }: { p: CandidateProfileData }) {
@@ -350,7 +425,13 @@ function DecisionPanel({ p }: { p: CandidateProfileData }) {
         ))}
       </dl>
       <div className="mt-5">
-        <CandidateActions candidateId={p.id} candidateName={p.name} variant="panel" />
+        <CandidateActions
+          candidateId={p.id}
+          candidateName={p.name}
+          variant="panel"
+          cta={p.access?.cta}
+          canSave={canSaveOf(p.access)}
+        />
       </div>
       <a
         href="#how-it-works"
@@ -405,12 +486,127 @@ function HowItWorks({ p }: { p: CandidateProfileData }) {
           ))}
         </ol>
         <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line pt-6">
-          <CandidateActions candidateId={p.id} candidateName={p.name} variant="cta" />
+          <CandidateActions
+            candidateId={p.id}
+            candidateName={p.name}
+            variant="cta"
+            cta={p.access?.cta}
+            canSave={false}
+          />
           <p className="text-caption text-subtle">
             No cost to introduce. Contact details stay private until acceptance.
           </p>
         </div>
       </Card>
+    </section>
+  );
+}
+
+// --- access UI (preview banner, admin switcher, contact reveal) ------------
+
+const PREVIEW_LEVELS: { level: string; label: string }[] = [
+  { level: "anonymous", label: "Anonymous" },
+  { level: "unverified_employer", label: "Unverified" },
+  { level: "free_verified_employer", label: "Free verified" },
+  { level: "paid_verified_employer", label: "Paid verified" },
+  { level: "accepted_introduction", label: "Accepted" },
+];
+
+function levelLabel(level: string): string {
+  return PREVIEW_LEVELS.find((l) => l.level === level)?.label ?? "Admin";
+}
+
+/** Admin-only control that re-renders the profile as another level. Plain anchor
+ *  links (GET ?preview=…) — presentation only; it never impersonates a user or
+ *  grants that viewer's actions (mutations stay disabled in preview). */
+function AdminPreviewSwitcher({ p }: { p: CandidateProfileData }) {
+  const access = p.access;
+  if (!access?.adminControls) return null;
+  const activeLevel = access.isPreview ? access.level : "admin";
+  const linkBase =
+    "rounded-full px-3 py-1 text-caption font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2";
+  return (
+    <div className="mb-4 rounded-card border border-line bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-caption font-semibold tracking-wide text-subtle uppercase">
+          Admin preview
+        </span>
+        {PREVIEW_LEVELS.map((l) => (
+          <Link
+            key={l.level}
+            href={`?preview=${l.level}`}
+            className={`${linkBase} ${
+              activeLevel === l.level ? "bg-navy text-paper" : "bg-mist text-muted hover:bg-line"
+            }`}
+          >
+            {l.label}
+          </Link>
+        ))}
+        <Link
+          href="?"
+          className={`${linkBase} ${
+            activeLevel === "admin" ? "bg-navy text-paper" : "bg-mist text-muted hover:bg-line"
+          }`}
+        >
+          Admin (full)
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function PreviewBanner({ p }: { p: CandidateProfileData }) {
+  if (!p.access?.isPreview) return null;
+  return (
+    <div
+      role="status"
+      className="mb-4 rounded-card border border-navy/20 bg-navy/[0.04] px-4 py-3 text-caption text-navy"
+    >
+      <span className="font-semibold">Preview mode</span> — viewing as{" "}
+      <span className="font-semibold">{levelLabel(p.access.level)}</span>. This changes only what
+      is shown; introduction actions are disabled.
+    </div>
+  );
+}
+
+/** Identity + contact, rendered only when the projection included p.contact
+ *  (accepted-introduction or admin). Server decides; this just displays. */
+function ContactCard({ p }: { p: CandidateProfileData }) {
+  const c = p.contact;
+  if (!c) return null;
+  const rows: { label: string; value: string; href?: string }[] = [];
+  if (c.email) rows.push({ label: "Email", value: c.email, href: `mailto:${c.email}` });
+  if (c.phone) rows.push({ label: "Phone", value: c.phone });
+  if (c.linkedin) rows.push({ label: "LinkedIn", value: c.linkedin, href: c.linkedin });
+  return (
+    <section id="contact" className="scroll-mt-24">
+      <div className="rounded-card border border-verified/40 bg-verified/[0.06] p-7 lg:p-8">
+        <div className="flex items-center gap-2">
+          <SealCheck size={18} weight="fill" className="text-verified-deep" aria-hidden />
+          <h2 className="font-display text-[1.35rem] font-medium text-ink">
+            Introduction accepted — contact details
+          </h2>
+        </div>
+        <p className="mt-2 text-small font-semibold text-ink">{c.fullName}</p>
+        {rows.length > 0 && (
+          <dl className="mt-3 divide-y divide-line">
+            {rows.map((r) => (
+              <div key={r.label} className="flex items-baseline justify-between gap-4 py-2.5">
+                <dt className="text-caption tracking-wide text-subtle uppercase">{r.label}</dt>
+                <dd className="text-small font-medium text-ink">
+                  {r.href ? (
+                    <a href={r.href} className="text-navy underline underline-offset-2">
+                      {r.value}
+                    </a>
+                  ) : (
+                    r.value
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     </section>
   );
 }
@@ -443,10 +639,15 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
           <span className="text-ink">{p.name}</span>
         </nav>
 
+        <AdminPreviewSwitcher p={p} />
+        <PreviewBanner p={p} />
+
         <Hero p={p} />
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] lg:items-start">
           <div className="order-2 flex min-w-0 flex-col gap-5 lg:order-1">
+            <ContactCard p={p} />
+
             {p.summary && (
               <SectionCard title="Professional summary">
                 <p className="text-small leading-relaxed text-muted">{p.summary}</p>
@@ -486,6 +687,7 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
             )}
 
             <VerifiedChecks items={p.verifications} />
+            <PaidFeatures p={p} />
             <EmploymentHistory items={p.history} />
             <EducationCredentials items={p.education} />
 
@@ -516,7 +718,13 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
       {/* Mobile sticky action bar */}
       <div className="sticky bottom-0 z-20 border-t border-navy-deep bg-navy/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
         <div className="mx-auto max-w-[1160px]">
-          <CandidateActions candidateId={p.id} candidateName={p.name} variant="mobile" />
+          <CandidateActions
+            candidateId={p.id}
+            candidateName={p.name}
+            variant="mobile"
+            cta={p.access?.cta}
+            canSave={canSaveOf(p.access)}
+          />
         </div>
       </div>
     </div>

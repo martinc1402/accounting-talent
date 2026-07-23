@@ -1,0 +1,124 @@
+/*
+  The one server-side profile serializer. Given a fully-mapped candidate
+  view-model and an effective visibility level, it returns a NEW view-model that
+  contains only the fields that level may see — restricted fields are OMITTED
+  (set to undefined / replaced with a generalised value), never masked. This is
+  the object that gets serialized to the client, so anything absent here is absent
+  from page source, hydration payload, structured data and error messages.
+
+  It is pure (no I/O): the caller resolves privacy flags, the contact block and
+  the CTA state and passes them in. This keeps all field-level permission logic in
+  one testable place rather than scattered across components.
+*/
+import type {
+  CandidateContact,
+  CandidateProfile,
+  ProfileCtaState,
+} from "@/lib/profile/candidate";
+import type { VisibilityLevel } from "./types";
+import type { Entitlements } from "./plans";
+import { canSeeIdentity, canSeeVerifiedEmployerFields } from "./visibility";
+
+export type ProjectContext = {
+  isPreview: boolean;
+  /** The real viewer is an admin (drives the preview switcher; not the level). */
+  isAdminViewer: boolean;
+  privacy: { publicPhoto: boolean; publicCompensation: boolean };
+  /** Full contact, included ONLY at accepted-introduction / admin. */
+  contact?: CandidateContact | null;
+  cta: ProfileCtaState;
+  entitlements: Entitlements;
+};
+
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+/** "Priya Sharma" -> "Priya S."; "Priya S." -> "Priya S."; "Priya" -> "Priya". */
+function anonymizeName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0] ?? "";
+  const last = parts[parts.length - 1].replace(/[^A-Za-z]/g, "");
+  return `${parts[0]} ${(last[0] ?? "").toUpperCase()}.`;
+}
+
+/** "Ahmedabad, India" -> "India" (broad region only). */
+function generalizeLocation(location: string): string {
+  const parts = location.split(",").map((p) => p.trim()).filter(Boolean);
+  return parts[parts.length - 1] ?? location;
+}
+
+/** Drop the identifying institution, keep a year if present. */
+function generalizeEducationMeta(meta?: string): string | undefined {
+  if (!meta) return undefined;
+  const year = meta.split("·").map((p) => p.trim()).find((p) => /^\d{4}$/.test(p));
+  return year || undefined;
+}
+
+/**
+ * Project a full view-model down to what `level` may see.
+ * @param view  the fully-mapped candidate view-model (server-side only)
+ */
+export function projectProfileView(
+  view: CandidateProfile,
+  level: VisibilityLevel,
+  ctx: ProjectContext,
+): CandidateProfile {
+  const identity = canSeeIdentity(level); // full name + contact
+  const verifiedFields = canSeeVerifiedEmployerFields(level); // photo, exact city, named institutions
+  const isAdmin = level === "admin";
+
+  const out: CandidateProfile = { ...view };
+
+  // Name: first + last initial unless identity is unlocked.
+  out.name = identity ? view.name : anonymizeName(view.name);
+  out.initials = initialsOf(out.name);
+
+  // Photo: only for verified+ employers, or if the candidate opted photo public.
+  const showPhoto = verifiedFields || ctx.privacy.publicPhoto;
+  if (!showPhoto) out.photo = undefined;
+
+  // Location: broad region for non-verified; exact city for verified+.
+  if (!verifiedFields && view.location) out.location = generalizeLocation(view.location);
+
+  // Employer names: hidden for everyone except admin (replace the whole meta so no
+  // embedded city/name leaks). Titles, dates, bullets and exposure are preserved.
+  if (!isAdmin) {
+    out.history = view.history.map((h) => ({ ...h, meta: "Employer name withheld" }));
+  }
+
+  // Education institutions: generalised until verified+.
+  if (!verifiedFields) {
+    out.education = view.education.map((e) => ({ ...e, meta: generalizeEducationMeta(e.meta) }));
+  }
+
+  // Compensation: withheld (CTA shown instead) only when not verified AND the
+  // candidate has not consented to public compensation. The value is dropped, not
+  // hidden — it never reaches the client.
+  const compensationLocked = !verifiedFields && !ctx.privacy.publicCompensation;
+  if (compensationLocked) out.compensation = undefined;
+
+  // Contact: only at accepted-introduction / admin.
+  out.contact = identity ? ctx.contact ?? undefined : undefined;
+
+  out.access = {
+    level,
+    isPreview: ctx.isPreview,
+    adminControls: ctx.isAdminViewer,
+    cta: ctx.cta,
+    compensationLocked,
+    paidFeatures: {
+      assessmentBreakdown: ctx.entitlements.assessmentBreakdown,
+      referenceSummaries: ctx.entitlements.referenceSummaries,
+      resumeDownload: ctx.entitlements.resumeDownload,
+    },
+  };
+
+  return out;
+}

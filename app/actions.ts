@@ -17,6 +17,17 @@ import {
   firstNameOf,
   sendEmail,
 } from "@/lib/assessment/emails";
+import { getViewer } from "@/lib/authz/viewer";
+import { deriveVisibility } from "@/lib/authz/visibility";
+import { entitlementsFor } from "@/lib/authz/plans";
+import { canCreateIntroduction } from "@/lib/authz/introductions";
+import {
+  countActiveIntroductions,
+  getViewerIntroduction,
+  insertIntroduction,
+  transitionIntroduction,
+} from "@/lib/authz/introductionsRepo";
+import type { IntroductionStatus } from "@/lib/authz/types";
 
 /*
   Server Functions are reachable by direct POST, not just through our UI, so
@@ -324,15 +335,20 @@ export async function submitEmployerLead(
 
 /*
   A firm asking to be introduced to a verified candidate, from the profile page's
-  "Request introduction" modal. Same discipline as the other Server Functions
-  (guards -> rate limit -> validate -> insert), writing to introduction_requests.
-  There is no employer auth yet, so it records the candidate and an optional
-  message; the candidate's contact details are never returned here (they are
-  released only when an introduction is accepted, out of band). Reachable by
-  direct POST like every Server Function, so it re-validates and never trusts the
-  client. The application_id FK guarantees the candidate exists.
+  "Request introduction" modal. AUTHORIZED: the caller must be a signed-in,
+  VERIFIED employer with introduction capacity under their plan. Every rule is
+  re-derived server-side (never trusted from the client): guards -> rate limit ->
+  validate -> AUTHORIZE (viewer + entitlement limit) -> insert (with a DB partial
+  unique index as the final backstop against duplicate active requests). Candidate
+  contact details are never returned here; identity is released only when an
+  introduction reaches `accepted`, and only to the associated employer account.
 */
-export type IntroState = { status: "idle" | "success" | "error"; message?: string };
+export type IntroState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  // Extra reasons the UI can act on without re-deriving anything.
+  reason?: "unauthenticated" | "not_verified" | "at_limit" | "duplicate";
+};
 
 const applicationUuid = z.uuid();
 
@@ -343,17 +359,12 @@ export async function requestIntroduction(
 ): Promise<IntroState> {
   const ip = await clientIp();
 
-  // The modal is a single optional field, so the floor is low (1.2s). Guards
-  // return the normal success shape without persisting.
   if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 1200 })) {
     logDrop("introduction", "honeypot-or-timing", ip);
     return { status: "success" };
   }
 
-  const rl = await isRateLimited("introduction", ip, {
-    limit: 10,
-    windowMs: 60 * 60 * 1000,
-  });
+  const rl = await isRateLimited("introduction", ip, { limit: 10, windowMs: 60 * 60 * 1000 });
   if (rl.limited) {
     logDrop("introduction", "rate_limit", rl.ipHash);
     return { status: "success" };
@@ -363,26 +374,63 @@ export async function requestIntroduction(
   if (!applicationUuid.safeParse(id).success) {
     return {
       status: "error",
-      message:
-        "We couldn't identify that candidate. Please reopen the profile and try again.",
+      message: "We couldn't identify that candidate. Please reopen the profile and try again.",
     };
   }
   const msg = String(message ?? "").trim().slice(0, 4000) || null;
 
   if (!supabaseConfigured || !supabase) {
-    console.info("[introduction] Supabase not configured, request not persisted.", {
-      id,
-      msg,
-    });
-    return { status: "success" };
+    return { status: "error", message: "Introductions are temporarily unavailable." };
   }
 
-  const { error } = await supabase
-    .from("introduction_requests")
-    .insert({ application_id: id, message: msg, status: "new" });
+  // --- Authorization (server-side, non-negotiable) ---------------------------
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return {
+      status: "error",
+      reason: "unauthenticated",
+      message: "Please sign in with a verified employer account to request an introduction.",
+    };
+  }
+  const accountId = viewer.account.id;
+  const existing = await getViewerIntroduction(id, accountId);
+  const { level } = deriveVisibility(viewer, existing);
+  const entitlements = entitlementsFor(viewer.account);
+  const activeCount = await countActiveIntroductions(accountId);
 
-  if (error) {
-    console.error("[introduction] insert failed", error);
+  const eligibility = canCreateIntroduction({ level, activeCount, entitlements });
+  if (!eligibility.ok) {
+    if (eligibility.reason === "not_verified") {
+      return {
+        status: "error",
+        reason: "not_verified",
+        message: "Verify your employer account to request introductions.",
+      };
+    }
+    return {
+      status: "error",
+      reason: "at_limit",
+      message:
+        "You've reached your plan's active-introduction limit. Upgrade to request more, or wait for a current request to close.",
+    };
+  }
+
+  const res = await insertIntroduction({
+    applicationId: id,
+    employerAccountId: accountId,
+    createdBy: viewer.userId,
+    message: msg,
+    priority: entitlements.priority,
+  });
+
+  if (!res.ok) {
+    if (res.reason === "duplicate") {
+      return {
+        status: "error",
+        reason: "duplicate",
+        message: "You already have an active request for this candidate.",
+      };
+    }
     return {
       status: "error",
       message:
@@ -390,6 +438,146 @@ export async function requestIntroduction(
     };
   }
 
+  return { status: "success" };
+}
+
+/* Employer cancels their OWN active request. Ownership re-checked server-side. */
+export async function cancelIntroduction(introductionId: string): Promise<IntroState> {
+  const id = String(introductionId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid request." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in." };
+  }
+  const { data } = await supabase
+    .from("introduction_requests")
+    .select("id, application_id, employer_account_id, status, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as
+    | { id: string; employer_account_id: string | null; status: IntroductionStatus }
+    | null;
+  if (!row || row.employer_account_id !== viewer.account.id) {
+    // Never confirm existence of a request that isn't the viewer's.
+    return { status: "error", message: "Request not found." };
+  }
+  const result = await transitionIntroduction({
+    introductionId: id,
+    from: row.status,
+    to: "cancelled",
+    actorKind: "employer",
+    actorUserId: viewer.userId,
+  });
+  if (!result.ok) return { status: "error", message: "That request can no longer be cancelled." };
+  return { status: "success" };
+}
+
+/* Admin-only: drive an introduction through its lifecycle (review, invite,
+   accept/decline on the candidate's behalf until candidate auth exists). */
+export async function adminTransitionIntroduction(
+  introductionId: string,
+  to: IntroductionStatus,
+): Promise<IntroState> {
+  const id = String(introductionId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid request." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) {
+    return { status: "error", message: "Not authorized." };
+  }
+  const { data } = await supabase
+    .from("introduction_requests")
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as { id: string; status: IntroductionStatus } | null;
+  if (!row) return { status: "error", message: "Request not found." };
+
+  const result = await transitionIntroduction({
+    introductionId: id,
+    from: row.status,
+    to,
+    actorKind: "admin",
+    actorUserId: viewer.userId,
+  });
+  if (!result.ok) {
+    return { status: "error", message: `Cannot move ${row.status} -> ${to}.` };
+  }
+  await supabase.from("admin_actions").insert({
+    action: "introduction_transition",
+    detail: `${row.status} -> ${to}`,
+    actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
+/* Create the caller's employer account + owner membership (once). Signed-in only. */
+export async function createEmployerAccount(name: string): Promise<IntroState> {
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user") {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in first." };
+  }
+  if (viewer.account) return { status: "success" }; // already has one
+
+  const firmName = String(name ?? "").trim().slice(0, 200);
+  if (!firmName) return { status: "error", message: "Enter your firm name." };
+
+  const { data, error } = await supabase
+    .from("employer_accounts")
+    .insert({ name: firmName })
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { status: "error", message: "Could not create account." };
+
+  const { error: memErr } = await supabase
+    .from("employer_members")
+    .insert({ employer_account_id: (data as { id: string }).id, user_id: viewer.userId, member_role: "owner" });
+  if (memErr) return { status: "error", message: "Could not link account." };
+  return { status: "success" };
+}
+
+/* Move the caller's employer account to `pending` verification. */
+export async function requestEmployerVerification(): Promise<IntroState> {
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in." };
+  }
+  if (viewer.account.verificationState === "verified") return { status: "success" };
+  const { error } = await supabase
+    .from("employer_accounts")
+    .update({ verification_state: "pending" })
+    .eq("id", viewer.account.id);
+  if (error) return { status: "error", message: "Could not start verification." };
+  return { status: "success" };
+}
+
+/* Admin-only test control: switch an employer account between free and paid.
+   Not a billing workflow — for exercising entitlements locally. */
+export async function adminSetEmployerPlan(
+  employerAccountId: string,
+  plan: "free" | "paid",
+): Promise<IntroState> {
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) return { status: "error", message: "Not authorized." };
+  if (plan !== "free" && plan !== "paid") return { status: "error", message: "Invalid plan." };
+
+  const { error } = await supabase
+    .from("employer_accounts")
+    .update({ plan, plan_updated_at: new Date().toISOString() })
+    .eq("id", String(employerAccountId));
+  if (error) return { status: "error", message: "Update failed." };
+
+  await supabase.from("admin_actions").insert({
+    action: "employer_plan_set",
+    detail: `account=${employerAccountId} plan=${plan}`,
+    actor: viewer.email,
+  });
   return { status: "success" };
 }
 

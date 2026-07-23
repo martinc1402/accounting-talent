@@ -45,7 +45,46 @@ const CAPABILITY_META: Record<RoleCategory, { title: string; subtitle: string }>
   other: { title: "Relevant experience", subtitle: "" },
 };
 
+import type { IntroductionStatus, VisibilityLevel } from "@/lib/authz/types";
+
 export type ProfileStat = { value: string; label: string };
+
+/** Identity/contact, present in the view-model ONLY at accepted-introduction or
+ *  admin level. Absent (undefined) at every lower level — never masked. */
+export type CandidateContact = {
+  fullName: string;
+  email?: string;
+  phone?: string;
+  linkedin?: string;
+  resumeUrl?: string;
+};
+
+/** The Request-introduction CTA state, decided server-side. */
+export type ProfileCtaState =
+  | { kind: "register" }
+  | { kind: "verify" }
+  | { kind: "request" }
+  | { kind: "at_limit" }
+  | { kind: "status"; status: IntroductionStatus }
+  | { kind: "accepted" }
+  | { kind: "preview" };
+
+/** Access/entitlement metadata attached to the projected view-model so the UI can
+ *  render the right CTA and paid-feature slots without re-deriving permissions. */
+export type ProfileAccess = {
+  level: VisibilityLevel;
+  isPreview: boolean;
+  /** True when the real viewer is an admin (drives the preview switcher UI). */
+  adminControls: boolean;
+  cta: ProfileCtaState;
+  /** True when compensation is withheld and a registration CTA is shown instead. */
+  compensationLocked: boolean;
+  paidFeatures: {
+    assessmentBreakdown: boolean;
+    referenceSummaries: boolean;
+    resumeDownload: boolean;
+  };
+};
 export type ProfileVerification = {
   label: string;
   status: string;
@@ -94,6 +133,10 @@ export type CandidateProfile = {
   education: ProfileEducationEntry[];
   preferences: ProfileFact[];
   decision: ProfileFact[];
+  // Present only at accepted-introduction / admin (see projectProfileView).
+  contact?: CandidateContact;
+  // Attached by the projection so the client renders the right CTA/paid slots.
+  access?: ProfileAccess;
 };
 
 // jsonb column shapes (0008). Read whole with the row; loosely typed and coerced.
