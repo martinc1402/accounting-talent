@@ -115,7 +115,6 @@ export function projectProfileView(
     compensationLocked,
     paidFeatures: {
       assessmentBreakdown: ctx.entitlements.assessmentBreakdown,
-      referenceSummaries: ctx.entitlements.referenceSummaries,
       resumeDownload: ctx.entitlements.resumeDownload,
     },
   };

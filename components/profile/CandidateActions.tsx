@@ -189,29 +189,9 @@ export function CandidateActions({
 
       {variant === "cta" && primaryBtn("")}
 
-      {variant === "mobile" && (
-        <div className="flex gap-2.5">
-          {primaryBtn("flex-1")}
-          {showSave && (
-            <button
-              type="button"
-              aria-pressed={saved}
-              aria-label={saveAria}
-              onClick={toggleSave}
-              className={`inline-flex w-13 shrink-0 items-center justify-center rounded-card border transition ${
-                saved ? "border-verified bg-verified/10" : "border-paper/30"
-              } ${FOCUS_PAPER}`}
-            >
-              <BookmarkSimple
-                size={18}
-                weight={saved ? "fill" : "regular"}
-                className={saved ? "text-verified" : "text-paper"}
-                aria-hidden
-              />
-            </button>
-          )}
-        </div>
-      )}
+      {/* Mobile bar shows only the primary action (compensation sits beside it in
+          the sticky bar); Save stays in the hero + Decision Summary. */}
+      {variant === "mobile" && primaryBtn("w-full")}
 
       {open && (
         <RequestIntroModal

@@ -10,7 +10,6 @@ export type Entitlements = {
   maxActiveIntroductions: number;
   priority: boolean;
   assessmentBreakdown: boolean;
-  referenceSummaries: boolean;
   resumeDownload: boolean;
   recentAvailability: boolean;
 };
@@ -26,7 +25,6 @@ export const PLAN_ENTITLEMENTS: Record<PlanName, Entitlements> = {
     maxActiveIntroductions: 1,
     priority: false,
     assessmentBreakdown: false,
-    referenceSummaries: false,
     resumeDownload: false,
     recentAvailability: false,
   },
@@ -34,7 +32,6 @@ export const PLAN_ENTITLEMENTS: Record<PlanName, Entitlements> = {
     maxActiveIntroductions: PAID_MAX_ACTIVE,
     priority: true,
     assessmentBreakdown: true,
-    referenceSummaries: true,
     resumeDownload: true,
     recentAvailability: true,
   },

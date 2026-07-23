@@ -149,7 +149,7 @@ if (!candidateId) {
       highlights: [
         { value: "350+", label: "US returns / season" },
         { value: "45+", label: "clients managed" },
-        { value: "~25%", label: "fewer reviewer notes" },
+        { value: "5", label: "tax seasons" },
       ],
       employment_history: [
         { title: "Senior Tax Associate", employer: "Whitfield & Roe CPA (US)", dates: "Jan 2021 to Present", bullets: ["Prepared 350+ US federal and multi-state returns per season.", "Owns 45+ SMB and individual clients end to end."], exposure: "US federal and multi-state returns" },

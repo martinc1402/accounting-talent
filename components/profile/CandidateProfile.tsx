@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   CalendarBlank,
   CaretRight,
-  Clock,
   GraduationCap,
   MapPin,
   SealCheck,
@@ -20,6 +19,7 @@ import type {
   ProfileEducationEntry,
   ProfileHistoryEntry,
   ProfileVerification,
+  VerificationBadge,
 } from "@/lib/profile/candidate";
 
 // Save is a verified-employer capability; hidden for anon/unverified viewers.
@@ -85,14 +85,21 @@ function VerifiedBadge({ children }: { children: ReactNode }) {
   );
 }
 
+// The only two verification badge labels: "Verified" (binary pass) or the level.
+function verificationBadgeLabel(badge: VerificationBadge): string {
+  return badge.kind === "verified" ? "Verified" : badge.level;
+}
+
 // --- hero ------------------------------------------------------------------
 
 function Hero({ p }: { p: CandidateProfileData }) {
   return (
     <section className="overflow-hidden rounded-card bg-navy shadow-[0_24px_60px_-20px_rgba(19,31,91,0.35)]">
-      <div className="relative flex flex-col sm:flex-row">
-        {/* Portrait / initials */}
-        <div className="relative aspect-[3/2] bg-navy-deep sm:aspect-auto sm:w-56 sm:flex-none">
+      <div className="relative flex flex-col items-stretch sm:flex-row">
+        {/* Portrait / initials. On desktop the column self-stretches to the full
+            card height with a fill + object-cover image (no fixed height that can
+            underrun the card), so it always bleeds to top/left/bottom edges. */}
+        <div className="relative aspect-[3/2] self-stretch bg-navy-deep sm:aspect-auto sm:w-56 sm:flex-none">
           {p.photo ? (
             <>
               <Image
@@ -189,12 +196,6 @@ function Hero({ p }: { p: CandidateProfileData }) {
                 {p.location}
               </span>
             )}
-            {p.overlap && (
-              <span className="inline-flex items-center gap-2">
-                <Clock size={15} weight="light" className="shrink-0 text-paper/70" />
-                {p.overlap}
-              </span>
-            )}
             {p.availability && (
               <span className="inline-flex items-center gap-2">
                 <CalendarBlank size={15} weight="light" className="shrink-0 text-paper/70" />
@@ -277,7 +278,7 @@ function VerifiedChecks({ items }: { items: ProfileVerification[] }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                 <span className="text-small font-semibold text-ink">{v.label}</span>
-                <VerifiedBadge>{v.status}</VerifiedBadge>
+                <VerifiedBadge>{verificationBadgeLabel(v.badge)}</VerifiedBadge>
                 {v.date && <span className="text-caption text-subtle">{v.date}</span>}
               </div>
               <p className="mt-0.5 text-caption text-muted">{v.detail}</p>
@@ -365,17 +366,12 @@ function EducationCredentials({ items }: { items: ProfileEducationEntry[] }) {
 
 function PaidFeatures({ p }: { p: CandidateProfileData }) {
   const f = p.access?.paidFeatures;
-  if (!f || (!f.assessmentBreakdown && !f.referenceSummaries && !f.resumeDownload)) return null;
+  if (!f || (!f.assessmentBreakdown && !f.resumeDownload)) return null;
   const rows: { on: boolean; label: string; note: string }[] = [
     {
       on: f.assessmentBreakdown,
       label: "Detailed assessment breakdown",
       note: "Section-by-section scoring — added once this candidate's assessment is reviewed.",
-    },
-    {
-      on: f.referenceSummaries,
-      label: "Redacted reference summaries",
-      note: "Referee feedback with identities removed — available on request.",
     },
     {
       on: f.resumeDownload,
@@ -715,16 +711,25 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
         <HowItWorks p={p} />
       </main>
 
-      {/* Mobile sticky action bar */}
+      {/* Mobile sticky bar = the Decision Summary's collapse: compensation + the
+          primary action, always reachable without scrolling the hero. */}
       <div className="sticky bottom-0 z-20 border-t border-navy-deep bg-navy/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
-        <div className="mx-auto max-w-[1160px]">
-          <CandidateActions
-            candidateId={p.id}
-            candidateName={p.name}
-            variant="mobile"
-            cta={p.access?.cta}
-            canSave={canSaveOf(p.access)}
-          />
+        <div className="mx-auto flex max-w-[1160px] items-center gap-3">
+          {p.compensation && (
+            <p className="shrink-0 font-display text-[1.05rem] leading-none whitespace-nowrap text-paper">
+              {p.compensation.value}
+              <span className="ml-0.5 text-[0.7rem] text-paper/60">/mo</span>
+            </p>
+          )}
+          <div className="min-w-0 flex-1">
+            <CandidateActions
+              candidateId={p.id}
+              candidateName={p.name}
+              variant="mobile"
+              cta={p.access?.cta}
+              canSave={false}
+            />
+          </div>
         </div>
       </div>
     </div>

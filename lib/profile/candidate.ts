@@ -81,13 +81,15 @@ export type ProfileAccess = {
   compensationLocked: boolean;
   paidFeatures: {
     assessmentBreakdown: boolean;
-    referenceSummaries: boolean;
     resumeDownload: boolean;
   };
 };
+/** A verification badge's label derives from the check STATE, not free text:
+ *  binary pass checks read "Verified"; leveled checks read their level. */
+export type VerificationBadge = { kind: "verified" } | { kind: "level"; level: string };
 export type ProfileVerification = {
   label: string;
-  status: string;
+  badge: VerificationBadge;
   detail: string;
   // Independently-verified date, surfaced only when the gating timestamp exists.
   date?: string;
@@ -169,10 +171,6 @@ export type ProfileRow = ApplicationRow & {
   willing_full_shift?: boolean | null;
   software_proficiency?: SoftwareJson[] | null;
   qualification_verified_at?: string | null;
-  // Deprecated: employment-reference verification was dropped (too much overhead
-  // to contact prior employers per candidate). Column kept (0008) but no longer
-  // surfaced; employment history is candidate-supplied narrative.
-  references_checked_at?: string | null;
   // 0010 polish fields.
   experience_focus?: string | null; // e.g. "US tax" -> "4 years' US tax experience"
   english_assessed_at?: string | null;
@@ -268,7 +266,7 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
   if (row.identity_verified_at) {
     out.push({
       label: "Identity verified",
-      status: "Verified",
+      badge: { kind: "verified" },
       detail: "Government-issued photo ID verified.",
       date: verifiedDate(row.identity_verified_at),
     });
@@ -277,7 +275,7 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
   if (eng) {
     out.push({
       label: "English communication",
-      status: eng,
+      badge: { kind: "level", level: eng },
       detail: "Assessed for written and spoken business English.",
       date: verifiedDate(row.english_assessed_at),
     });
@@ -286,14 +284,14 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
   if (SHOW_ASSESSMENT && assessment) {
     out.push({
       label: assessment.name,
-      status: assessment.score != null ? `${assessment.score}%` : "Passed",
+      badge: { kind: "level", level: assessment.score != null ? `${assessment.score}%` : "Passed" },
       detail: "Scenario-based skills assessment.",
     });
   }
   if (row.qualification_verified_at) {
     out.push({
       label: "Qualification checked",
-      status: "Confirmed",
+      badge: { kind: "verified" },
       detail: "Confirmed with the issuing institution.",
       date: verifiedDate(row.qualification_verified_at),
     });
@@ -423,7 +421,7 @@ export const sampleProfiles: CandidateProfile[] = [
     evidence: [
       { value: "300+", label: "US returns / season" },
       { value: "40+", label: "clients managed" },
-      { value: "~30%", label: "fewer reviewer notes" },
+      { value: "4", label: "tax seasons" },
     ],
     location: "Ahmedabad, India",
     overlap: "4 hours ET overlap",
@@ -447,9 +445,9 @@ export const sampleProfiles: CandidateProfile[] = [
       { name: "Lacerte", meta: "Intermediate · 2 yrs" },
     ],
     verifications: [
-      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified.", date: "Mar 2026" },
-      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English.", date: "Feb 2026" },
-      { label: "Qualification checked", status: "Confirmed", detail: "CA Intermediate confirmed with the issuing institution.", date: "Feb 2026" },
+      { label: "Identity verified", badge: { kind: "verified" }, detail: "Government-issued photo ID verified.", date: "Mar 2026" },
+      { label: "English communication", badge: { kind: "level", level: "Advanced" }, detail: "Assessed for written and spoken business English.", date: "Feb 2026" },
+      { label: "Qualification checked", badge: { kind: "verified" }, detail: "CA Intermediate confirmed with the issuing institution.", date: "Feb 2026" },
     ],
     history: [
       {
@@ -535,9 +533,9 @@ export const sampleProfiles: CandidateProfile[] = [
       { name: "Bill.com" },
     ],
     verifications: [
-      { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified.", date: "Apr 2026" },
-      { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English.", date: "Mar 2026" },
-      { label: "Qualification checked", status: "Confirmed", detail: "B.Com (Accountancy) confirmed with the issuing institution.", date: "Mar 2026" },
+      { label: "Identity verified", badge: { kind: "verified" }, detail: "Government-issued photo ID verified.", date: "Apr 2026" },
+      { label: "English communication", badge: { kind: "level", level: "Advanced" }, detail: "Assessed for written and spoken business English.", date: "Mar 2026" },
+      { label: "Qualification checked", badge: { kind: "verified" }, detail: "B.Com (Accountancy) confirmed with the issuing institution.", date: "Mar 2026" },
     ],
     history: [
       {
