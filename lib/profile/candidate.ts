@@ -169,6 +169,9 @@ export type ProfileRow = ApplicationRow & {
   willing_full_shift?: boolean | null;
   software_proficiency?: SoftwareJson[] | null;
   qualification_verified_at?: string | null;
+  // Deprecated: employment-reference verification was dropped (too much overhead
+  // to contact prior employers per candidate). Column kept (0008) but no longer
+  // surfaced; employment history is candidate-supplied narrative.
   references_checked_at?: string | null;
   // 0010 polish fields.
   experience_focus?: string | null; // e.g. "US tax" -> "4 years' US tax experience"
@@ -293,14 +296,6 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
       status: "Confirmed",
       detail: "Confirmed with the issuing institution.",
       date: verifiedDate(row.qualification_verified_at),
-    });
-  }
-  if (row.references_checked_at) {
-    out.push({
-      label: "Employment references",
-      status: "Checked",
-      detail: "Prior-employer references contacted.",
-      date: verifiedDate(row.references_checked_at),
     });
   }
   return out;
@@ -455,7 +450,6 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Identity verified", status: "Verified", detail: "Government-issued photo ID verified.", date: "Mar 2026" },
       { label: "English communication", status: "Advanced", detail: "Assessed for written and spoken business English.", date: "Feb 2026" },
       { label: "Qualification checked", status: "Confirmed", detail: "CA Intermediate confirmed with the issuing institution.", date: "Feb 2026" },
-      { label: "Employment references", status: "Checked", detail: "Prior-employer references contacted.", date: "Mar 2026" },
     ],
     history: [
       {

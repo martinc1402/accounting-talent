@@ -137,7 +137,6 @@ if (!candidateId) {
       verified_at: new Date().toISOString(),
       identity_verified_at: new Date().toISOString(),
       qualification_verified_at: new Date().toISOString(),
-      references_checked_at: new Date().toISOString(),
       english_level: "Advanced",
       english_assessed_at: new Date().toISOString(),
       photo_url: "/images/candidate-headshot.jpg",
