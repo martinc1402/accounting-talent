@@ -6,7 +6,12 @@ import {
   CheckCircle,
   WarningCircle,
 } from "@phosphor-icons/react/dist/ssr";
-import { requestIntroduction, type IntroState } from "@/app/actions";
+import {
+  requestIntroduction,
+  saveCandidate,
+  unsaveCandidate,
+  type IntroState,
+} from "@/app/actions";
 import type { ProfileCtaState } from "@/lib/profile/candidate";
 
 /*
@@ -15,9 +20,9 @@ import type { ProfileCtaState } from "@/lib/profile/candidate";
   entitlement; it only renders the state the server computed and, for the
   "request" state, opens the modal whose server action re-authorizes everything.
 
-  Save is a verified-employer capability (canSave); it is hidden otherwise.
-  Rendered in the hero (on navy), the decision panel (on navy), the mobile bar
-  (on navy) and the closing process section (on light).
+  Save is persisted server-side, scoped to the employer account (saveMode:
+  "toggle" for verified employers, "signin"/"verify" prompts otherwise, "hidden"
+  in preview/admin). Rendered on navy (hero, decision panel) and light (cta).
 */
 
 const FOCUS_PAPER =
@@ -25,8 +30,7 @@ const FOCUS_PAPER =
 const FOCUS_NAVY =
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2";
 
-const savedKey = (id: string) => `at:saved-candidate:${id}`;
-const SAVE_EVENT = "at:saved-candidate-changed";
+export type SaveMode = "toggle" | "signin" | "verify" | "hidden";
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -48,42 +52,42 @@ export function CandidateActions({
   candidateName,
   variant,
   cta = { kind: "request" },
-  canSave = true,
+  saveMode = "hidden",
+  initialSaved = false,
 }: {
   candidateId: string;
   candidateName: string;
   variant: "hero" | "panel" | "mobile" | "cta";
   cta?: ProfileCtaState;
-  canSave?: boolean;
+  saveMode?: SaveMode;
+  initialSaved?: boolean;
 }) {
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(initialSaved);
+  const [savePending, startSave] = useTransition();
+  const [saveNote, setSaveNote] = useState("");
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const read = () => {
-      try {
-        setSaved(localStorage.getItem(savedKey(candidateId)) === "1");
-      } catch {
-        /* storage unavailable */
-      }
-    };
-    read();
-    const onChange = (e: Event) => {
-      if ((e as CustomEvent<string>).detail === candidateId) read();
-    };
-    window.addEventListener(SAVE_EVENT, onChange);
-    return () => window.removeEventListener(SAVE_EVENT, onChange);
-  }, [candidateId]);
-
   const toggleSave = () => {
-    const next = !saved;
-    setSaved(next);
-    try {
-      localStorage.setItem(savedKey(candidateId), next ? "1" : "0");
-      window.dispatchEvent(new CustomEvent(SAVE_EVENT, { detail: candidateId }));
-    } catch {
-      /* storage unavailable */
+    // Verified employers persist; others are prompted to sign in / verify.
+    if (saveMode === "signin") {
+      window.location.href = "/login?next=" + encodeURIComponent(`/candidates/${candidateId}`);
+      return;
     }
+    if (saveMode === "verify") {
+      window.location.href = "/employer";
+      return;
+    }
+    const next = !saved;
+    setSaved(next); // optimistic
+    startSave(async () => {
+      const res = next ? await saveCandidate(candidateId) : await unsaveCandidate(candidateId);
+      if (res.status === "error") {
+        setSaved(!next); // revert
+        setSaveNote(res.message ?? "Could not update.");
+      } else {
+        setSaveNote(next ? "Saved to your shortlist." : "Removed from your shortlist.");
+      }
+    });
   };
 
   const saveLabel = saved ? "Saved" : "Save candidate";
@@ -124,7 +128,7 @@ export function CandidateActions({
       case "accepted":
         return (
           <a href="#contact" className={`${base} ${solid}`}>
-            View contact details
+            View introduction details
           </a>
         );
       case "status":
@@ -136,9 +140,9 @@ export function CandidateActions({
         );
       case "at_limit":
         return (
-          <span className={`${base} ${disabled} cursor-not-allowed`} aria-disabled>
-            Introduction limit reached
-          </span>
+          <a href="/employer" className={`${base} ${solid}`}>
+            Upgrade to request another
+          </a>
         );
       case "preview":
         return (
@@ -152,10 +156,11 @@ export function CandidateActions({
   const saveBtn = (extra: string) => (
     <button
       type="button"
-      aria-pressed={saved}
+      aria-pressed={saveMode === "toggle" ? saved : undefined}
       aria-label={saveAria}
+      disabled={savePending}
       onClick={toggleSave}
-      className={`inline-flex items-center justify-center gap-2 rounded-card border px-5 py-3 text-small font-semibold text-paper transition ${
+      className={`inline-flex items-center justify-center gap-2 rounded-card border px-5 py-3 text-small font-semibold text-paper transition disabled:opacity-70 ${
         saved ? "border-verified bg-verified/10" : "border-paper/30 hover:border-paper/60"
       } ${FOCUS_PAPER} ${extra}`}
     >
@@ -169,10 +174,15 @@ export function CandidateActions({
     </button>
   );
 
-  const showSave = canSave && cta.kind !== "preview";
+  const showSave = saveMode !== "hidden" && cta.kind !== "preview";
 
   return (
     <>
+      {/* Restrained, accessible confirmation of the save toggle. */}
+      <span className="sr-only" role="status" aria-live="polite">
+        {saveNote}
+      </span>
+
       {variant === "hero" && (
         <div className="flex flex-wrap gap-2.5">
           {primaryBtn("")}

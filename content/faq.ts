@@ -161,7 +161,7 @@ export const employerFaq: FaqItem[] = [
     id: "interview-before-paying",
     q: "Can I interview candidates before paying?",
     a: [
-      "Yes. You review the shortlist and interview candidates directly, at no cost. You pay only when you decide to hire someone.",
+      "Yes. You review the shortlist and interview candidates directly before deciding whether to proceed. We confirm the commercial terms with you up front, so there are no surprises.",
     ],
   },
   {

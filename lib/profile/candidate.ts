@@ -18,10 +18,29 @@ import {
   type RoleCategory,
   SHOW_ASSESSMENT,
   compensation,
+  compensationLine,
   overlapPhrase,
   roleCategory,
   yearsPhrase,
 } from "@/lib/search/candidate";
+
+// Availability is considered stale after this many days without reconfirmation.
+const AVAILABILITY_STALE_DAYS = (() => {
+  const n = Number(process.env.AVAILABILITY_STALE_DAYS);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 45;
+})();
+
+/** Availability freshness: "Confirmed 22 Jul 2026" plus a stale flag once older
+ *  than AVAILABILITY_STALE_DAYS (or never confirmed). */
+function availabilityFreshness(row: ProfileRow): { confirmed?: string; stale: boolean } {
+  const ts = (row.availability_confirmed_at ?? "").trim();
+  if (!ts) return { stale: true };
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return { stale: true };
+  const ageDays = (Date.now() - d.getTime()) / 86_400_000;
+  const label = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return { confirmed: `Confirmed ${label}`, stale: ageDays > AVAILABILITY_STALE_DAYS };
+}
 
 // Title + one-line subtitle for the role-specific capabilities card, keyed by
 // the same role category the card uses for its evidence label.
@@ -125,6 +144,9 @@ export type CandidateProfile = {
   location?: string;
   overlap?: string;
   availability?: string;
+  // "Confirmed 22 Jul 2026" when availability was recently reconfirmed; absent
+  // when stale (the availability value itself switches to "being reconfirmed").
+  availabilityConfirmed?: string;
   compensation?: { value: string; unit: string };
   summary?: string;
   writingSample?: { text: string; attribution: string };
@@ -139,6 +161,9 @@ export type CandidateProfile = {
   contact?: CandidateContact;
   // Attached by the projection so the client renders the right CTA/paid slots.
   access?: ProfileAccess;
+  // Whether the viewing employer account has this candidate saved (set by the
+  // page for the viewer's account; drives the Save toggle's initial state).
+  saved?: boolean;
 };
 
 // jsonb column shapes (0008). Read whole with the row; loosely typed and coerced.
@@ -175,6 +200,9 @@ export type ProfileRow = ApplicationRow & {
   experience_focus?: string | null; // e.g. "US tax" -> "4 years' US tax experience"
   english_assessed_at?: string | null;
   photo_focal?: string | null; // CSS object-position, e.g. "center 20%"
+  // 0014 fields.
+  availability_confirmed_at?: string | null;
+  timezone?: string | null; // IANA, e.g. "Asia/Kolkata"
 };
 
 /** The assessment payload for a profile: score is still gated by SHOW_ASSESSMENT;
@@ -351,12 +379,16 @@ export function applicationToProfile(
 ): CandidateProfile {
   const comp = compensation(row);
   const overlap = overlapPhrase(row) ?? undefined;
-  const availability = (row.availability ?? "").trim() || undefined;
+  const rawAvailability = (row.availability ?? "").trim() || undefined;
   const employmentType = (row.employment_type ?? "").trim();
   const location = [row.city, row.country ?? row.state].filter(Boolean).join(", ") || undefined;
 
+  // Availability freshness: stale confirmations are not presented as current.
+  const fresh = availabilityFreshness(row);
+  const availability = fresh.stale ? "Availability being reconfirmed" : rawAvailability;
+
   const decision: ProfileFact[] = [{ label: "Target role", value: row.role }];
-  if (comp) decision.push({ label: "Compensation", value: comp.unit ? `${comp.value} /mo` : comp.value });
+  if (comp) decision.push({ label: "Compensation", value: compensationLine(comp) ?? comp.value });
   if (availability) decision.push({ label: "Availability", value: availability });
   if (overlap) decision.push({ label: "US overlap", value: overlap });
   if (employmentType) decision.push({ label: "Preference", value: employmentType });
@@ -383,6 +415,7 @@ export function applicationToProfile(
     location,
     overlap,
     availability,
+    availabilityConfirmed: fresh.stale ? undefined : fresh.confirmed,
     compensation: comp,
     summary: (row.professional_summary ?? "").trim() || undefined,
     writingSample: ws
@@ -424,9 +457,10 @@ export const sampleProfiles: CandidateProfile[] = [
       { value: "4", label: "tax seasons" },
     ],
     location: "Ahmedabad, India",
-    overlap: "4 hours ET overlap",
+    overlap: "4+ hours ET overlap",
     availability: "Available within 30 days",
-    compensation: { value: "$900‑$1,200", unit: "USD / month" },
+    availabilityConfirmed: "Confirmed 22 Jul 2026",
+    compensation: { value: "$900–$1,200", unit: "USD / month" },
     summary:
       "Priya is a US tax preparer with four busy seasons preparing federal and multi-state returns for an outsourced US CPA firm. She owns a book of 40+ small-business and individual clients end to end in Drake and Lacerte, from workpaper prep through review-ready filing, and is strongest on 1040, 1120-S and 1065 engagements.",
     writingSample: {
@@ -475,8 +509,8 @@ export const sampleProfiles: CandidateProfile[] = [
       {
         qualification: "CA Intermediate",
         meta: "ICAI · India",
-        status: "In progress",
-        completed: false,
+        status: "Completed",
+        completed: true,
         note: "Both groups cleared; currently pursuing CA Final.",
       },
       { qualification: "B.Com (Accounting & Finance)", meta: "Gujarat University · 2020", status: "Completed", completed: true },
@@ -485,16 +519,16 @@ export const sampleProfiles: CandidateProfile[] = [
     preferences: [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Within 30 days" },
-      { label: "Preferred hours", value: "12:00 to 8:00 PM IST" },
-      { label: "US overlap", value: "4 hours ET overlap" },
+      { label: "Preferred hours", value: "3:30 PM–11:30 PM IST" },
+      { label: "US overlap", value: "4+ hours ET overlap" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Employer of record / contractor" },
     ],
     decision: [
       { label: "Target role", value: "US Tax Preparer" },
-      { label: "Compensation", value: "$900‑$1,200 /mo" },
+      { label: "Compensation", value: "$900–$1,200/month" },
       { label: "Availability", value: "Available within 30 days" },
-      { label: "US overlap", value: "4 hours ET overlap" },
+      { label: "US overlap", value: "4+ hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },
@@ -512,9 +546,10 @@ export const sampleProfiles: CandidateProfile[] = [
       { value: "3", label: "years remote US" },
     ],
     location: "Manila, Philippines",
-    overlap: "6 hours ET overlap",
+    overlap: "6+ hours ET overlap",
     availability: "Available immediately",
-    compensation: { value: "$700‑$950", unit: "USD / month" },
+    availabilityConfirmed: "Confirmed 20 Jul 2026",
+    compensation: { value: "$700–$950", unit: "USD / month" },
     summary:
       "Daniel is a full-charge bookkeeper with three years supporting US small businesses remotely. He manages the full monthly cycle (AP/AR, bank and credit-card reconciliations, payroll runs and month-end close) primarily in QuickBooks Online and Xero, and keeps clean, review-ready books.",
     writingSample: {
@@ -555,16 +590,16 @@ export const sampleProfiles: CandidateProfile[] = [
     preferences: [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Immediately" },
-      { label: "Preferred hours", value: "9:00 PM to 5:00 AM PHT" },
-      { label: "US overlap", value: "6 hours ET overlap" },
+      { label: "Preferred hours", value: "9:00 PM–5:00 AM PHT" },
+      { label: "US overlap", value: "6+ hours ET overlap" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Contractor" },
     ],
     decision: [
       { label: "Target role", value: "Bookkeeper" },
-      { label: "Compensation", value: "$700‑$950 /mo" },
+      { label: "Compensation", value: "$700–$950/month" },
       { label: "Availability", value: "Available immediately" },
-      { label: "US overlap", value: "6 hours ET overlap" },
+      { label: "US overlap", value: "6+ hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },

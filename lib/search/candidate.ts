@@ -109,9 +109,12 @@ export function yearsPhrase(row: ApplicationRow): string | null {
 
 export function overlapPhrase(row: ApplicationRow): string | null {
   if (row.et_overlap_hours != null) {
+    // "N+ hours" — the stored value is the minimum guaranteed overlap across US
+    // daylight-saving (see lib/overlap.ts). Single source for hero-excluded meta,
+    // Decision Summary, Work Preferences and the search card.
     return row.et_overlap_hours >= 8
       ? "Full US shift available"
-      : `${row.et_overlap_hours} hours ET overlap`;
+      : `${row.et_overlap_hours}+ hours ET overlap`;
   }
   return (row.working_hours ?? "").trim() || null;
 }
@@ -119,15 +122,23 @@ export function overlapPhrase(row: ApplicationRow): string | null {
 export function compensation(row: ApplicationRow): Candidate["compensation"] {
   const { salary_min_usd: min, salary_max_usd: max } = row;
   if (min != null && max != null) {
-    // Non-breaking hyphen (‑) so the range never wraps mid-figure, matching
-    // the homepage card's salary treatment.
+    // En dash for the range (house range style). Render sites keep the figure on
+    // one line (whitespace-nowrap). Standard display via compensationLine() is
+    // "$900–$1,200/month".
     return {
-      value: `$${min.toLocaleString("en-US")}‑$${max.toLocaleString("en-US")}`,
+      value: `$${min.toLocaleString("en-US")}–$${max.toLocaleString("en-US")}`,
       unit: "USD / month",
     };
   }
   const raw = (row.salary_expectation ?? "").trim();
   return raw ? { value: raw, unit: "" } : undefined;
+}
+
+/** The single compensation display string: "$900–$1,200/month". Used by the
+ *  Decision Summary and search card so the format is defined in one place. */
+export function compensationLine(comp: Candidate["compensation"]): string | null {
+  if (!comp) return null;
+  return comp.unit ? `${comp.value}/month` : comp.value;
 }
 
 function verifications(

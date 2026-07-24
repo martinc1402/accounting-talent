@@ -581,6 +581,75 @@ export async function adminSetEmployerPlan(
   return { status: "success" };
 }
 
+/* Save / unsave a candidate to the employer's shortlist. Verified employers only;
+   scoped to the viewer's account; the DB unique index prevents duplicates. */
+export type SaveState = { status: "success" | "error"; saved?: boolean; reason?: "unauthenticated" | "not_verified"; message?: string };
+
+async function requireVerifiedEmployer(): Promise<
+  { ok: true; accountId: string; userId: string } | { ok: false; res: SaveState }
+> {
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { ok: false, res: { status: "error", reason: "unauthenticated", message: "Sign in with an employer account." } };
+  }
+  if (viewer.account.verificationState !== "verified") {
+    return { ok: false, res: { status: "error", reason: "not_verified", message: "Verify your employer account to save candidates." } };
+  }
+  return { ok: true, accountId: viewer.account.id, userId: viewer.userId };
+}
+
+export async function saveCandidate(applicationId: string): Promise<SaveState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const gate = await requireVerifiedEmployer();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("saved_candidates")
+    .insert({ employer_account_id: gate.accountId, application_id: id, created_by: gate.userId });
+  // 23505 = already saved; treat as success (idempotent, no duplicate row).
+  if (error && error.code !== "23505") return { status: "error", message: "Could not save." };
+  return { status: "success", saved: true };
+}
+
+export async function unsaveCandidate(applicationId: string): Promise<SaveState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const gate = await requireVerifiedEmployer();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("saved_candidates")
+    .delete()
+    .eq("employer_account_id", gate.accountId)
+    .eq("application_id", id);
+  if (error) return { status: "error", message: "Could not update." };
+  return { status: "success", saved: false };
+}
+
+/* Admin-only: reconfirm a candidate's availability (stamps now). */
+export async function adminReconfirmAvailability(applicationId: string): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) return { status: "error", message: "Not authorized." };
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ availability_confirmed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "availability_reconfirmed",
+    application_id: id,
+    actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
 export type WaitlistState = {
   status: "idle" | "success" | "error";
   message?: string;

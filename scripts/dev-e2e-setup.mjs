@@ -129,7 +129,9 @@ if (!candidateId) {
       salary_min_usd: 1000,
       salary_max_usd: 1400,
       availability: "Available within 30 days",
-      working_hours: "12:00 to 8:00 PM IST",
+      availability_confirmed_at: new Date().toISOString(),
+      working_hours: "3:30 PM–11:30 PM IST",
+      timezone: "Asia/Kolkata",
       start_date: "Within 30 days",
       source: "e2e",
       consent: true,
@@ -172,7 +174,37 @@ if (!candidateId) {
   candidateId = cand.id;
 }
 
-const adminCookies = await mintCookies(adminEmail, admin.password);
-const employerCookies = await mintCookies(employerEmail, employer.password);
+// Keep the existing seeded candidate current with the 0014 fields (idempotent).
+await svc
+  .from("applications")
+  .update({
+    availability_confirmed_at: new Date().toISOString(),
+    working_hours: "3:30 PM–11:30 PM IST",
+    timezone: "Asia/Kolkata",
+    et_overlap_hours: 4,
+  })
+  .eq("id", candidateId);
+
+// Seed a saved-candidate row so /employer/saved has data (idempotent).
+await svc
+  .from("saved_candidates")
+  .upsert(
+    { employer_account_id: employerAccountId, application_id: candidateId, created_by: employer.user.id },
+    { onConflict: "employer_account_id,application_id" },
+  );
+
+// Cookie minting is only for the screenshot harness; never let a transient
+// auth hiccup fail the reseed (accounts + candidate + saved row are already in).
+async function mintSafe(email, password) {
+  try {
+    return await mintCookies(email, password);
+  } catch (e) {
+    console.error(`[warn] could not mint session for ${email}: ${e?.message ?? e}`);
+    return null;
+  }
+}
+
+const adminCookies = await mintSafe(adminEmail, admin.password);
+const employerCookies = await mintSafe(employerEmail, employer.password);
 
 console.log(JSON.stringify({ candidateId, employerAccountId, adminCookies, employerCookies }, null, 2));

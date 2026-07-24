@@ -18,6 +18,8 @@ import {
   getViewerIntroduction,
 } from "@/lib/authz/introductionsRepo";
 import { projectProfileView } from "@/lib/authz/projectCandidate";
+import { isCandidateSaved } from "@/lib/authz/savedRepo";
+import { navFromViewer } from "@/components/ui/SiteHeader";
 import type { Introduction, VisibilityLevel } from "@/lib/authz/types";
 
 /*
@@ -194,5 +196,13 @@ export default async function CandidateProfilePage({
     projected.photo = { ...projected.photo, src: `/api/candidates/${id}/photo` };
   }
 
-  return <CandidateProfile profile={projected} />;
+  // Saved state, scoped to the viewer's employer account (verified only).
+  projected.saved =
+    !isPreview && level !== "anonymous" && level !== "unverified_employer"
+      ? await isCandidateSaved(accountId, id)
+      : false;
+
+  const nav = navFromViewer(viewer);
+
+  return <CandidateProfile profile={projected} nav={nav} />;
 }

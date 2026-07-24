@@ -7,6 +7,7 @@ import "server-only";
   session email matching SUPER_ADMIN_EMAIL — never from request-supplied data or
   editable user metadata. Any error resolves to anonymous (default-deny).
 */
+import { cache } from "react";
 import { getAuthUser } from "@/lib/supabase/server";
 import { supabase } from "@/lib/supabase";
 import { emailsMatch } from "./email";
@@ -28,7 +29,9 @@ function mapAccount(row: Record<string, unknown>): EmployerAccount {
   };
 }
 
-export async function getViewer(): Promise<Viewer> {
+// Request-level cached: the page, the header and any other server component in
+// one render share a single resolution (one auth check + account lookup).
+export const getViewer = cache(async (): Promise<Viewer> => {
   try {
     const user = await getAuthUser();
     if (!user) return { kind: "anonymous" };
@@ -62,4 +65,4 @@ export async function getViewer(): Promise<Viewer> {
   } catch {
     return { kind: "anonymous" };
   }
-}
+});

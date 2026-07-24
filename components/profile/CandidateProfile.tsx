@@ -9,10 +9,10 @@ import {
   MapPin,
   SealCheck,
 } from "@phosphor-icons/react/dist/ssr";
-import { Logo } from "@/components/ui/Logo";
 import { LogoMark } from "@/components/ui/LogoMark";
 import { Card } from "@/components/ui/Card";
-import { CandidateActions } from "@/components/profile/CandidateActions";
+import { SiteHeader, type SiteHeaderNav } from "@/components/ui/SiteHeader";
+import { CandidateActions, type SaveMode } from "@/components/profile/CandidateActions";
 import type {
   CandidateProfile as CandidateProfileData,
   ProfileAccess,
@@ -22,15 +22,22 @@ import type {
   VerificationBadge,
 } from "@/lib/profile/candidate";
 
-// Save is a verified-employer capability; hidden for anon/unverified viewers.
-function canSaveOf(access?: ProfileAccess): boolean {
-  if (!access) return true;
-  return (
-    access.level === "free_verified_employer" ||
-    access.level === "paid_verified_employer" ||
-    access.level === "accepted_introduction" ||
-    access.level === "admin"
-  );
+// Save behaviour by viewer: verified employers persist (toggle); anon/unverified
+// are prompted; admin/preview have no shortlist.
+function saveModeOf(access?: ProfileAccess): SaveMode {
+  if (!access || access.isPreview) return "hidden";
+  switch (access.level) {
+    case "anonymous":
+      return "signin";
+    case "unverified_employer":
+      return "verify";
+    case "free_verified_employer":
+    case "paid_verified_employer":
+    case "accepted_introduction":
+      return "toggle";
+    default:
+      return "hidden"; // admin
+  }
 }
 
 /*
@@ -232,7 +239,8 @@ function Hero({ p }: { p: CandidateProfileData }) {
               candidateName={p.name}
               variant="hero"
               cta={p.access?.cta}
-              canSave={canSaveOf(p.access)}
+              saveMode={saveModeOf(p.access)}
+              initialSaved={p.saved}
             />
           </div>
         </div>
@@ -262,9 +270,10 @@ function VerifiedChecks({ items }: { items: ProfileVerification[] }) {
   if (!items.length) return null;
   return (
     <SectionCard title="Verified by AccountingTalent" id="verified">
-      <p className="-mt-2 mb-3 max-w-[62ch] text-caption text-muted">
-        Independently verified by AccountingTalent. Everything else on this page is
-        provided by the candidate. Only completed checks are shown.
+      <p className="-mt-2 mb-3 max-w-[64ch] text-caption text-muted">
+        Independently verified by AccountingTalent. Employment history, achievements
+        and other profile information are provided by the candidate. Only completed
+        checks are shown.
       </p>
       <div className="divide-y divide-line">
         {items.map((v) => (
@@ -414,19 +423,27 @@ function DecisionPanel({ p }: { p: CandidateProfileData }) {
         {p.decision.map((d) => (
           <div key={d.label} className="flex items-baseline justify-between gap-4 py-3">
             <dt className="text-caption tracking-wide text-paper/65 uppercase">{d.label}</dt>
-            <dd className="max-w-[62%] text-right text-small font-semibold text-paper">
+            <dd
+              className={`max-w-[62%] text-right text-small font-semibold text-paper ${
+                d.label === "Compensation" ? "whitespace-nowrap" : ""
+              }`}
+            >
               {d.value}
             </dd>
           </div>
         ))}
       </dl>
+      {p.availabilityConfirmed && (
+        <p className="mt-2 text-fine text-paper/60">{p.availabilityConfirmed}</p>
+      )}
       <div className="mt-5">
         <CandidateActions
           candidateId={p.id}
           candidateName={p.name}
           variant="panel"
           cta={p.access?.cta}
-          canSave={canSaveOf(p.access)}
+          saveMode={saveModeOf(p.access)}
+          initialSaved={p.saved}
         />
       </div>
       <a
@@ -487,10 +504,10 @@ function HowItWorks({ p }: { p: CandidateProfileData }) {
             candidateName={p.name}
             variant="cta"
             cta={p.access?.cta}
-            canSave={false}
           />
-          <p className="text-caption text-subtle">
-            No cost to introduce. Contact details stay private until acceptance.
+          <p className="max-w-[46ch] text-caption text-subtle">
+            Contact details stay private until the candidate accepts the introduction.
+            Requesting an introduction does not commit you to hiring.
           </p>
         </div>
       </Card>
@@ -609,14 +626,16 @@ function ContactCard({ p }: { p: CandidateProfileData }) {
 
 // --- page ------------------------------------------------------------------
 
-export function CandidateProfile({ profile: p }: { profile: CandidateProfileData }) {
+export function CandidateProfile({
+  profile: p,
+  nav = { authenticated: false },
+}: {
+  profile: CandidateProfileData;
+  nav?: SiteHeaderNav;
+}) {
   return (
     <div className="flex min-h-full flex-col bg-mist">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex h-16 max-w-[1160px] items-center px-5 lg:h-[72px] lg:px-8">
-          <Logo />
-        </div>
-      </header>
+      <SiteHeader nav={nav} />
 
       <main className="mx-auto w-full max-w-[1160px] flex-1 px-5 pt-6 pb-24 lg:px-8 lg:pb-16">
         {/* Breadcrumb */}
@@ -727,7 +746,6 @@ export function CandidateProfile({ profile: p }: { profile: CandidateProfileData
               candidateName={p.name}
               variant="mobile"
               cta={p.access?.cta}
-              canSave={false}
             />
           </div>
         </div>
