@@ -108,15 +108,15 @@ export function yearsPhrase(row: ApplicationRow): string | null {
 }
 
 export function overlapPhrase(row: ApplicationRow): string | null {
-  if (row.et_overlap_hours != null) {
-    // "N+ hours" — the stored value is the minimum guaranteed overlap across US
-    // daylight-saving (see lib/overlap.ts). Single source for hero-excluded meta,
-    // Decision Summary, Work Preferences and the search card.
-    return row.et_overlap_hours >= 8
-      ? "Full US shift available"
-      : `${row.et_overlap_hours}+ hours ET overlap`;
-  }
-  return (row.working_hours ?? "").trim() || null;
+  // Only a STRUCTURED overlap figure produces an ET-overlap claim. Without one we
+  // show nothing, rather than echoing the raw working-hours text — that duplicated
+  // the "Preferred hours" line and asserts an overlap we can't validate.
+  // "N+ hours" is the minimum guaranteed overlap across US DST (see lib/overlap.ts);
+  // single source for Decision Summary, Work Preferences and the search card.
+  if (row.et_overlap_hours == null) return null;
+  return row.et_overlap_hours >= 8
+    ? "Full US shift available"
+    : `${row.et_overlap_hours}+ hours ET overlap`;
 }
 
 export function compensation(row: ApplicationRow): Candidate["compensation"] {

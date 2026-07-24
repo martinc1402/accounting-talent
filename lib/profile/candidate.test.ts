@@ -30,6 +30,9 @@ describe("overlap + compensation formatting (items 2, 12)", () => {
     expect(overlapPhrase(row({ et_overlap_hours: 4 }))).toBe("4+ hours ET overlap");
     expect(overlapPhrase(row({ et_overlap_hours: 8 }))).toBe("Full US shift available");
   });
+  it("overlapPhrase is null without a structured figure (no echoing working_hours)", () => {
+    expect(overlapPhrase(row({ working_hours: "until ~10 pm IST", et_overlap_hours: null }))).toBeNull();
+  });
   it("compensation uses an en dash; compensationLine is $900–$1,200/month", () => {
     const comp = compensation(row({ salary_min_usd: 900, salary_max_usd: 1200 }));
     expect(comp?.value).toBe("$900–$1,200");

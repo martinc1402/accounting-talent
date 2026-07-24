@@ -396,9 +396,13 @@ export function applicationToProfile(
   const qualLine = [row.qualification?.trim(), experiencePhrase(row)].filter(Boolean).join(" · ");
   const ws = (assessment?.writingSample ?? "").trim();
 
+  // "Verified candidate" only when AccountingTalent has actually completed a
+  // check; otherwise it's a published-but-unverified profile.
+  const verifs = verifications(row, assessment);
+
   return {
     id: row.id,
-    eyebrow: "Verified candidate",
+    eyebrow: verifs.length ? "Verified candidate" : "Candidate profile",
     name: row.full_name,
     initials: initialsOf(row.full_name),
     role: row.role,
@@ -423,7 +427,7 @@ export function applicationToProfile(
       : undefined,
     capabilities: capabilities(row),
     software: software(row),
-    verifications: verifications(row, assessment),
+    verifications: verifs,
     history: history(row),
     education: education(row),
     preferences: preferences(row),

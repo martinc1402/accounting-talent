@@ -171,14 +171,16 @@ function Hero({ p }: { p: CandidateProfileData }) {
             </div>
           )}
 
-          {/* Anchors to the full verification section further down the page. */}
-          <a
-            href="#verified"
-            className="mt-3 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
-          >
-            What we checked
-            <CaretRight size={11} weight="bold" aria-hidden className="shrink-0" />
-          </a>
+          {/* Anchors to the verification section — only when there are checks. */}
+          {p.verifications.length > 0 && (
+            <a
+              href="#verified"
+              className="mt-3 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+            >
+              What we checked
+              <CaretRight size={11} weight="bold" aria-hidden className="shrink-0" />
+            </a>
+          )}
 
           {p.evidence && p.evidence.length > 0 && (
             <dl className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
