@@ -11,6 +11,12 @@ import {
 import { CandidateProfile } from "@/components/profile/CandidateProfile";
 import { getViewer } from "@/lib/authz/viewer";
 import { canIndexProfile, deriveVisibility } from "@/lib/authz/visibility";
+import {
+  isPublished,
+  readinessChecklist,
+  publicationRequirements,
+  type ReadinessRow,
+} from "@/lib/authz/readiness";
 import { entitlementsFor } from "@/lib/authz/plans";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
 import {
@@ -43,7 +49,9 @@ const loadCandidate = cache(async (id: string) => {
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !app || !app.verified_at) return null;
+  // No publication gate here — the page decides (published for the public,
+  // any state for admins previewing a draft).
+  if (error || !app) return null;
 
   const { data: assessment } = await supabase
     .from("assessments")
@@ -89,11 +97,14 @@ export async function generateMetadata({
   // Metadata must carry no PII: anonymise the name in the title.
   const title = `${anonymizeName(app.full_name)} · ${app.role}`;
 
-  const indexable = canIndexProfile({
-    allowSearchIndexing: app.allow_search_indexing === true,
-    hasVerifiedAt: !!app.verified_at,
-    hasAvailability: !!(app.availability ?? "").trim(),
-  });
+  // Only published, opted-in, available profiles are indexable.
+  const indexable =
+    isPublished(app) &&
+    canIndexProfile({
+      allowSearchIndexing: app.allow_search_indexing === true,
+      hasVerifiedAt: !!app.verified_at,
+      hasAvailability: !!(app.availability ?? "").trim(),
+    });
 
   return { title, robots: { index: indexable, follow: indexable } };
 }
@@ -146,6 +157,10 @@ export default async function CandidateProfilePage({
 
   const app = data.app as Record<string, unknown>;
   const viewer = await getViewer();
+  const isAdmin = viewer.kind === "user" && viewer.isAdmin;
+
+  // Publication gate: only published profiles are public. Admins preview any state.
+  if (!isPublished(app as ReadinessRow) && !isAdmin) notFound();
 
   // Admin-only presentation preview.
   const previewAs =
@@ -204,5 +219,15 @@ export default async function CandidateProfilePage({
 
   const nav = navFromViewer(viewer);
 
-  return <CandidateProfile profile={projected} nav={nav} />;
+  // Admin readiness (draft banner + checklist + publication requirements). Only
+  // ever sent to admins; never part of a public/employer response.
+  const admin = isAdmin
+    ? {
+        status: String((app as ReadinessRow).profile_status ?? "draft"),
+        checklist: readinessChecklist(app as ReadinessRow),
+        publication: publicationRequirements(app as ReadinessRow),
+      }
+    : undefined;
+
+  return <CandidateProfile profile={projected} nav={nav} admin={admin} />;
 }

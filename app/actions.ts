@@ -19,6 +19,7 @@ import {
 } from "@/lib/assessment/emails";
 import { getViewer } from "@/lib/authz/viewer";
 import { deriveVisibility } from "@/lib/authz/visibility";
+import { publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
 import { entitlementsFor } from "@/lib/authz/plans";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
 import {
@@ -646,6 +647,147 @@ export async function adminReconfirmAvailability(applicationId: string): Promise
     action: "availability_reconfirmed",
     application_id: id,
     actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
+/* --- Profile readiness (admin) ------------------------------------------------
+   The admin readiness panel drives three narrow actions. None of them edit
+   applicant content — they only record confirmations and checks (stamping a
+   timestamp) and move the publication status. Publication itself is gated
+   server-side by publicationRequirements(): the minimum data + AT checks must be
+   present, so an admin can never publish an incomplete profile from the UI. */
+
+const PROFILE_STATUSES = [
+  "draft",
+  "needs_candidate_confirmation",
+  "under_assessment",
+  "approved",
+  "published",
+  "paused",
+] as const;
+
+// A confirmable field key → the *_confirmed_at column it stamps. These are
+// candidate-provided confirmations, not AccountingTalent verifications.
+const CONFIRM_COLUMNS: Record<string, string> = {
+  role: "role_confirmed_at",
+  experience: "experience_confirmed_at",
+  compensation_basis: "compensation_basis_confirmed_at",
+  availability: "availability_structured_confirmed_at",
+  software: "software_confirmed_at",
+  education: "education_confirmed_at",
+  candidate_publication: "candidate_publication_approved_at",
+};
+
+// An AccountingTalent check → the *_verified/assessed_at column it stamps.
+const CHECK_COLUMNS: Record<string, string> = {
+  identity: "identity_verified_at",
+  english: "english_assessed_at",
+  qualification: "qualification_verified_at",
+};
+
+async function requireAdmin(): Promise<
+  { ok: true; email: string | null } | { ok: false; res: IntroState }
+> {
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) {
+    return { ok: false, res: { status: "error", message: "Not authorized." } };
+  }
+  return { ok: true, email: viewer.email };
+}
+
+/* Move a profile between readiness states. Publishing is blocked unless the
+   publication requirements are met (checked against the live row). */
+export async function adminSetProfileStatus(
+  applicationId: string,
+  status: string,
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  if (!(PROFILE_STATUSES as readonly string[]).includes(status)) {
+    return { status: "error", message: "Invalid status." };
+  }
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  if (status === "published") {
+    const { data: row } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+    if (!row) return { status: "error", message: "Candidate not found." };
+    const req = publicationRequirements(row as ReadinessRow);
+    if (!req.met) {
+      return { status: "error", message: `Cannot publish — missing: ${req.missing.join(", ")}` };
+    }
+  }
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ profile_status: status })
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_status_set",
+    application_id: id,
+    detail: `status=${status}`,
+    actor: gate.email,
+  });
+  return { status: "success" };
+}
+
+/* Toggle a candidate-provided confirmation (stamps now, or clears it). */
+export async function adminConfirmField(
+  applicationId: string,
+  key: string,
+  confirmed: boolean = true,
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const column = CONFIRM_COLUMNS[key];
+  if (!column) return { status: "error", message: "Unknown field." };
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ [column]: confirmed ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_field_confirmed",
+    application_id: id,
+    detail: `field=${key} confirmed=${confirmed}`,
+    actor: gate.email,
+  });
+  return { status: "success" };
+}
+
+/* Record an AccountingTalent check (identity / English / qualification). English
+   also carries the assessed level. Stamps now, or clears the check. */
+export async function adminVerifyCheck(
+  applicationId: string,
+  check: string,
+  opts: { confirmed?: boolean; englishLevel?: string } = {},
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const column = CHECK_COLUMNS[check];
+  if (!column) return { status: "error", message: "Unknown check." };
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const confirmed = opts.confirmed ?? true;
+  const patch: Record<string, unknown> = { [column]: confirmed ? new Date().toISOString() : null };
+  if (check === "english" && confirmed && opts.englishLevel) patch.english_level = opts.englishLevel;
+
+  const { error } = await supabase.from("applications").update(patch).eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_check_recorded",
+    application_id: id,
+    detail: `check=${check} confirmed=${confirmed}`,
+    actor: gate.email,
   });
   return { status: "success" };
 }

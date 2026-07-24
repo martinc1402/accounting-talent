@@ -13,6 +13,8 @@ import { LogoMark } from "@/components/ui/LogoMark";
 import { Card } from "@/components/ui/Card";
 import { SiteHeader, type SiteHeaderNav } from "@/components/ui/SiteHeader";
 import { CandidateActions, type SaveMode } from "@/components/profile/CandidateActions";
+import { AssessmentResponse } from "@/components/profile/AssessmentResponse";
+import { AdminReadinessControls } from "@/components/profile/AdminReadinessControls";
 import type {
   CandidateProfile as CandidateProfileData,
   ProfileAccess,
@@ -21,6 +23,14 @@ import type {
   ProfileVerification,
   VerificationBadge,
 } from "@/lib/profile/candidate";
+import type { ChecklistItem } from "@/lib/authz/readiness";
+
+// Admin-only readiness data (draft banner + checklist). Never in a public response.
+export type AdminReadiness = {
+  status: string;
+  checklist: ChecklistItem[];
+  publication: { met: boolean; missing: string[] };
+};
 
 // Save behaviour by viewer: verified employers persist (toggle); anon/unverified
 // are prompted; admin/preview have no shortlist.
@@ -149,6 +159,11 @@ function Hero({ p }: { p: CandidateProfileData }) {
           </p>
           <h1 className="mt-2 display display-figure text-paper">{p.name}</h1>
           <p className="mt-1.5 font-display text-lede leading-snug text-paper/90">{p.role}</p>
+          {p.alternativeRoles && p.alternativeRoles.length > 0 && (
+            <p className="mt-1 text-caption text-paper/70">
+              Also open to: {p.alternativeRoles.join(", ")}
+            </p>
+          )}
 
           {p.qualLine && (
             <p className="mt-4 flex items-start gap-2.5 text-small text-paper/85">
@@ -183,19 +198,33 @@ function Hero({ p }: { p: CandidateProfileData }) {
           )}
 
           {p.evidence && p.evidence.length > 0 && (
-            <dl className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
-              {p.evidence.map((e) => (
-                <div
-                  key={e.label}
-                  className="border-l border-paper/20 pl-4 first:border-l-0 first:pl-0"
-                >
-                  <dd className="font-display text-[1.55rem] leading-none text-paper">
-                    {e.value}
-                  </dd>
-                  <dt className="mt-1.5 text-caption text-paper/75">{e.label}</dt>
-                </div>
-              ))}
-            </dl>
+            <>
+              <dl className="mt-5 flex flex-wrap gap-x-7 gap-y-3">
+                {p.evidence.slice(0, 3).map((e) => (
+                  <div
+                    key={e.label}
+                    className="border-l border-paper/20 pl-4 first:border-l-0 first:pl-0"
+                  >
+                    <dd className="flex items-center gap-1.5 font-display text-[1.55rem] leading-none text-paper">
+                      {e.value}
+                      {e.verified && (
+                        <SealCheck
+                          size={14}
+                          weight="fill"
+                          className="text-verified"
+                          aria-label="Independently verified"
+                        />
+                      )}
+                    </dd>
+                    <dt className="mt-1.5 text-caption text-paper/75">{e.label}</dt>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2.5 text-fine text-paper/55">
+                Experience and achievements are candidate-provided unless marked as
+                independently verified.
+              </p>
+            </>
           )}
 
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-small text-paper/85">
@@ -224,6 +253,9 @@ function Hero({ p }: { p: CandidateProfileData }) {
                 </p>
                 {p.compensation.unit && (
                   <p className="mt-1 text-caption text-paper/75">{p.compensation.unit}</p>
+                )}
+                {p.compensationBasis && (
+                  <p className="mt-0.5 text-caption text-paper/60">{p.compensationBasis}</p>
                 )}
               </div>
             ) : p.access?.compensationLocked ? (
@@ -272,10 +304,10 @@ function VerifiedChecks({ items }: { items: ProfileVerification[] }) {
   if (!items.length) return null;
   return (
     <SectionCard title="Verified by AccountingTalent" id="verified">
-      <p className="-mt-2 mb-3 max-w-[64ch] text-caption text-muted">
-        Independently verified by AccountingTalent. Employment history, achievements
-        and other profile information are provided by the candidate. Only completed
-        checks are shown.
+      <p className="-mt-2 mb-3 max-w-[68ch] text-caption text-muted">
+        Identity, English communication and qualifications are independently checked
+        by AccountingTalent. Employment history, experience and achievements are
+        provided by the candidate. Only completed checks are shown.
       </p>
       <div className="divide-y divide-line">
         {items.map((v) => (
@@ -435,8 +467,11 @@ function DecisionPanel({ p }: { p: CandidateProfileData }) {
           </div>
         ))}
       </dl>
+      {p.compensationBasis && (
+        <p className="mt-2 text-fine text-paper/60">{p.compensationBasis}</p>
+      )}
       {p.availabilityConfirmed && (
-        <p className="mt-2 text-fine text-paper/60">{p.availabilityConfirmed}</p>
+        <p className="mt-1 text-fine text-paper/60">{p.availabilityConfirmed}</p>
       )}
       <div className="mt-5">
         <CandidateActions
@@ -584,6 +619,8 @@ function PreviewBanner({ p }: { p: CandidateProfileData }) {
   );
 }
 
+/** Admin-only readiness: draft banner + the publication checklist. Rendered only
+ *  when `admin` is present (server sends it to admins alone). Presentational. */
 /** Identity + contact, rendered only when the projection included p.contact
  *  (accepted-introduction or admin). Server decides; this just displays. */
 function ContactCard({ p }: { p: CandidateProfileData }) {
@@ -631,9 +668,11 @@ function ContactCard({ p }: { p: CandidateProfileData }) {
 export function CandidateProfile({
   profile: p,
   nav = { authenticated: false },
+  admin,
 }: {
   profile: CandidateProfileData;
   nav?: SiteHeaderNav;
+  admin?: AdminReadiness;
 }) {
   return (
     <div className="flex min-h-full flex-col bg-mist">
@@ -656,6 +695,7 @@ export function CandidateProfile({
           <span className="text-ink">{p.name}</span>
         </nav>
 
+        {admin && <AdminReadinessControls candidateId={p.id} admin={admin} />}
         <AdminPreviewSwitcher p={p} />
         <PreviewBanner p={p} />
 
@@ -673,14 +713,10 @@ export function CandidateProfile({
 
             {p.writingSample && (
               <SectionCard title="In their own words">
-                <blockquote className="border-l-2 border-navy/25 pl-5 sm:pl-6">
-                  <p className="max-w-[60ch] text-body leading-relaxed text-ink">
-                    {p.writingSample.text}
-                  </p>
-                  <footer className="mt-4 text-caption text-subtle">
-                    {p.writingSample.attribution}
-                  </footer>
-                </blockquote>
+                <AssessmentResponse
+                  text={p.writingSample.text}
+                  attribution={p.writingSample.attribution}
+                />
               </SectionCard>
             )}
 

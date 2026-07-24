@@ -78,3 +78,105 @@ describe("verification is precise (items 3, 5)", () => {
     }
   });
 });
+
+describe("real-data honesty (profile refinement)", () => {
+  it("target role: confirmed primary shown; unconfirmed falls back to raw role", () => {
+    const confirmed = applicationToProfile(
+      row({ role: "Tax Reviewer", primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: "2026-07-01T00:00:00Z" }),
+    );
+    expect(confirmed.role).toBe("Senior US Tax Reviewer");
+    // Unconfirmed proposal must NOT surface publicly as the role.
+    const unconfirmed = applicationToProfile(
+      row({ role: "Tax Reviewer", primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: null }),
+    );
+    expect(unconfirmed.role).toBe("Tax Reviewer");
+  });
+
+  it("alternative roles only render once the role is confirmed", () => {
+    const unconfirmed = applicationToProfile(
+      row({ primary_target_role: "Senior US Tax Reviewer", alternative_target_roles: ["Senior US Tax Associate"], role_confirmed_at: null }),
+    );
+    expect(unconfirmed.alternativeRoles).toBeUndefined();
+    const confirmed = applicationToProfile(
+      row({ primary_target_role: "Senior US Tax Reviewer", alternative_target_roles: ["Senior US Tax Associate"], role_confirmed_at: "2026-07-01T00:00:00Z" }),
+    );
+    expect(confirmed.alternativeRoles).toEqual(["Senior US Tax Associate"]);
+  });
+
+  it("compensation basis line appears only when the basis is confirmed", () => {
+    const unconf = applicationToProfile(row({ salary_min_usd: 1800, salary_max_usd: 2500, hours_per_week_basis: 20, compensation_basis_confirmed_at: null }));
+    expect(unconf.compensationBasis).toBeUndefined();
+    const conf = applicationToProfile(row({ salary_min_usd: 1800, salary_max_usd: 2500, hours_per_week_basis: 20, compensation_basis_confirmed_at: "2026-07-01T00:00:00Z" }));
+    expect(conf.compensationBasis).toBe("Based on up to 20 hours/week");
+  });
+
+  it("proof points are candidate-provided by default (never flagged verified)", () => {
+    const p = applicationToProfile(
+      row({
+        proof_points: [
+          { value: "1120, 1120-S & 1065", label: "Entity return experience", source_type: "candidate_provided", display_order: 1, is_public: true },
+          { value: "60 shareholders", label: "Complex S-corporation handled", source_type: "candidate_provided", display_order: 2, is_public: true },
+        ],
+      }),
+    );
+    expect(p.evidence).toHaveLength(2);
+    expect(p.evidence!.every((e) => e.verified !== true)).toBe(true);
+    expect(p.evidence![0].value).toBe("1120, 1120-S & 1065");
+  });
+
+  it("proof points marked accounting_talent_verified carry the verified flag; private ones are hidden", () => {
+    const p = applicationToProfile(
+      row({
+        proof_points: [
+          { value: "CPA eligible", label: "Credential", source_type: "accounting_talent_verified", display_order: 1, is_public: true },
+          { value: "secret", label: "hidden", source_type: "candidate_provided", display_order: 2, is_public: false },
+        ],
+      }),
+    );
+    expect(p.evidence).toHaveLength(1);
+    expect(p.evidence![0].verified).toBe(true);
+  });
+
+  it("software stays separate records and never fabricates level/years", () => {
+    const p = applicationToProfile(
+      row({
+        software_proficiency: [
+          { name: "CCH Axcess Tax" },
+          { name: "CCH ProSystem fx Tax" },
+          { name: "GoSystem Tax RS" },
+        ],
+      }),
+    );
+    expect(p.software.map((s) => s.name)).toEqual(["CCH Axcess Tax", "CCH ProSystem fx Tax", "GoSystem Tax RS"]);
+    // No level/years supplied -> no invented meta line.
+    expect(p.software.every((s) => s.meta === undefined)).toBe(true);
+  });
+
+  it("employment history exposes only the public employer, never the private name", () => {
+    const p = applicationToProfile(
+      row({
+        employment_history: [
+          { role: "Senior Tax Associate", employer_public: "Offshore US accounting firm", employer_private: "Acme Offshore Pvt Ltd", responsibilities: ["Reviewed 1120 returns"] },
+        ],
+      }),
+    );
+    expect(p.history).toHaveLength(1);
+    expect(p.history[0].meta).toBe("Offshore US accounting firm");
+    expect(JSON.stringify(p.history)).not.toContain("Acme Offshore");
+  });
+
+  it("assessment writing sample is preserved byte-for-byte (unedited)", () => {
+    const sample = "I handled a  complex  1120-S with 60 shareholders.\n\nMulti-state: 12 states.";
+    const p = applicationToProfile(row({}), { name: "Skills assessment", score: null, writingSample: sample });
+    expect(p.writingSample?.text).toBe(sample.trim());
+    expect(p.writingSample?.attribution).toMatch(/unedited/);
+  });
+
+  it("education generalizes to completion status + field when institution is absent", () => {
+    const p = applicationToProfile(
+      row({ education: [{ degree: "B.Com", field_of_study: "Commerce", completion_status: "Completed" }] }),
+    );
+    expect(p.education[0].qualification).toBe("B.Com");
+    expect(p.education[0].meta).toBe("Completed · Commerce");
+  });
+});

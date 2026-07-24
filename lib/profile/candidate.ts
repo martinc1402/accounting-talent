@@ -21,7 +21,6 @@ import {
   compensationLine,
   overlapPhrase,
   roleCategory,
-  yearsPhrase,
 } from "@/lib/search/candidate";
 
 // Availability is considered stale after this many days without reconfirmation.
@@ -46,8 +45,9 @@ function availabilityFreshness(row: ProfileRow): { confirmed?: string; stale: bo
 // the same role category the card uses for its evidence label.
 const CAPABILITY_META: Record<RoleCategory, { title: string; subtitle: string }> = {
   tax: {
-    title: "US returns prepared",
-    subtitle: "Federal and state returns this candidate has hands-on experience preparing.",
+    title: "US returns prepared and reviewed",
+    subtitle:
+      "Federal and state returns this candidate has hands-on experience preparing or reviewing.",
   },
   bookkeeper: {
     title: "Core bookkeeping responsibilities",
@@ -65,8 +65,14 @@ const CAPABILITY_META: Record<RoleCategory, { title: string; subtitle: string }>
 };
 
 import type { IntroductionStatus, VisibilityLevel } from "@/lib/authz/types";
+import {
+  resolveTargetRole,
+  resolveExperienceLabel,
+  resolveCompensation,
+  resolveEtOverlap,
+} from "@/lib/authz/readiness";
 
-export type ProfileStat = { value: string; label: string };
+export type ProfileStat = { value: string; label: string; verified?: boolean };
 
 /** Identity/contact, present in the view-model ONLY at accepted-introduction or
  *  admin level. Absent (undefined) at every lower level — never masked. */
@@ -138,8 +144,10 @@ export type CandidateProfile = {
   role: string;
   photo?: { src: string; alt: string; focal?: string };
   qualLine: string;
+  // Roles the candidate is also open to (shown only when the role is confirmed).
+  alternativeRoles?: string[];
   heroVerifications: string[];
-  // Scannable, candidate-supplied proof points (e.g. "300+" / "US returns / season").
+  // Scannable proof points; each candidate-provided unless verified === true.
   evidence?: ProfileStat[];
   location?: string;
   overlap?: string;
@@ -148,6 +156,8 @@ export type CandidateProfile = {
   // when stale (the availability value itself switches to "being reconfirmed").
   availabilityConfirmed?: string;
   compensation?: { value: string; unit: string };
+  // "Based on up to N hours/week" — shown only when the basis is confirmed.
+  compensationBasis?: string;
   summary?: string;
   writingSample?: { text: string; attribution: string };
   capabilities?: { title: string; subtitle: string; primary: string[]; extra: string[] };
@@ -166,23 +176,43 @@ export type CandidateProfile = {
   saved?: boolean;
 };
 
-// jsonb column shapes (0008). Read whole with the row; loosely typed and coerced.
+// jsonb column shapes (0008, extended 0015). Read whole with the row; loosely
+// typed and coerced. New fields are optional so pre-0015 rows still map.
 type EmploymentJson = {
   title?: string;
+  role?: string;
+  // employer_public is the only employer name shown publicly ("Offshore US
+  // accounting firm"). employer_private is admin-only and NEVER read here.
   employer?: string;
+  employer_public?: string;
+  employer_private?: string;
   dates?: string;
+  start_date?: string;
+  end_date?: string;
+  current?: boolean;
   bullets?: string[];
+  responsibilities?: string[];
   exposure?: string;
+  source_type?: string;
 };
 type EducationJson = {
   qualification?: string;
+  degree?: string;
+  field_of_study?: string;
+  completion_status?: string;
   institution?: string;
   year?: string | number;
   status?: string;
   completed?: boolean;
   note?: string;
 };
-type SoftwareJson = { name?: string; level?: string; years?: number };
+type SoftwareJson = {
+  name?: string;
+  level?: string;
+  years?: number;
+  last_used?: string;
+  confirmed_by_candidate?: boolean;
+};
 
 export type ProfileRow = ApplicationRow & {
   start_date?: string | null;
@@ -203,6 +233,35 @@ export type ProfileRow = ApplicationRow & {
   // 0014 fields.
   availability_confirmed_at?: string | null;
   timezone?: string | null; // IANA, e.g. "Asia/Kolkata"
+  // 0015 readiness + structure.
+  profile_status?: string | null;
+  primary_target_role?: string | null;
+  alternative_target_roles?: string[] | null;
+  role_confirmed_at?: string | null;
+  us_tax_experience_start_date?: string | null;
+  us_tax_experience_months?: number | null;
+  experience_confirmed_at?: string | null;
+  compensation_currency?: string | null;
+  compensation_period?: string | null;
+  hours_per_week_basis?: number | null;
+  compensation_basis_confirmed_at?: string | null;
+  avail_days?: string[] | null;
+  avail_start_time?: string | null;
+  avail_finish_time?: string | null;
+  avail_max_weekly_hours?: number | null;
+  avail_busy_season_flexible?: boolean | null;
+  availability_structured_confirmed_at?: string | null;
+  software_confirmed_at?: string | null;
+  education_confirmed_at?: string | null;
+  candidate_publication_approved_at?: string | null;
+  proof_points?: {
+    value?: string;
+    label?: string;
+    source_type?: "candidate_provided" | "accounting_talent_verified";
+    display_order?: number;
+    is_public?: boolean;
+  }[] | null;
+  return_experience?: { form?: string; mode?: "prepared" | "reviewed" | "both" }[] | null;
 };
 
 /** The assessment payload for a profile: score is still gated by SHOW_ASSESSMENT;
@@ -222,21 +281,19 @@ function verifiedDate(ts?: string | null): string | undefined {
   return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-/** The hero experience line, with an optional role-specific focus injected.
- *  "4 years' experience" + focus "US tax" -> "4 years' US tax experience".
- *  yearsPhrase (shared with the card) stays generic; the focus is profile-only. */
-function experiencePhrase(row: ProfileRow): string | null {
-  const base = yearsPhrase(row);
-  if (!base) return null;
-  const focus = (row.experience_focus ?? "").trim();
-  if (!focus) return base;
-  return base.includes("experience")
-    ? base.replace("experience", `${focus} experience`)
-    : `${base}, ${focus}`;
-}
-
-/** Coerce the loosely-typed highlights column into proof-point stats. */
+/** Proof points from the structured proof_points column (public ones only),
+ *  falling back to the legacy highlights column. Each carries its source so the
+ *  UI never labels a candidate-provided point as independently verified. */
 function evidence(row: ProfileRow): ProfileStat[] | undefined {
+  const pp = (row.proof_points ?? [])
+    .filter((p) => p?.value?.trim() && p?.label?.trim() && p.is_public !== false)
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((p) => ({
+      value: (p.value as string).trim(),
+      label: (p.label as string).trim(),
+      verified: p.source_type === "accounting_talent_verified",
+    }));
+  if (pp.length) return pp;
   const out = (row.highlights ?? [])
     .filter((h) => h?.value?.trim() && h?.label?.trim())
     .map((h) => ({ value: (h.value as string).trim(), label: (h.label as string).trim() }));
@@ -327,16 +384,21 @@ function verifications(row: ProfileRow, assessment?: ProfileAssessment | null): 
   return out;
 }
 
+/** Candidate-provided employment history. Only ever exposes the PUBLIC employer
+ *  label (employer_public), never employer_private — the private name stays in
+ *  the admin data. Entries are never labelled independently verified. */
 function history(row: ProfileRow): ProfileHistoryEntry[] {
   const h = row.employment_history;
   if (!h?.length) return [];
   return h
-    .filter((j) => j?.title)
+    .map((j) => ({ ...j, title: (j.title ?? j.role ?? "").trim() }))
+    .filter((j) => j.title)
     .map((j) => ({
-      title: j.title as string,
-      meta: (j.employer ?? "").trim(),
+      title: j.title,
+      // employer_public first; legacy `employer` still works. NEVER employer_private.
+      meta: (j.employer_public ?? j.employer ?? "").trim(),
       dates: (j.dates ?? "").trim(),
-      bullets: j.bullets ?? [],
+      bullets: j.responsibilities?.length ? j.responsibilities : j.bullets ?? [],
       exposure: j.exposure?.trim() || undefined,
     }));
 }
@@ -345,14 +407,21 @@ function education(row: ProfileRow): ProfileEducationEntry[] {
   const e = row.education;
   if (e?.length) {
     return e
-      .filter((x) => x?.qualification)
-      .map((x) => ({
-        qualification: x.qualification as string,
-        meta: [x.institution, x.year].filter(Boolean).join(" · ") || undefined,
-        status: x.status?.trim() || undefined,
-        completed: x.completed,
-        note: x.note?.trim() || undefined,
-      }));
+      .map((x) => ({ ...x, qualification: (x.qualification ?? x.degree ?? "").trim() }))
+      .filter((x) => x.qualification)
+      .map((x) => {
+        // Anonymous/unverified viewers get "Completed · Commerce" (status + field);
+        // the projection layer adds institution + year only for verified employers.
+        const generic = [x.completion_status, x.field_of_study].filter(Boolean).join(" · ");
+        const detailed = [x.institution, x.year].filter(Boolean).join(" · ");
+        return {
+          qualification: x.qualification,
+          meta: detailed || generic || undefined,
+          status: (x.status ?? x.completion_status)?.trim() || undefined,
+          completed: x.completed,
+          note: x.note?.trim() || undefined,
+        };
+      });
   }
   // Fallback: the single free-text qualification the form does capture.
   const q = (row.qualification ?? "").trim();
@@ -378,22 +447,33 @@ export function applicationToProfile(
   assessment?: ProfileAssessment | null,
 ): CandidateProfile {
   const comp = compensation(row);
-  const overlap = overlapPhrase(row) ?? undefined;
+  const compResolved = resolveCompensation(row);
+  // ET overlap: structured et_overlap_hours, else computed from confirmed avail
+  // times, else nothing (never echo free-text).
+  const overlap = overlapPhrase(row) ?? resolveEtOverlap(row).value;
   const rawAvailability = (row.availability ?? "").trim() || undefined;
   const employmentType = (row.employment_type ?? "").trim();
   const location = [row.city, row.country ?? row.state].filter(Boolean).join(", ") || undefined;
+
+  // Confirmed primary role wins; else the raw applicant role.
+  const targetRole = resolveTargetRole(row).value ?? row.role;
+  const alternativeRoles =
+    !!row.role_confirmed_at && (row.alternative_target_roles?.length ?? 0) > 0
+      ? row.alternative_target_roles ?? undefined
+      : undefined;
 
   // Availability freshness: stale confirmations are not presented as current.
   const fresh = availabilityFreshness(row);
   const availability = fresh.stale ? "Availability being reconfirmed" : rawAvailability;
 
-  const decision: ProfileFact[] = [{ label: "Target role", value: row.role }];
-  if (comp) decision.push({ label: "Compensation", value: compensationLine(comp) ?? comp.value });
+  const decision: ProfileFact[] = [{ label: "Target role", value: targetRole }];
+  if (comp) decision.push({ label: "Compensation", value: compResolved.line ?? comp.value });
   if (availability) decision.push({ label: "Availability", value: availability });
   if (overlap) decision.push({ label: "US overlap", value: overlap });
   if (employmentType) decision.push({ label: "Preference", value: employmentType });
 
-  const qualLine = [row.qualification?.trim(), experiencePhrase(row)].filter(Boolean).join(" · ");
+  // Experience label: exact only from confirmed data, else a grammatical range.
+  const qualLine = [row.qualification?.trim(), resolveExperienceLabel(row).value].filter(Boolean).join(" · ");
   const ws = (assessment?.writingSample ?? "").trim();
 
   // "Verified candidate" only when AccountingTalent has actually completed a
@@ -405,15 +485,16 @@ export function applicationToProfile(
     eyebrow: verifs.length ? "Verified candidate" : "Candidate profile",
     name: row.full_name,
     initials: initialsOf(row.full_name),
-    role: row.role,
+    role: targetRole,
     photo: row.photo_url
       ? {
           src: row.photo_url,
-          alt: `${row.full_name}, ${row.role}`,
+          alt: `${row.full_name}, ${targetRole}`,
           focal: (row.photo_focal ?? "").trim() || undefined,
         }
       : undefined,
     qualLine,
+    alternativeRoles,
     heroVerifications: heroVerifications(row, assessment),
     evidence: evidence(row),
     location,
@@ -421,6 +502,7 @@ export function applicationToProfile(
     availability,
     availabilityConfirmed: fresh.stale ? undefined : fresh.confirmed,
     compensation: comp,
+    compensationBasis: compResolved.basis,
     summary: (row.professional_summary ?? "").trim() || undefined,
     writingSample: ws
       ? { text: ws, attribution: "Written during the AccountingTalent skills assessment · unedited" }
@@ -448,6 +530,7 @@ export const sampleProfiles: CandidateProfile[] = [
     name: "Priya S.",
     initials: "PS",
     role: "US Tax Preparer",
+    alternativeRoles: ["US Tax Reviewer"],
     photo: {
       src: "/images/candidate-headshot.jpg",
       alt: "Priya S., US Tax Preparer",
@@ -458,17 +541,18 @@ export const sampleProfiles: CandidateProfile[] = [
     evidence: [
       { value: "300+", label: "US returns / season" },
       { value: "40+", label: "clients managed" },
-      { value: "4", label: "tax seasons" },
+      { value: "4", label: "tax seasons", verified: true },
     ],
     location: "Ahmedabad, India",
     overlap: "4+ hours ET overlap",
     availability: "Available within 30 days",
     availabilityConfirmed: "Confirmed 22 Jul 2026",
     compensation: { value: "$900–$1,200", unit: "USD / month" },
+    compensationBasis: "Based on up to 40 hours/week",
     summary:
       "Priya is a US tax preparer with four busy seasons preparing federal and multi-state returns for an outsourced US CPA firm. She owns a book of 40+ small-business and individual clients end to end in Drake and Lacerte, from workpaper prep through review-ready filing, and is strongest on 1040, 1120-S and 1065 engagements.",
     writingSample: {
-      text: "A client came to us mid-season with two years of unfiled 1120-S returns and no clean workpapers. I rebuilt the trial balances from the bank feeds in QuickBooks, reconciled the shareholder basis, and got both years filed before the extended deadline. The owner had assumed the penalties were unavoidable; we abated most of them with a reasonable-cause letter.",
+      text: "A client came to us mid-season with two years of unfiled 1120-S returns and no clean workpapers. I rebuilt the trial balances from the bank feeds in QuickBooks, reconciled the shareholder basis, and got both years filed before the extended deadline. The owner had assumed the penalties were unavoidable; we abated most of them with a reasonable-cause letter.\n\nThe harder part was the shareholder basis schedule. The prior preparer had never tracked it, so distributions in year two looked like they exceeded basis. I reconstructed contributions and loans from the formation documents and the bank history, which brought the basis back into line and avoided a gain that would otherwise have been reported in error.\n\nWhat I took from it: the return is only as good as the workpapers underneath it. I now start every clean-up engagement by rebuilding the books before I touch the tax forms, and I document each assumption so the review is fast and the client can follow the reasoning.",
       attribution: "Written during the AccountingTalent skills assessment · unedited",
     },
     capabilities: {
