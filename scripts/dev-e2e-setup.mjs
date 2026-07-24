@@ -25,10 +25,29 @@ if (!url || !anon || !serviceKey || !adminEmail || !employerEmail) {
 
 const svc = createClient(url, serviceKey, { auth: { persistSession: false } });
 
+// Supabase's auth layer intermittently returns a spurious 403 "bad_jwt"
+// (kid <nil>, ES256) while an asymmetric JWT-signing-key migration propagates
+// across GoTrue instances. The same valid key succeeds on retry, so wrap the
+// auth-admin / sign-in calls and retry transient failures.
+async function retryAuth(fn, label, n = 6) {
+  let lastErr;
+  for (let i = 0; i < n; i++) {
+    const res = await fn();
+    if (!res?.error) return res;
+    const e = res.error;
+    const transient =
+      [403, 429, 500, 502, 503].includes(e.status) ||
+      /bad_jwt|unverifiable|kid <nil>|signature/i.test(e.message ?? "");
+    if (!transient) throw e;
+    lastErr = e;
+    await new Promise((r) => setTimeout(r, 350 * (i + 1)));
+  }
+  throw new Error(`${label}: gave up after ${n} attempts (${lastErr?.message})`);
+}
+
 async function findUser(email) {
   for (let page = 1; page <= 20; page++) {
-    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) throw error;
+    const { data } = await retryAuth(() => svc.auth.admin.listUsers({ page, perPage: 200 }), "listUsers");
     const u = data.users.find((x) => (x.email ?? "").toLowerCase() === email);
     if (u) return u;
     if (data.users.length < 200) break;
@@ -40,10 +59,9 @@ async function ensureUser(email) {
   const password = `Dev-${randomUUID()}`;
   let user = await findUser(email);
   if (user) {
-    await svc.auth.admin.updateUserById(user.id, { password, email_confirm: true });
+    await retryAuth(() => svc.auth.admin.updateUserById(user.id, { password, email_confirm: true }), "updateUser");
   } else {
-    const { data, error } = await svc.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error) throw error;
+    const { data } = await retryAuth(() => svc.auth.admin.createUser({ email, password, email_confirm: true }), "createUser");
     user = data.user;
   }
   await svc.from("profiles").upsert({ user_id: user.id, email }, { onConflict: "user_id" });
@@ -54,8 +72,7 @@ async function ensureUser(email) {
 // serialize the session into an in-memory jar via its own setAll.
 async function mintCookies(email, password) {
   const authClient = createClient(url, anon, { auth: { persistSession: false } });
-  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  const { data } = await retryAuth(() => authClient.auth.signInWithPassword({ email, password }), "signIn");
   const { access_token, refresh_token } = data.session;
 
   const jar = new Map();
