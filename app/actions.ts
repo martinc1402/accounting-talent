@@ -630,7 +630,10 @@ export async function unsaveCandidate(applicationId: string): Promise<SaveState>
   return { status: "success", saved: false };
 }
 
-/* Admin-only: reconfirm a candidate's availability (stamps now). */
+/* Admin-only: reconfirm a candidate's availability (stamps now). Stamps the
+   structured-availability confirmation — the single source of truth the profile
+   mapper, readiness panel and publication gate all read (equivalent to
+   adminConfirmField(id, "availability")). */
 export async function adminReconfirmAvailability(applicationId: string): Promise<IntroState> {
   const id = String(applicationId ?? "").trim();
   if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
@@ -640,7 +643,7 @@ export async function adminReconfirmAvailability(applicationId: string): Promise
 
   const { error } = await supabase
     .from("applications")
-    .update({ availability_confirmed_at: new Date().toISOString() })
+    .update({ availability_structured_confirmed_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { status: "error", message: "Update failed." };
   await supabase.from("admin_actions").insert({

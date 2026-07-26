@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applicationToProfile, sampleProfiles, type ProfileRow } from "./candidate";
 import { overlapPhrase, compensation, compensationLine } from "@/lib/search/candidate";
+import { readinessChecklist } from "@/lib/authz/readiness";
 
 const priya = sampleProfiles[0];
 
@@ -50,18 +51,42 @@ describe("availability freshness (item 4)", () => {
   const days = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 
   it("fresh confirmation shows the value + a Confirmed date", () => {
-    const p = applicationToProfile(row({ availability: "Available within 30 days", availability_confirmed_at: days(2) }));
+    const p = applicationToProfile(row({ availability: "Available within 30 days", availability_structured_confirmed_at: days(2) }));
     expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Available within 30 days");
     expect(p.availabilityConfirmed).toMatch(/^Confirmed /);
   });
-  it("stale confirmation is NOT shown as current", () => {
-    const p = applicationToProfile(row({ availability: "Available within 30 days", availability_confirmed_at: days(100) }));
+  it("stale confirmation (lapsed) is NOT shown as current", () => {
+    const p = applicationToProfile(row({ availability: "Available within 30 days", availability_structured_confirmed_at: days(100) }));
     expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Availability being reconfirmed");
     expect(p.availabilityConfirmed).toBeUndefined();
   });
-  it("never confirmed is treated as stale", () => {
-    const p = applicationToProfile(row({ availability: "Available now", availability_confirmed_at: null }));
-    expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Availability being reconfirmed");
+  it("never confirmed shows the stated availability plainly, with no badge", () => {
+    // A draft that was never confirmed is NOT "being reconfirmed" (nothing lapsed):
+    // show the candidate's stated availability, no "Confirmed" line.
+    const p = applicationToProfile(row({ availability: "Available now", availability_structured_confirmed_at: null }));
+    expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Available now");
+    expect(p.availabilityConfirmed).toBeUndefined();
+  });
+  it("does NOT read the legacy availability_confirmed_at (0014) for the public claim", () => {
+    // The stray 0014 freshness field must not resurrect a confirmation the
+    // structured/readiness model says is unconfirmed (Sai's contradiction).
+    const p = applicationToProfile(row({ availability: "Part-time", availability_confirmed_at: days(1), availability_structured_confirmed_at: null }));
+    expect(p.availabilityConfirmed).toBeUndefined();
+    expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Part-time");
+  });
+  it("raw 'Preferred hours' free-text is public only once availability is confirmed", () => {
+    const unconfirmed = applicationToProfile(row({ working_hours: "until ~10 pm IST", availability_structured_confirmed_at: null }));
+    expect(unconfirmed.preferences.find((p) => p.label === "Preferred hours")).toBeUndefined();
+    const confirmed = applicationToProfile(row({ working_hours: "until ~10 pm IST", availability_structured_confirmed_at: days(1) }));
+    expect(confirmed.preferences.find((p) => p.label === "Preferred hours")?.value).toBe("until ~10 pm IST");
+  });
+  it("public availability claim can't contradict the readiness panel (Sai's bug)", () => {
+    // Same row through both surfaces: an unconfirmed structured availability must
+    // never show a public "Confirmed" line while readiness flags it needs-confirm.
+    const r = row({ availability: "Part-time (up to 20 hrs/week)", avail_max_weekly_hours: 20, availability_structured_confirmed_at: null });
+    expect(applicationToProfile(r).availabilityConfirmed).toBeUndefined();
+    const item = readinessChecklist(r).find((i) => i.key === "availability");
+    expect(item?.state).not.toBe("confirmed");
   });
 });
 

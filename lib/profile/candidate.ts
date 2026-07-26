@@ -29,16 +29,25 @@ const AVAILABILITY_STALE_DAYS = (() => {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 45;
 })();
 
-/** Availability freshness: "Confirmed 22 Jul 2026" plus a stale flag once older
- *  than AVAILABILITY_STALE_DAYS (or never confirmed). */
-function availabilityFreshness(row: ProfileRow): { confirmed?: string; stale: boolean } {
-  const ts = (row.availability_confirmed_at ?? "").trim();
-  if (!ts) return { stale: true };
+/** Availability confirmation, keyed on the SAME timestamp the readiness panel and
+ *  publication gate use (availability_structured_confirmed_at) so the public claim
+ *  can never contradict the admin view. Three states:
+ *    - 'confirmed'   : set and within AVAILABILITY_STALE_DAYS -> show "Confirmed <date>"
+ *    - 'stale'       : set but older -> show "being reconfirmed" (it lapsed)
+ *    - 'unconfirmed' : never confirmed -> show the stated availability plainly, no badge
+ *  (A never-confirmed draft is NOT "being reconfirmed" — nothing was confirmed to lapse.) */
+function availabilityFreshness(row: ProfileRow): {
+  state: "confirmed" | "stale" | "unconfirmed";
+  confirmed?: string;
+} {
+  const ts = (row.availability_structured_confirmed_at ?? "").trim();
+  if (!ts) return { state: "unconfirmed" };
   const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return { stale: true };
+  if (Number.isNaN(d.getTime())) return { state: "unconfirmed" };
   const ageDays = (Date.now() - d.getTime()) / 86_400_000;
+  if (ageDays > AVAILABILITY_STALE_DAYS) return { state: "stale" };
   const label = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  return { confirmed: `Confirmed ${label}`, stale: ageDays > AVAILABILITY_STALE_DAYS };
+  return { state: "confirmed", confirmed: `Confirmed ${label}` };
 }
 
 // Title + one-line subtitle for the role-specific capabilities card, keyed by
@@ -430,10 +439,16 @@ function education(row: ProfileRow): ProfileEducationEntry[] {
 
 function preferences(row: ProfileRow): ProfileFact[] {
   const overlap = overlapPhrase(row);
+  // The raw working-hours note is unstructured free-text; like the search card
+  // (lib/search/candidate.ts), we don't surface it publicly as fact until the
+  // structured availability is candidate-confirmed. Unconfirmed -> admin-only.
+  const workingHours = row.availability_structured_confirmed_at
+    ? (row.working_hours ?? "").trim()
+    : "";
   const entries: [string, string][] = [
     ["Employment", (row.employment_type ?? "").trim()],
     ["Earliest start", (row.start_date ?? "").trim()],
-    ["Preferred hours", (row.working_hours ?? "").trim()],
+    ["Preferred hours", workingHours],
     ["US overlap", overlap ?? ""],
     ["Full US shift", row.willing_full_shift ? "Willing to work a full US shift" : ""],
     ["Engagement", (row.engagement ?? "").trim()],
@@ -462,9 +477,10 @@ export function applicationToProfile(
       ? row.alternative_target_roles ?? undefined
       : undefined;
 
-  // Availability freshness: stale confirmations are not presented as current.
+  // Availability freshness: a lapsed confirmation is not presented as current; a
+  // never-confirmed availability just shows the stated value (no badge).
   const fresh = availabilityFreshness(row);
-  const availability = fresh.stale ? "Availability being reconfirmed" : rawAvailability;
+  const availability = fresh.state === "stale" ? "Availability being reconfirmed" : rawAvailability;
 
   const decision: ProfileFact[] = [{ label: "Target role", value: targetRole }];
   if (comp) decision.push({ label: "Compensation", value: compResolved.line ?? comp.value });
@@ -500,7 +516,7 @@ export function applicationToProfile(
     location,
     overlap,
     availability,
-    availabilityConfirmed: fresh.stale ? undefined : fresh.confirmed,
+    availabilityConfirmed: fresh.state === "confirmed" ? fresh.confirmed : undefined,
     compensation: comp,
     compensationBasis: compResolved.basis,
     summary: (row.professional_summary ?? "").trim() || undefined,
