@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getViewer } from "@/lib/authz/viewer";
-import { deriveVisibility, canViewPhoto } from "@/lib/authz/visibility";
+import { deriveVisibility, canViewPhoto, canSeeIdentity } from "@/lib/authz/visibility";
 import { getViewerIntroduction } from "@/lib/authz/introductionsRepo";
 
 /*
@@ -17,6 +17,10 @@ export const dynamic = "force-dynamic";
 // Private storage bucket holding candidate photos; served only via signed URLs.
 const CANDIDATE_PHOTO_BUCKET = "candidate-photos";
 const SIGNED_URL_TTL_SECONDS = 60;
+
+// Pre-blurred derivative key: "<id>.png" -> "<id>-frosted.png". Non-identity
+// viewers get these bytes so the clear face never reaches the client.
+const frostedObjectKey = (key: string) => key.replace(/(\.[^./]+)$/, "-frosted$1");
 
 function deny() {
   return new NextResponse(null, { status: 404 });
@@ -49,14 +53,18 @@ export async function GET(
   // Resolve photo_url to a concrete target to redirect the <img> at:
   //  - a private-bucket object key -> a short-lived signed URL (never public);
   //  - a legacy absolute URL or /public path -> used as-is (back-compat).
+  // Clear photo only once identity is unlocked (accepted introduction / admin) or
+  // the candidate opted the photo public; otherwise serve the frosted derivative.
+  const clear = canSeeIdentity(level) || app.public_photo === true;
   const stored = app.photo_url;
   let target: string;
   if (/^https?:\/\//i.test(stored) || stored.startsWith("/")) {
     target = new URL(stored, request.url).toString();
   } else {
+    const key = clear ? stored : frostedObjectKey(stored);
     const { data: signed } = await supabase.storage
       .from(CANDIDATE_PHOTO_BUCKET)
-      .createSignedUrl(stored, SIGNED_URL_TTL_SECONDS);
+      .createSignedUrl(key, SIGNED_URL_TTL_SECONDS);
     if (!signed?.signedUrl) return deny();
     target = signed.signedUrl;
   }

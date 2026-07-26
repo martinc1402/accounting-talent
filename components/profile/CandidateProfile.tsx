@@ -6,6 +6,7 @@ import {
   CalendarBlank,
   CaretRight,
   GraduationCap,
+  Lock,
   MapPin,
   SealCheck,
 } from "@phosphor-icons/react/dist/ssr";
@@ -121,7 +122,7 @@ function Hero({ p }: { p: CandidateProfileData }) {
             <>
               <Image
                 src={p.photo.src}
-                alt={p.photo.alt}
+                alt={p.photo.locked ? "Candidate photo — unlocks after an accepted introduction" : p.photo.alt}
                 fill
                 priority
                 sizes="(max-width: 640px) 100vw, 224px"
@@ -129,7 +130,10 @@ function Hero({ p }: { p: CandidateProfileData }) {
                 // redirect; don't run it through the image optimizer/cache.
                 unoptimized={p.photo.src.startsWith("/api/")}
                 style={{ objectPosition: p.photo.focal ?? "center 22%" }}
-                className="object-cover"
+                // Locked: the endpoint already sends pre-blurred bytes; the extra
+                // CSS blur (scaled to avoid transparent edges) keeps the preview
+                // faithful and hardens the frost.
+                className={`object-cover ${p.photo.locked ? "scale-110 blur-xl" : ""}`}
               />
               {/* Navy-tinted inset scrim blends the photo edge into the hero panel
                   (bottom seam on mobile, right seam on desktop) so it reads as one
@@ -138,6 +142,14 @@ function Hero({ p }: { p: CandidateProfileData }) {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 shadow-[inset_0_-44px_48px_-30px_rgba(13,22,66,0.9)] sm:shadow-[inset_-44px_0_48px_-30px_rgba(13,22,66,0.9)]"
               />
+              {p.photo.locked && (
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-navy-deep/45 px-4 text-center">
+                  <Lock size={22} weight="fill" className="text-paper/85" aria-hidden />
+                  <span className="max-w-[12rem] text-fine leading-snug font-medium text-paper/85">
+                    Photo unlocks once your introduction is accepted
+                  </span>
+                </div>
+              )}
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

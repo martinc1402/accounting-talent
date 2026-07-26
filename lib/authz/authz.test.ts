@@ -193,9 +193,20 @@ describe("projectProfileView field-level filtering", () => {
     expect(JSON.stringify(withheld)).not.toContain("$900");
   });
 
-  it("public_photo consent shows the photo to anonymous", () => {
+  it("public_photo consent shows the photo to anonymous, unlocked", () => {
     const out = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicPhoto: true, publicCompensation: true } }));
     expect(out.photo).toBeDefined();
+    expect(out.photo?.locked).toBeFalsy(); // candidate consented -> clear
+  });
+
+  it("photo is frosted (locked) for verified employers until an intro is accepted", () => {
+    const free = projectProfileView(baseView, "free_verified_employer", ctx({ entitlements: PLAN_ENTITLEMENTS.free }));
+    expect(free.photo?.locked).toBe(true);
+    const paid = projectProfileView(baseView, "paid_verified_employer", ctx({ entitlements: PLAN_ENTITLEMENTS.paid }));
+    expect(paid.photo?.locked).toBe(true);
+    const accepted = projectProfileView(baseView, "accepted_introduction", ctx({ contact: CONTACT }));
+    expect(accepted.photo).toBeDefined();
+    expect(accepted.photo?.locked).toBeFalsy(); // introduction accepted -> clear
   });
 
   it("(3) free verified: photo, exact city, named institutions; no identity", () => {

@@ -81,8 +81,15 @@ export function projectProfileView(
   out.initials = initialsOf(out.name);
 
   // Photo: only for verified+ employers, or if the candidate opted photo public.
+  // Frosted until an introduction is accepted (or the candidate made it public):
+  // the photo endpoint serves pre-blurred bytes to non-identity viewers, and
+  // `locked` tells the UI to show the obscured/unlock treatment.
   const showPhoto = verifiedFields || ctx.privacy.publicPhoto;
-  if (!showPhoto) out.photo = undefined;
+  if (!showPhoto) {
+    out.photo = undefined;
+  } else if (out.photo && !identity && !ctx.privacy.publicPhoto) {
+    out.photo = { ...out.photo, locked: true };
+  }
 
   // Location: broad region for non-verified; exact city for verified+.
   if (!verifiedFields && view.location) out.location = generalizeLocation(view.location);

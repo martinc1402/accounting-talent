@@ -151,7 +151,7 @@ export type CandidateProfile = {
   name: string;
   initials: string;
   role: string;
-  photo?: { src: string; alt: string; focal?: string };
+  photo?: { src: string; alt: string; focal?: string; locked?: boolean };
   qualLine: string;
   // Roles the candidate is also open to (shown only when the role is confirmed).
   alternativeRoles?: string[];
