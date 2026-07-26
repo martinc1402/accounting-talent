@@ -14,6 +14,10 @@ import { getViewerIntroduction } from "@/lib/authz/introductionsRepo";
 */
 export const dynamic = "force-dynamic";
 
+// Private storage bucket holding candidate photos; served only via signed URLs.
+const CANDIDATE_PHOTO_BUCKET = "candidate-photos";
+const SIGNED_URL_TTL_SECONDS = 60;
+
 function deny() {
   return new NextResponse(null, { status: 404 });
 }
@@ -42,8 +46,22 @@ export async function GET(
 
   if (!canViewPhoto(level, app.public_photo === true)) return deny();
 
-  // TODO: swap for a short-lived signed URL from private storage.
-  const res = NextResponse.redirect(new URL(app.photo_url, request.url), 302);
+  // Resolve photo_url to a concrete target to redirect the <img> at:
+  //  - a private-bucket object key -> a short-lived signed URL (never public);
+  //  - a legacy absolute URL or /public path -> used as-is (back-compat).
+  const stored = app.photo_url;
+  let target: string;
+  if (/^https?:\/\//i.test(stored) || stored.startsWith("/")) {
+    target = new URL(stored, request.url).toString();
+  } else {
+    const { data: signed } = await supabase.storage
+      .from(CANDIDATE_PHOTO_BUCKET)
+      .createSignedUrl(stored, SIGNED_URL_TTL_SECONDS);
+    if (!signed?.signedUrl) return deny();
+    target = signed.signedUrl;
+  }
+
+  const res = NextResponse.redirect(target, 302);
   res.headers.set("Cache-Control", "private, no-store");
   return res;
 }
