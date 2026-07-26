@@ -148,10 +148,10 @@ export default async function CandidateProfilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; bare?: string }>;
 }) {
   const { id } = await params;
-  const { preview } = await searchParams;
+  const { preview, bare } = await searchParams;
   const data = await loadCandidate(id);
   if (!data) notFound();
 
@@ -168,11 +168,20 @@ export default async function CandidateProfilePage({
       ? (preview as VisibilityLevel)
       : null;
 
+  // "Bare" admin preview: render EXACTLY as the previewed viewer would see it —
+  // real CTA, contact card, no readiness panel / preview switcher / banner. Lets an
+  // admin sanity-check the true experience (e.g. an accepted-introduction employer)
+  // without the admin chrome. Admin-only, and only meaningful alongside ?preview=.
+  const bareView = previewAs !== null && bare === "1";
+
   // The viewer's OWN introduction for this candidate (scoped to their account).
   const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
   const introduction = await getViewerIntroduction(id, accountId);
 
-  const { level, isPreview } = deriveVisibility(viewer, introduction, { previewAs });
+  const { level, isPreview: rawIsPreview } = deriveVisibility(viewer, introduction, { previewAs });
+  // In bare mode the admin views AS the level, so the preview chrome/flags are off.
+  const isPreview = rawIsPreview && !bareView;
+  const isAdminViewer = isAdmin && !bareView;
 
   const entitlements = entitlementsFor(viewer.kind === "user" ? viewer.account : null);
   const activeCount = accountId ? await countActiveIntroductions(accountId) : 0;
@@ -194,7 +203,7 @@ export default async function CandidateProfilePage({
 
   const projected = projectProfileView(fullView, level, {
     isPreview,
-    isAdminViewer: viewer.kind === "user" && viewer.isAdmin,
+    isAdminViewer,
     privacy: {
       publicPhoto: app.public_photo === true,
       publicCompensation: app.public_compensation !== false,
@@ -220,8 +229,8 @@ export default async function CandidateProfilePage({
   const nav = navFromViewer(viewer);
 
   // Admin readiness (draft banner + checklist + publication requirements). Only
-  // ever sent to admins; never part of a public/employer response.
-  const admin = isAdmin
+  // ever sent to admins; suppressed in bare mode so the view is chrome-free.
+  const admin = isAdmin && !bareView
     ? {
         status: String((app as ReadinessRow).profile_status ?? "draft"),
         checklist: readinessChecklist(app as ReadinessRow),
