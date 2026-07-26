@@ -6,6 +6,7 @@ import {
   CalendarBlank,
   CaretRight,
   GraduationCap,
+  Lightning,
   Lock,
   MapPin,
   SealCheck,
@@ -232,7 +233,7 @@ function Hero({ p }: { p: CandidateProfileData }) {
                   </div>
                 ))}
               </dl>
-              <p className="mt-2.5 text-fine text-paper/55">
+              <p className="mt-2.5 text-fine text-paper/70">
                 Experience and achievements are candidate-provided unless marked as
                 independently verified.
               </p>
@@ -250,6 +251,12 @@ function Hero({ p }: { p: CandidateProfileData }) {
               <span className="inline-flex items-center gap-2">
                 <CalendarBlank size={15} weight="light" className="shrink-0 text-paper/70" />
                 {p.availability}
+              </span>
+            )}
+            {p.earliestStart && (
+              <span className="inline-flex items-center gap-2">
+                <Lightning size={15} weight="light" className="shrink-0 text-paper/70" />
+                {p.earliestStart}
               </span>
             )}
           </div>

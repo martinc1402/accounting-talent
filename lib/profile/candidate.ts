@@ -155,12 +155,17 @@ export type CandidateProfile = {
   qualLine: string;
   // Roles the candidate is also open to (shown only when the role is confirmed).
   alternativeRoles?: string[];
+  // Current career level (e.g. "Assistant Manager"), distinct from the
+  // employer-facing target role. Referenced in the professional summary copy.
+  currentSeniority?: string;
   heroVerifications: string[];
   // Scannable proof points; each candidate-provided unless verified === true.
   evidence?: ProfileStat[];
   location?: string;
   overlap?: string;
   availability?: string;
+  // "Available immediately" (or the stated start) — hero metadata + Decision Summary.
+  earliestStart?: string;
   // "Confirmed 22 Jul 2026" when availability was recently reconfirmed; absent
   // when stale (the availability value itself switches to "being reconfirmed").
   availabilityConfirmed?: string;
@@ -246,6 +251,7 @@ export type ProfileRow = ApplicationRow & {
   profile_status?: string | null;
   primary_target_role?: string | null;
   alternative_target_roles?: string[] | null;
+  current_seniority?: string | null;
   role_confirmed_at?: string | null;
   us_tax_experience_start_date?: string | null;
   us_tax_experience_months?: number | null;
@@ -344,9 +350,12 @@ function software(row: ProfileRow): ProfileSoftware[] {
     return prof
       .filter((s) => s?.name)
       .map((s) => {
+        // Only show depth the candidate actually supplied — never an invented
+        // level/years. When nothing is known, the product name stands alone.
         const bits = [
           s.level?.trim(),
           s.years != null ? `${s.years} yr${s.years === 1 ? "" : "s"}` : null,
+          s.last_used?.trim() ? `last used ${s.last_used.trim()}` : null,
         ].filter(Boolean);
         return { name: s.name as string, meta: bits.length ? bits.join(" · ") : undefined };
       });
@@ -449,7 +458,7 @@ function preferences(row: ProfileRow): ProfileFact[] {
     ["Employment", (row.employment_type ?? "").trim()],
     ["Earliest start", (row.start_date ?? "").trim()],
     ["Preferred hours", workingHours],
-    ["US overlap", overlap ?? ""],
+    ["ET overlap", overlap ?? ""],
     ["Full US shift", row.willing_full_shift ? "Willing to work a full US shift" : ""],
     ["Engagement", (row.engagement ?? "").trim()],
   ];
@@ -467,8 +476,16 @@ export function applicationToProfile(
   // times, else nothing (never echo free-text).
   const overlap = overlapPhrase(row) ?? resolveEtOverlap(row).value;
   const rawAvailability = (row.availability ?? "").trim() || undefined;
-  const employmentType = (row.employment_type ?? "").trim();
   const location = [row.city, row.country ?? row.state].filter(Boolean).join(", ") || undefined;
+
+  // Earliest start (structured): normalize the common "Immediately" answer to the
+  // employer-facing "Available immediately"; otherwise show the stated value.
+  const startRaw = (row.start_date ?? "").trim();
+  const earliestStart = startRaw
+    ? /^immediate/i.test(startRaw) || /immediately/i.test(startRaw)
+      ? "Available immediately"
+      : startRaw
+    : undefined;
 
   // Confirmed primary role wins; else the raw applicant role.
   const targetRole = resolveTargetRole(row).value ?? row.role;
@@ -482,11 +499,14 @@ export function applicationToProfile(
   const fresh = availabilityFreshness(row);
   const availability = fresh.state === "stale" ? "Availability being reconfirmed" : rawAvailability;
 
+  // Decision Summary rows, in the fixed employer-facing order. Each is gated on a
+  // real value — a row is hidden rather than showing "Unknown". Compensation basis
+  // and the availability confirmation date render as captions beneath the list.
   const decision: ProfileFact[] = [{ label: "Target role", value: targetRole }];
   if (comp) decision.push({ label: "Compensation", value: compResolved.line ?? comp.value });
   if (availability) decision.push({ label: "Availability", value: availability });
-  if (overlap) decision.push({ label: "US overlap", value: overlap });
-  if (employmentType) decision.push({ label: "Preference", value: employmentType });
+  if (earliestStart) decision.push({ label: "Earliest start", value: earliestStart });
+  if (overlap) decision.push({ label: "ET overlap", value: overlap });
 
   // Experience label: exact only from confirmed data, else a grammatical range.
   const qualLine = [row.qualification?.trim(), resolveExperienceLabel(row).value].filter(Boolean).join(" · ");
@@ -511,11 +531,13 @@ export function applicationToProfile(
       : undefined,
     qualLine,
     alternativeRoles,
+    currentSeniority: (row.current_seniority ?? "").trim() || undefined,
     heroVerifications: heroVerifications(row, assessment),
     evidence: evidence(row),
     location,
     overlap,
     availability,
+    earliestStart,
     availabilityConfirmed: fresh.state === "confirmed" ? fresh.confirmed : undefined,
     compensation: comp,
     compensationBasis: compResolved.basis,
@@ -624,7 +646,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Within 30 days" },
       { label: "Preferred hours", value: "3:30 PM–11:30 PM IST" },
-      { label: "US overlap", value: "4+ hours ET overlap" },
+      { label: "ET overlap", value: "4+ hours ET overlap" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Employer of record / contractor" },
     ],
@@ -632,7 +654,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Target role", value: "US Tax Preparer" },
       { label: "Compensation", value: "$900–$1,200/month" },
       { label: "Availability", value: "Available within 30 days" },
-      { label: "US overlap", value: "4+ hours ET overlap" },
+      { label: "ET overlap", value: "4+ hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },
@@ -695,7 +717,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Immediately" },
       { label: "Preferred hours", value: "9:00 PM–5:00 AM PHT" },
-      { label: "US overlap", value: "6+ hours ET overlap" },
+      { label: "ET overlap", value: "6+ hours ET overlap" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Contractor" },
     ],
@@ -703,7 +725,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Target role", value: "Bookkeeper" },
       { label: "Compensation", value: "$700–$950/month" },
       { label: "Availability", value: "Available immediately" },
-      { label: "US overlap", value: "6+ hours ET overlap" },
+      { label: "ET overlap", value: "6+ hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },

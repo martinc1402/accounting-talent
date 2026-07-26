@@ -5,6 +5,8 @@ import { SiteHeader, navFromViewer } from "@/components/ui/SiteHeader";
 import { getViewer } from "@/lib/authz/viewer";
 import { listSavedApplicationIds } from "@/lib/authz/savedRepo";
 import { supabase } from "@/lib/supabase";
+import { resolveTargetRole } from "@/lib/candidate/role";
+import { compensation, compensationLine, type ApplicationRow } from "@/lib/search/candidate";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -26,23 +28,35 @@ export default async function SavedCandidatesPage() {
   const verified = viewer.account?.verificationState === "verified";
   const ids = verified && viewer.account ? await listSavedApplicationIds(viewer.account.id) : [];
 
-  let rows: { id: string; name: string; role: string; region: string }[] = [];
+  let rows: { id: string; name: string; role: string; region: string; comp?: string; basis?: string }[] = [];
   if (ids.length && supabase) {
     const { data } = await supabase
       .from("applications")
-      .select("id, full_name, role, country, state")
+      .select(
+        "id, full_name, role, primary_target_role, role_confirmed_at, country, state, salary_min_usd, salary_max_usd, salary_expectation, compensation_currency, compensation_period, hours_per_week_basis, compensation_basis_confirmed_at",
+      )
       .in("id", ids);
-    type AppRow = { id: string; full_name: string; role: string; country: string | null; state: string | null };
+    type AppRow = ApplicationRow & { salary_expectation?: string | null };
     const byId = new Map((data ?? []).map((r) => [r.id, r as AppRow]));
     rows = ids
       .map((id) => byId.get(id))
       .filter((r): r is AppRow => !!r)
-      .map((r) => ({
-        id: r.id,
-        name: anonymizeName(r.full_name),
-        role: r.role,
-        region: r.country ?? r.state ?? "",
-      }));
+      .map((r) => {
+        // Verified-employer shortlist: same role + compensation source as the profile.
+        const comp = compensationLine(compensation(r)) ?? undefined;
+        const basis =
+          r.compensation_basis_confirmed_at && r.hours_per_week_basis != null
+            ? `Based on up to ${r.hours_per_week_basis} hours/week`
+            : undefined;
+        return {
+          id: r.id,
+          name: anonymizeName(r.full_name),
+          role: resolveTargetRole(r).value ?? r.role,
+          region: r.country ?? r.state ?? "",
+          comp,
+          basis,
+        };
+      });
   }
 
   return (
@@ -73,6 +87,12 @@ export default async function SavedCandidatesPage() {
                     {r.role}
                     {r.region ? ` · ${r.region}` : ""}
                   </div>
+                  {r.comp && (
+                    <div className="mt-0.5 text-caption text-ink">
+                      {r.comp}
+                      {r.basis ? <span className="text-muted"> · {r.basis}</span> : null}
+                    </div>
+                  )}
                 </div>
                 <Link
                   href={`/candidates/${r.id}`}

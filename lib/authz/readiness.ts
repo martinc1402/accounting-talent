@@ -12,6 +12,11 @@
 */
 import { etOverlapHours } from "@/lib/overlap";
 import { compensationLine } from "@/lib/search/candidate";
+import { resolveTargetRole, type Resolved } from "@/lib/candidate/role";
+
+// Re-exported so existing importers (lib/profile/candidate.ts, tests) keep working.
+export { resolveTargetRole };
+export type { Resolved };
 
 // The subset of an applications row that readiness reads. Loose + optional so a
 // sparse real candidate maps cleanly and tests can build partial rows.
@@ -35,6 +40,7 @@ export type ReadinessRow = {
   hours_per_week_basis?: number | null;
   compensation_basis_confirmed_at?: string | null;
   timezone?: string | null;
+  avail_days?: string[] | null;
   avail_start_time?: string | null;
   avail_finish_time?: string | null;
   avail_max_weekly_hours?: number | null;
@@ -42,7 +48,7 @@ export type ReadinessRow = {
   availability?: string | null;
   availability_structured_confirmed_at?: string | null;
   start_date?: string | null;
-  software_proficiency?: { name?: string; confirmed_by_candidate?: boolean }[] | null;
+  software_proficiency?: { name?: string; level?: string; years?: number; last_used?: string; confirmed_by_candidate?: boolean }[] | null;
   software_confirmed_at?: string | null;
   employment_history?: unknown[] | null;
   education?: unknown[] | null;
@@ -72,23 +78,31 @@ function tri(confirmedAt: unknown, hasData: boolean): CheckState {
 }
 
 export function readinessChecklist(row: ReadinessRow): ChecklistItem[] {
-  const softwareCount = (row.software_proficiency ?? []).filter((s) => has(s?.name)).length;
+  const sw = row.software_proficiency ?? [];
+  const softwareCount = sw.filter((s) => has(s?.name)).length;
+  const softwareHasDepth = sw.some((s) => has(s?.level) || s?.years != null || has(s?.last_used));
   const employmentCount = (row.employment_history ?? []).length;
   const educationCaptured = (row.education ?? []).length > 0 || has(row.qualification);
+  const availConfirmed = has(row.availability_structured_confirmed_at);
+  const hasHours = has(row.avail_start_time) && has(row.avail_finish_time);
+  const overlapCalculable = has(resolveEtOverlap(row).value);
 
   return [
-    { key: "role", label: "Canonical target role confirmed", state: tri(row.role_confirmed_at, has(row.primary_target_role)) },
+    { key: "role", label: "Primary employer-facing role confirmed", state: tri(row.role_confirmed_at, has(row.primary_target_role)) },
     { key: "experience", label: "Exact US tax experience confirmed", state: tri(row.experience_confirmed_at, has(row.us_tax_experience_start_date) || has(row.us_tax_experience_months) || has(row.experience_years)) },
     { key: "compensation_basis", label: "Compensation basis confirmed", state: tri(row.compensation_basis_confirmed_at, has(row.salary_min_usd) || has(row.hours_per_week_basis)) },
-    { key: "availability", label: "Availability confirmed", state: tri(row.availability_structured_confirmed_at, has(row.avail_start_time) || has(row.availability)) },
-    { key: "software", label: "Software confirmed", state: tri(row.software_confirmed_at, softwareCount > 0) },
+    { key: "available_days", label: "Available days confirmed", state: has(row.avail_days) ? (availConfirmed ? "confirmed" : "needs_confirmation") : "missing" },
+    { key: "hours", label: "Start & finish hours confirmed", state: hasHours ? (availConfirmed ? "confirmed" : "needs_confirmation") : "missing" },
+    { key: "et_overlap", label: "ET overlap calculated", state: overlapCalculable ? "confirmed" : "missing" },
+    { key: "software", label: "Software products confirmed", state: tri(row.software_confirmed_at, softwareCount > 0) },
+    { key: "software_depth", label: "Software depth confirmed or intentionally omitted", state: softwareHasDepth ? "confirmed" : softwareCount > 0 ? "needs_confirmation" : "missing" },
     // "Captured", not verified — present = confirmed as captured; none = missing.
     { key: "employment_history", label: "Candidate-provided employment history captured", state: employmentCount > 0 ? "confirmed" : "missing" },
     { key: "education", label: "Education details captured", state: (row.education ?? []).length > 0 ? "confirmed" : educationCaptured ? "needs_confirmation" : "missing" },
+    { key: "candidate_publication", label: "Candidate approved profile copy", state: has(row.candidate_publication_approved_at) ? "confirmed" : "missing" },
     { key: "identity", label: "Identity verified", state: has(row.identity_verified_at) ? "confirmed" : "missing" },
     { key: "english", label: "English communication assessed", state: has(row.english_assessed_at) ? "confirmed" : "missing" },
     { key: "qualification", label: "Qualification checked", state: has(row.qualification_verified_at) ? "confirmed" : "missing" },
-    { key: "candidate_publication", label: "Candidate approved profile publication", state: has(row.candidate_publication_approved_at) ? "confirmed" : "missing" },
   ];
 }
 
@@ -122,17 +136,9 @@ export function isPublished(row: ReadinessRow): boolean {
 }
 
 // --- honest field resolvers (value + needsConfirmation) --------------------
-
-export type Resolved = { value?: string; needsConfirmation: boolean };
-
-/** Confirmed primary role wins; otherwise the raw applicant role, flagged if a
- *  primary role has been proposed but not yet confirmed. */
-export function resolveTargetRole(row: ReadinessRow): Resolved {
-  if (has(row.role_confirmed_at) && has(row.primary_target_role)) {
-    return { value: row.primary_target_role as string, needsConfirmation: false };
-  }
-  return { value: (row.role ?? "").trim() || undefined, needsConfirmation: has(row.primary_target_role) };
-}
+// resolveTargetRole + Resolved live in the leaf module lib/candidate/role.ts (so
+// the search card can share the exact same role source without an import cycle);
+// re-exported here for back-compat with existing importers.
 
 /** Exact "N years' US tax experience" only from a confirmed start date / months;
  *  else a grammatical range ("3–5 years' US tax experience"). Never fabricates. */

@@ -67,6 +67,20 @@ export function CandidateActions({
   const [saveNote, setSaveNote] = useState("");
   const [open, setOpen] = useState(false);
 
+  // Keep every Save button for this candidate on the page (hero + Decision
+  // Summary) in lockstep: each instance broadcasts its new state and mirrors the
+  // others'. Same-page only — persistence is the server action.
+  useEffect(() => {
+    const onSync = (e: Event) => {
+      const d = (e as CustomEvent<{ id: string; saved: boolean }>).detail;
+      if (d?.id === candidateId) setSaved(d.saved);
+    };
+    window.addEventListener("at:candidate-save", onSync as EventListener);
+    return () => window.removeEventListener("at:candidate-save", onSync as EventListener);
+  }, [candidateId]);
+  const broadcastSave = (value: boolean) =>
+    window.dispatchEvent(new CustomEvent("at:candidate-save", { detail: { id: candidateId, saved: value } }));
+
   const toggleSave = () => {
     // Verified employers persist; others are prompted to sign in / verify.
     if (saveMode === "signin") {
@@ -79,10 +93,12 @@ export function CandidateActions({
     }
     const next = !saved;
     setSaved(next); // optimistic
+    broadcastSave(next);
     startSave(async () => {
       const res = next ? await saveCandidate(candidateId) : await unsaveCandidate(candidateId);
       if (res.status === "error") {
         setSaved(!next); // revert
+        broadcastSave(!next);
         setSaveNote(res.message ?? "Could not update.");
       } else {
         setSaveNote(next ? "Saved to your shortlist." : "Removed from your shortlist.");

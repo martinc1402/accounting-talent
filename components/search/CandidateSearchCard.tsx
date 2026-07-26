@@ -200,6 +200,9 @@ export function CandidateSearchCard({
                   {c.compensation.unit}
                 </p>
               )}
+              {c.compensationBasis && (
+                <p className="mt-0.5 text-fine text-paper/60">{c.compensationBasis}</p>
+              )}
             </div>
           </div>
         )}

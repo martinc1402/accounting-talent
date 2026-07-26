@@ -94,10 +94,16 @@ export function projectProfileView(
   // Location: broad region for non-verified; exact city for verified+.
   if (!verifiedFields && view.location) out.location = generalizeLocation(view.location);
 
-  // Employer names: hidden for everyone except admin (replace the whole meta so no
-  // embedded city/name leaks). Titles, dates, bullets and exposure are preserved.
+  // Employer names: real names are NEVER surfaced (the mapper only ever puts the
+  // candidate-supplied anonymised descriptor — employer_public — into `meta`). For
+  // non-admins we keep that descriptor and append "· Name withheld" so the label is
+  // useful ("Offshore US accounting firm · Name withheld") rather than a bare
+  // "Employer name withheld". Titles, dates, bullets and exposure are preserved.
   if (!isAdmin) {
-    out.history = view.history.map((h) => ({ ...h, meta: "Employer name withheld" }));
+    out.history = view.history.map((h) => {
+      const descriptor = (h.meta ?? "").trim();
+      return { ...h, meta: descriptor ? `${descriptor} · Name withheld` : "Employer name withheld" };
+    });
   }
 
   // Education institutions: generalised until verified+.

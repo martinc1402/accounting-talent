@@ -18,6 +18,7 @@
   Pure module (no server-only imports) so both the server-side query and the
   client card can import the type and mapping.
 */
+import { resolveTargetRole } from "@/lib/candidate/role";
 
 export const SHOW_ASSESSMENT = false;
 
@@ -39,6 +40,8 @@ export type Candidate = {
   evidence: { label: string; items: string[] };
   /** Resolved compensation, or undefined when there's nothing to show. */
   compensation?: { value: string; unit: string };
+  /** "Based on up to N hours/week", only when the basis is candidate-confirmed. */
+  compensationBasis?: string;
 };
 
 /*
@@ -49,6 +52,15 @@ export type ApplicationRow = {
   id: string;
   full_name: string;
   role: string;
+  // Employer-facing role source (shared with the profile via resolveTargetRole).
+  primary_target_role?: string | null;
+  role_confirmed_at?: string | null;
+  current_seniority?: string | null;
+  // Structured compensation basis (0007/0015), so the card matches the profile.
+  compensation_currency?: string | null;
+  compensation_period?: string | null;
+  hours_per_week_basis?: number | null;
+  compensation_basis_confirmed_at?: string | null;
   qualification?: string | null;
   city?: string | null;
   state?: string | null;
@@ -127,7 +139,7 @@ export function compensation(row: ApplicationRow): Candidate["compensation"] {
     // "$900–$1,200/month".
     return {
       value: `$${min.toLocaleString("en-US")}–$${max.toLocaleString("en-US")}`,
-      unit: "USD / month",
+      unit: `${row.compensation_currency ?? "USD"} / ${row.compensation_period ?? "month"}`,
     };
   }
   const raw = (row.salary_expectation ?? "").trim();
@@ -179,10 +191,17 @@ export function applicationToCandidate(
     ...new Set([...(row.accounting_software ?? []), ...(row.tax_software ?? [])]),
   ];
 
+  const basisConfirmed = !!(row.compensation_basis_confirmed_at ?? "").toString().trim();
+  const compensationBasis =
+    basisConfirmed && row.hours_per_week_basis != null
+      ? `Based on up to ${row.hours_per_week_basis} hours/week`
+      : undefined;
+
   return {
     id: row.id,
     name: row.full_name,
-    role: row.role,
+    // Same employer-facing role source as the profile hero/Decision Summary.
+    role: resolveTargetRole(row).value ?? row.role,
     photo: row.photo_url
       ? { src: row.photo_url, alt: `${row.full_name} portrait` }
       : undefined,
@@ -193,6 +212,7 @@ export function applicationToCandidate(
     software,
     evidence: { label: EVIDENCE_LABEL[cat], items: evidenceItems },
     compensation: compensation(row),
+    compensationBasis,
   };
 }
 

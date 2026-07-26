@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { applicationToProfile, sampleProfiles, type ProfileRow } from "./candidate";
-import { overlapPhrase, compensation, compensationLine } from "@/lib/search/candidate";
+import { overlapPhrase, compensation, compensationLine, applicationToCandidate } from "@/lib/search/candidate";
 import { readinessChecklist } from "@/lib/authz/readiness";
 
 const priya = sampleProfiles[0];
@@ -203,5 +203,73 @@ describe("real-data honesty (profile refinement)", () => {
     );
     expect(p.education[0].qualification).toBe("B.Com");
     expect(p.education[0].meta).toBe("Completed · Commerce");
+  });
+});
+
+describe("final refinement (employer-facing precision)", () => {
+  it("primary target role is the single source for profile AND search card", () => {
+    const r = row({ role: "Tax Reviewer / Senior Tax", primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: "2026-07-26T00:00:00Z" });
+    expect(applicationToProfile(r).role).toBe("Senior US Tax Reviewer");
+    expect(applicationToCandidate(r).role).toBe("Senior US Tax Reviewer");
+    // Unconfirmed proposal falls back to raw role on BOTH surfaces.
+    const u = row({ role: "Tax Reviewer / Senior Tax", primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: null });
+    expect(applicationToProfile(u).role).toBe("Tax Reviewer / Senior Tax");
+    expect(applicationToCandidate(u).role).toBe("Tax Reviewer / Senior Tax");
+  });
+
+  it("current seniority is represented separately from the target role", () => {
+    const r = row({ primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: "2026-07-26T00:00:00Z", current_seniority: "Assistant Manager" });
+    const p = applicationToProfile(r);
+    expect(p.role).toBe("Senior US Tax Reviewer");
+    expect(p.currentSeniority).toBe("Assistant Manager");
+  });
+
+  it("Decision Summary order: role, comp, availability, earliest start, ET overlap — no Preference row", () => {
+    const r = row({
+      primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: "2026-07-26T00:00:00Z",
+      salary_min_usd: 1800, salary_max_usd: 2500,
+      availability: "Part-time (up to 20 hrs/week)", availability_structured_confirmed_at: "2026-07-26T00:00:00Z",
+      start_date: "Immediately", employment_type: "Full-time",
+      timezone: "Asia/Kolkata", avail_start_time: "15:30", avail_finish_time: "23:30",
+    });
+    const labels = applicationToProfile(r).decision.map((d) => d.label);
+    expect(labels).toEqual(["Target role", "Compensation", "Availability", "Earliest start", "ET overlap"]);
+    expect(labels).not.toContain("Preference");
+    expect(applicationToProfile(r).decision.find((d) => d.label === "Earliest start")?.value).toBe("Available immediately");
+  });
+
+  it("earliest start normalizes 'Immediately' to 'Available immediately'", () => {
+    expect(applicationToProfile(row({ start_date: "Immediately" })).earliestStart).toBe("Available immediately");
+    expect(applicationToProfile(row({ start_date: "Within 30 days" })).earliestStart).toBe("Within 30 days");
+    expect(applicationToProfile(row({})).earliestStart).toBeUndefined();
+  });
+
+  it("software shows only supplied depth (level/years/last used), else product name only", () => {
+    const p = applicationToProfile(row({
+      software_proficiency: [
+        { name: "CCH Axcess Tax", level: "Advanced", years: 4 },
+        { name: "GoSystem Tax RS", last_used: "2026" },
+        { name: "CCH ProSystem fx Tax" },
+      ],
+    }));
+    expect(p.software[0].meta).toBe("Advanced · 4 yrs");
+    expect(p.software[1].meta).toBe("last used 2026");
+    expect(p.software[2].meta).toBeUndefined();
+  });
+
+  it("compensation basis + currency/period flow to the search card too", () => {
+    const c = applicationToCandidate(row({ salary_min_usd: 1800, salary_max_usd: 2500, hours_per_week_basis: 20, compensation_basis_confirmed_at: "2026-07-26T00:00:00Z" }));
+    expect(compensationLine(c.compensation)).toBe("$1,800–$2,500/month");
+    expect(c.compensationBasis).toBe("Based on up to 20 hours/week");
+    // Unconfirmed basis -> no basis line on the card.
+    const u = applicationToCandidate(row({ salary_min_usd: 1800, salary_max_usd: 2500, hours_per_week_basis: 20, compensation_basis_confirmed_at: null }));
+    expect(u.compensationBasis).toBeUndefined();
+  });
+
+  it("missing availability (days/start times) is never invented into an ET overlap", () => {
+    // Sai-like: max hours + tz, but NO start/finish and NO days.
+    const p = applicationToProfile(row({ availability: "Part-time (up to 20 hrs/week)", avail_max_weekly_hours: 20, timezone: "Asia/Kolkata", availability_structured_confirmed_at: "2026-07-26T00:00:00Z" }));
+    expect(p.decision.find((d) => d.label === "ET overlap")).toBeUndefined();
+    expect(p.overlap).toBeUndefined();
   });
 });

@@ -74,7 +74,8 @@ const baseView = {
   history: [
     {
       title: "Senior Tax Associate",
-      meta: "Outsourced US CPA firm · Remote (Ahmedabad, India)",
+      // employer_public is a location/name-free anonymised descriptor by convention.
+      meta: "Outsourced US CPA firm",
       dates: "2022",
       bullets: ["Prepared 300+ returns."],
       exposure: "US returns",
@@ -171,7 +172,7 @@ describe("projectProfileView field-level filtering", () => {
     expect(out.name).toBe("Priya S."); // last name -> initial
     expect(out.photo).toBeUndefined(); // photo private by default
     expect(out.location).toBe("India"); // exact city hidden
-    expect(out.history[0].meta).toBe("Employer name withheld");
+    expect(out.history[0].meta).toBe("Outsourced US CPA firm · Name withheld");
     expect(out.education[0].meta).toBeUndefined(); // institution generalised away
     expect(out.contact).toBeUndefined(); // identity never leaks
     // (10) nothing PII survives serialization
@@ -216,7 +217,7 @@ describe("projectProfileView field-level filtering", () => {
     expect(out.education[0].meta).toBe("ICAI · India");
     expect(out.name).toBe("Priya S.");
     expect(out.contact).toBeUndefined();
-    expect(out.history[0].meta).toBe("Employer name withheld"); // employer still hidden
+    expect(out.history[0].meta).toBe("Outsourced US CPA firm · Name withheld"); // real name still hidden
   });
 
   it("(6) paid verified still cannot see identity without acceptance", () => {

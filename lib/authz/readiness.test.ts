@@ -73,9 +73,9 @@ describe("publicationRequirements", () => {
 });
 
 describe("readinessChecklist", () => {
-  it("has no employment/reference verification item, and 11 items", () => {
+  it("has no employment/reference verification item, and 14 items", () => {
     const items = readinessChecklist(ready());
-    expect(items).toHaveLength(11);
+    expect(items).toHaveLength(14);
     expect(items.some((i) => /reference/i.test(i.label))).toBe(false);
     expect(items.find((i) => i.key === "employment_history")?.label).toMatch(/candidate-provided/i);
   });
@@ -87,6 +87,25 @@ describe("readinessChecklist", () => {
     expect(byKey.experience).toBe("needs_confirmation");
     expect(byKey.employment_history).toBe("missing");
     expect(byKey.identity).toBe("missing");
+  });
+
+  it("new granular items: days/hours/overlap missing when not captured; software depth flagged", () => {
+    // Sai-like: software captured without depth; no days, start/finish, or overlap.
+    const sai: ReadinessRow = {
+      software_proficiency: [{ name: "CCH Axcess Tax" }],
+      software_confirmed_at: "2026-07-26T00:00:00Z",
+      avail_max_weekly_hours: 20,
+      timezone: "Asia/Kolkata",
+    };
+    const byKey = Object.fromEntries(readinessChecklist(sai).map((i) => [i.key, i.state]));
+    expect(byKey.available_days).toBe("missing");
+    expect(byKey.hours).toBe("missing");
+    expect(byKey.et_overlap).toBe("missing");
+    expect(byKey.software).toBe("confirmed");
+    expect(byKey.software_depth).toBe("needs_confirmation");
+    // Once start+finish+tz exist, overlap becomes calculable.
+    const full = readinessChecklist({ ...sai, avail_start_time: "15:30", avail_finish_time: "23:30" });
+    expect(full.find((i) => i.key === "et_overlap")?.state).toBe("confirmed");
   });
 });
 
