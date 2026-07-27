@@ -21,9 +21,20 @@ export async function GET(request: Request) {
         const { data } = await client.auth.getUser();
         const user = data.user;
         if (user && serviceClient) {
+          const email = normalizeEmail(user.email);
           await serviceClient
             .from("profiles")
-            .upsert({ user_id: user.id, email: normalizeEmail(user.email) }, { onConflict: "user_id" });
+            .upsert({ user_id: user.id, email }, { onConflict: "user_id" });
+          // Candidate ownership auto-claim: the magic link proves control of this
+          // email, so any application submitted with it belongs to this user. Claim
+          // all still-unclaimed matching rows (a candidate may have applied twice).
+          if (email) {
+            await serviceClient
+              .from("applications")
+              .update({ user_id: user.id })
+              .eq("email", email)
+              .is("user_id", null);
+          }
         }
         return NextResponse.redirect(new URL(next, url.origin));
       }

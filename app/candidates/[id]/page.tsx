@@ -10,7 +10,7 @@ import {
 } from "@/lib/profile/candidate";
 import { CandidateProfile } from "@/components/profile/CandidateProfile";
 import { getViewer } from "@/lib/authz/viewer";
-import { canIndexProfile, deriveVisibility } from "@/lib/authz/visibility";
+import { canIndexProfile, deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
 import {
   isPublished,
   readinessChecklist,
@@ -126,6 +126,7 @@ function deriveCta(args: {
 }): ProfileCtaState {
   const { level, isPreview, introduction, canRequest } = args;
   if (isPreview) return { kind: "preview" };
+  if (level === "owner") return { kind: "self" };
   if (level === "accepted_introduction" || level === "admin") return { kind: "accepted" };
 
   // An in-flight request shows its status regardless of level.
@@ -158,9 +159,12 @@ export default async function CandidateProfilePage({
   const app = data.app as Record<string, unknown>;
   const viewer = await getViewer();
   const isAdmin = viewer.kind === "user" && viewer.isAdmin;
+  // Owner = the candidate viewing their own application (per-application ownership).
+  const isOwner = isApplicationOwner(viewer, app as { user_id?: string | null });
 
-  // Publication gate: only published profiles are public. Admins preview any state.
-  if (!isPublished(app as ReadinessRow) && !isAdmin) notFound();
+  // Publication gate: only published profiles are public. Admins preview any state;
+  // the owner may always view their own profile (even as a draft).
+  if (!isPublished(app as ReadinessRow) && !isAdmin && !isOwner) notFound();
 
   // Admin-only presentation preview.
   const previewAs =
@@ -178,9 +182,13 @@ export default async function CandidateProfilePage({
   const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
   const introduction = await getViewerIntroduction(id, accountId);
 
-  const { level, isPreview: rawIsPreview } = deriveVisibility(viewer, introduction, { previewAs });
+  const derived = deriveVisibility(viewer, introduction, { previewAs });
+  // Owner self-view overrides the derived (employer/anonymous) level, except when an
+  // admin is previewing or is themselves the derived admin.
+  const level =
+    isOwner && !previewAs && derived.level !== "admin" ? "owner" : derived.level;
   // In bare mode the admin views AS the level, so the preview chrome/flags are off.
-  const isPreview = rawIsPreview && !bareView;
+  const isPreview = derived.isPreview && !bareView;
   const isAdminViewer = isAdmin && !bareView;
 
   const entitlements = entitlementsFor(viewer.kind === "user" ? viewer.account : null);
@@ -205,7 +213,6 @@ export default async function CandidateProfilePage({
     isPreview,
     isAdminViewer,
     privacy: {
-      publicPhoto: app.public_photo === true,
       publicCompensation: app.public_compensation !== false,
     },
     contact:

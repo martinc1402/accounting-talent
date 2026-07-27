@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getViewer } from "@/lib/authz/viewer";
-import { deriveVisibility, canViewPhoto, canSeeIdentity } from "@/lib/authz/visibility";
+import { deriveVisibility, canViewPhoto, canSeeIdentity, isApplicationOwner } from "@/lib/authz/visibility";
 import { getViewerIntroduction } from "@/lib/authz/introductionsRepo";
 
 /*
@@ -35,27 +35,30 @@ export async function GET(
 
   const { data } = await supabase
     .from("applications")
-    .select("photo_url, public_photo, verified_at")
+    .select("photo_url, verified_at, user_id")
     .eq("id", id)
     .maybeSingle();
   const app = data as
-    | { photo_url: string | null; public_photo: boolean | null; verified_at: string | null }
+    | { photo_url: string | null; verified_at: string | null; user_id: string | null }
     | null;
   if (!app || !app.verified_at || !app.photo_url) return deny();
 
   const viewer = await getViewer();
+  const owner = isApplicationOwner(viewer, app);
   const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
   const introduction = await getViewerIntroduction(id, accountId);
   const { level } = deriveVisibility(viewer, introduction);
 
-  if (!canViewPhoto(level, app.public_photo === true)) return deny();
+  // Access rule: owner / admin / accepted-introduction / verified employer may
+  // receive photo bytes. public_photo is NOT a factor — a photo is never public.
+  if (!owner && !canViewPhoto(level)) return deny();
 
   // Resolve photo_url to a concrete target to redirect the <img> at:
   //  - a private-bucket object key -> a short-lived signed URL (never public);
   //  - a legacy absolute URL or /public path -> used as-is (back-compat).
-  // Clear photo only once identity is unlocked (accepted introduction / admin) or
-  // the candidate opted the photo public; otherwise serve the frosted derivative.
-  const clear = canSeeIdentity(level) || app.public_photo === true;
+  // CLEAR only for owner / accepted-introduction / admin; verified employers get
+  // the frosted derivative.
+  const clear = owner || canSeeIdentity(level);
   const stored = app.photo_url;
   let target: string;
   if (/^https?:\/\//i.test(stored) || stored.startsWith("/")) {

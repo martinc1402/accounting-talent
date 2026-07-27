@@ -107,7 +107,7 @@ export default async function CandidatePreviewPage({
     const projected = projectProfileView(sample, lvl, {
       isPreview: false,
       isAdminViewer: lvl === "admin",
-      privacy: { publicPhoto: false, publicCompensation: comp !== "0" },
+      privacy: { publicCompensation: comp !== "0" },
       contact: lvl === "accepted_introduction" || lvl === "admin" ? SAMPLE_CONTACT : null,
       cta: ctaForLevel(lvl),
       entitlements: paid ? PLAN_ENTITLEMENTS.paid : PLAN_ENTITLEMENTS.free,

@@ -8,6 +8,16 @@
 */
 import type { Introduction, VisibilityLevel, Viewer } from "./types";
 
+/** True when this authenticated viewer owns this specific application (candidate
+ *  self-view). Ownership is per-application (applications.user_id), so it is
+ *  resolved by the route, not deriveVisibility. */
+export function isApplicationOwner(
+  viewer: Viewer,
+  app: { user_id?: string | null } | null | undefined,
+): boolean {
+  return viewer.kind === "user" && !!app?.user_id && app.user_id === viewer.userId;
+}
+
 export type DerivedVisibility = {
   level: VisibilityLevel;
   /** True when an admin is previewing a lower level; mutations must be blocked. */
@@ -69,6 +79,7 @@ const RANK: Record<VisibilityLevel, number> = {
   free_verified_employer: 1,
   paid_verified_employer: 2,
   accepted_introduction: 3,
+  owner: 3, // sees own identity + fields (like accepted); admin controls excluded
   admin: 4,
 };
 
@@ -81,14 +92,16 @@ export function canSeeVerifiedEmployerFields(level: VisibilityLevel): boolean {
   return atLeast(level, "free_verified_employer");
 }
 
-/** Full name / contact only at accepted-introduction or admin. */
+/** Full name / contact only at accepted-introduction, the owner (self), or admin. */
 export function canSeeIdentity(level: VisibilityLevel): boolean {
-  return level === "accepted_introduction" || level === "admin";
+  return level === "accepted_introduction" || level === "owner" || level === "admin";
 }
 
-/** Photo access: verified employer (free+), or the candidate opted photo public. */
-export function canViewPhoto(level: VisibilityLevel, publicPhoto: boolean): boolean {
-  return publicPhoto || canSeeVerifiedEmployerFields(level);
+/** Who may receive ANY photo bytes: owner / admin / accepted (clear) get it, and
+ *  verified employers get the FROSTED derivative. Everyone else gets nothing.
+ *  public_photo is intentionally NOT a factor — a photo can never be made public. */
+export function canViewPhoto(level: VisibilityLevel): boolean {
+  return canSeeVerifiedEmployerFields(level);
 }
 
 /** A profile may be search-indexed only when the candidate opted in AND it is

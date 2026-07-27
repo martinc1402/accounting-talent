@@ -101,7 +101,9 @@ export type ProfileCtaState =
   | { kind: "at_limit" }
   | { kind: "status"; status: IntroductionStatus }
   | { kind: "accepted" }
-  | { kind: "preview" };
+  | { kind: "preview" }
+  // The candidate viewing their OWN profile (owner self-view). No employer action.
+  | { kind: "self" };
 
 /** Access/entitlement metadata attached to the projected view-model so the UI can
  *  render the right CTA and paid-feature slots without re-deriving permissions. */

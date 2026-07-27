@@ -10,6 +10,9 @@ export type VisibilityLevel =
   | "free_verified_employer"
   | "paid_verified_employer"
   | "accepted_introduction"
+  // The candidate viewing THEIR OWN profile (per-application ownership; resolved in
+  // the route, never by deriveVisibility). Sees their own identity + clear photo.
+  | "owner"
   | "admin";
 
 export type PlanName = "free" | "paid";

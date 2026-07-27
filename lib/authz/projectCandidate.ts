@@ -23,7 +23,7 @@ export type ProjectContext = {
   isPreview: boolean;
   /** The real viewer is an admin (drives the preview switcher; not the level). */
   isAdminViewer: boolean;
-  privacy: { publicPhoto: boolean; publicCompensation: boolean };
+  privacy: { publicCompensation: boolean };
   /** Full contact, included ONLY at accepted-introduction / admin. */
   contact?: CandidateContact | null;
   cta: ProfileCtaState;
@@ -80,14 +80,14 @@ export function projectProfileView(
   out.name = identity ? view.name : anonymizeName(view.name);
   out.initials = initialsOf(out.name);
 
-  // Photo: only for verified+ employers, or if the candidate opted photo public.
-  // Frosted until an introduction is accepted (or the candidate made it public):
-  // the photo endpoint serves pre-blurred bytes to non-identity viewers, and
-  // `locked` tells the UI to show the obscured/unlock treatment.
-  const showPhoto = verifiedFields || ctx.privacy.publicPhoto;
+  // Photo: verified+ employers (and owner/accepted/admin via identity). Frosted
+  // until identity is unlocked (owner / accepted introduction / admin): the photo
+  // endpoint serves pre-blurred bytes to non-identity viewers, and `locked` tells
+  // the UI to show the obscured/unlock treatment. A photo is NEVER public.
+  const showPhoto = verifiedFields;
   if (!showPhoto) {
     out.photo = undefined;
-  } else if (out.photo && !identity && !ctx.privacy.publicPhoto) {
+  } else if (out.photo && !identity) {
     out.photo = { ...out.photo, locked: true };
   }
 

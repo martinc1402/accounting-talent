@@ -6,6 +6,7 @@ import {
   canSeeIdentity,
   canViewPhoto,
   canIndexProfile,
+  isApplicationOwner,
 } from "./visibility";
 import {
   validateTransition,
@@ -90,7 +91,7 @@ function ctx(over: Partial<ProjectContext> = {}): ProjectContext {
   return {
     isPreview: false,
     isAdminViewer: false,
-    privacy: { publicPhoto: false, publicCompensation: true },
+    privacy: { publicCompensation: true },
     contact: null,
     cta: { kind: "register" },
     entitlements: PLAN_ENTITLEMENTS.free,
@@ -184,23 +185,22 @@ describe("projectProfileView field-level filtering", () => {
   });
 
   it("public compensation consent gates the value, not verified level", () => {
-    const consented = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicPhoto: false, publicCompensation: true } }));
+    const consented = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicCompensation: true } }));
     expect(consented.compensation).toBeDefined();
     expect(consented.access?.compensationLocked).toBe(false);
 
-    const withheld = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicPhoto: false, publicCompensation: false } }));
+    const withheld = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicCompensation: false } }));
     expect(withheld.compensation).toBeUndefined();
     expect(withheld.access?.compensationLocked).toBe(true);
     expect(JSON.stringify(withheld)).not.toContain("$900");
   });
 
-  it("public_photo consent shows the photo to anonymous, unlocked", () => {
-    const out = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicPhoto: true, publicCompensation: true } }));
-    expect(out.photo).toBeDefined();
-    expect(out.photo?.locked).toBeFalsy(); // candidate consented -> clear
+  it("a photo can NEVER be made public — anonymous gets no photo regardless", () => {
+    const out = projectProfileView(baseView, "anonymous", ctx({ privacy: { publicCompensation: true } }));
+    expect(out.photo).toBeUndefined();
   });
 
-  it("photo is frosted (locked) for verified employers until an intro is accepted", () => {
+  it("photo is frosted (locked) for verified employers, clear for accepted/owner/admin", () => {
     const free = projectProfileView(baseView, "free_verified_employer", ctx({ entitlements: PLAN_ENTITLEMENTS.free }));
     expect(free.photo?.locked).toBe(true);
     const paid = projectProfileView(baseView, "paid_verified_employer", ctx({ entitlements: PLAN_ENTITLEMENTS.paid }));
@@ -208,6 +208,9 @@ describe("projectProfileView field-level filtering", () => {
     const accepted = projectProfileView(baseView, "accepted_introduction", ctx({ contact: CONTACT }));
     expect(accepted.photo).toBeDefined();
     expect(accepted.photo?.locked).toBeFalsy(); // introduction accepted -> clear
+    const owner = projectProfileView(baseView, "owner", ctx({}));
+    expect(owner.photo).toBeDefined();
+    expect(owner.photo?.locked).toBeFalsy(); // owner sees their own clear photo
   });
 
   it("(3) free verified: photo, exact city, named institutions; no identity", () => {
@@ -285,11 +288,25 @@ describe("introduction state machine + limits", () => {
 // --- assets + indexing -----------------------------------------------------
 
 describe("asset + index gating", () => {
-  it("(11) photo endpoint gate", () => {
-    expect(canViewPhoto("anonymous", false)).toBe(false);
-    expect(canViewPhoto("anonymous", true)).toBe(true);
-    expect(canViewPhoto("unverified_employer", false)).toBe(false);
-    expect(canViewPhoto("free_verified_employer", false)).toBe(true);
+  it("(11) photo endpoint gate — public_photo is no longer a factor", () => {
+    expect(canViewPhoto("anonymous")).toBe(false);
+    expect(canViewPhoto("unverified_employer")).toBe(false);
+    expect(canViewPhoto("free_verified_employer")).toBe(true); // frosted
+    expect(canViewPhoto("accepted_introduction")).toBe(true); // clear
+    expect(canViewPhoto("owner")).toBe(true); // clear
+    expect(canViewPhoto("admin")).toBe(true); // clear
+  });
+  it("isApplicationOwner: only the user whose id matches the application", () => {
+    const u = (userId: string): Viewer => ({ kind: "user", userId, email: "x@y.com", isAdmin: false, account: null, memberRole: null });
+    expect(isApplicationOwner(u("u1"), { user_id: "u1" })).toBe(true);
+    expect(isApplicationOwner(u("u1"), { user_id: "u2" })).toBe(false);
+    expect(isApplicationOwner(u("u1"), { user_id: null })).toBe(false); // unclaimed
+    expect(isApplicationOwner({ kind: "anonymous" }, { user_id: "u1" })).toBe(false);
+  });
+  it("canSeeIdentity: owner sees own identity (like accepted/admin)", () => {
+    expect(canSeeIdentity("owner")).toBe(true);
+    expect(canSeeIdentity("accepted_introduction")).toBe(true);
+    expect(canSeeIdentity("free_verified_employer")).toBe(false);
   });
   it("(12) noindex truth table", () => {
     expect(canIndexProfile({ allowSearchIndexing: true, hasVerifiedAt: true, hasAvailability: true })).toBe(true);

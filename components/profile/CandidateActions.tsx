@@ -166,6 +166,12 @@ export function CandidateActions({
             Preview mode — actions disabled
           </span>
         );
+      case "self":
+        return (
+          <span className={`${base} ${disabled} cursor-default`} aria-disabled>
+            This is your profile
+          </span>
+        );
     }
   };
 
@@ -190,7 +196,7 @@ export function CandidateActions({
     </button>
   );
 
-  const showSave = saveMode !== "hidden" && cta.kind !== "preview";
+  const showSave = saveMode !== "hidden" && cta.kind !== "preview" && cta.kind !== "self";
 
   return (
     <>
