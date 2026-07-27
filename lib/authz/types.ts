@@ -37,6 +37,9 @@ export type Viewer =
       isAdmin: boolean;
       account: EmployerAccount | null;
       memberRole: MemberRole | null;
+      // Set when the user owns a candidate application (single-role: never both an
+      // employer account AND a candidate). Drives the candidate-facing header nav.
+      candidate: { name: string } | null;
     };
 
 export type IntroductionStatus =

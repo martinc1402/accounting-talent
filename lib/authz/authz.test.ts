@@ -39,6 +39,7 @@ function userViewer(over: Partial<Extract<Viewer, { kind: "user" }>> = {}): View
     isAdmin: false,
     account: null,
     memberRole: null,
+    candidate: null,
     ...over,
   };
 }
@@ -330,7 +331,7 @@ describe("asset + index gating", () => {
     expect(canViewPhoto("admin")).toBe(true); // clear
   });
   it("isApplicationOwner: only the user whose id matches the application", () => {
-    const u = (userId: string): Viewer => ({ kind: "user", userId, email: "x@y.com", isAdmin: false, account: null, memberRole: null });
+    const u = (userId: string): Viewer => ({ kind: "user", userId, email: "x@y.com", isAdmin: false, account: null, memberRole: null, candidate: null });
     expect(isApplicationOwner(u("u1"), { user_id: "u1" })).toBe(true);
     expect(isApplicationOwner(u("u1"), { user_id: "u2" })).toBe(false);
     expect(isApplicationOwner(u("u1"), { user_id: null })).toBe(false); // unclaimed

@@ -61,7 +61,21 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       }
     }
 
-    return { kind: "user", userId: user.id, email: user.email, isAdmin, account, memberRole };
+    // A user is either an employer OR a candidate (single-role, enforced at sign-up
+    // + auto-claim). Only look for an owned application when there's no employer
+    // account — so employers never pay for this query.
+    let candidate: { name: string } | null = null;
+    if (!account && supabase) {
+      const { data: ownApp } = await supabase
+        .from("applications")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      if (ownApp?.full_name) candidate = { name: String(ownApp.full_name) };
+    }
+
+    return { kind: "user", userId: user.id, email: user.email, isAdmin, account, memberRole, candidate };
   } catch {
     return { kind: "anonymous" };
   }

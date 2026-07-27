@@ -10,8 +10,11 @@ import Link from "next/link";
   Native button + a click-away backdrop; keyboard-closable with Escape.
 */
 function initialsOf(label: string): string {
-  const parts = label.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length >= 2 ? parts[0][0] + parts[1][0] : (parts[0] ?? "?").slice(0, 2);
+  // Ignore non-letter tokens (e.g. "(local)" in a firm name); first + last initial
+  // for names ("Sai Swaminathan Ramji" → "SR"), else the first two letters.
+  const parts = label.trim().split(/\s+/).filter((p) => /[a-z]/i.test(p));
+  if (parts.length === 0) return "?";
+  const letters = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
   return letters.toUpperCase();
 }
 
@@ -21,9 +24,11 @@ const ITEM =
 export function AccountMenu({
   label,
   plan,
+  role,
 }: {
   label: string;
   plan?: "free" | "paid";
+  role?: "employer" | "candidate";
 }) {
   const [open, setOpen] = useState(false);
 
@@ -57,16 +62,28 @@ export function AccountMenu({
               )}
             </div>
             <div className="my-1 border-t border-line" />
-            <Link href="/employer" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
-              Employer dashboard
-            </Link>
-            <Link href="/employer/saved" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
-              Saved candidates
-            </Link>
-            <Link href="/employer/introductions" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
-              Introductions
-            </Link>
-            <div className="my-1 border-t border-line" />
+            {role === "employer" && (
+              <>
+                <Link href="/employer" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
+                  Employer dashboard
+                </Link>
+                <Link href="/employer/saved" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
+                  Saved candidates
+                </Link>
+                <Link href="/employer/introductions" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
+                  Introductions
+                </Link>
+                <div className="my-1 border-t border-line" />
+              </>
+            )}
+            {role === "candidate" && (
+              <>
+                <Link href="/candidates/me" className={ITEM} role="menuitem" onClick={() => setOpen(false)}>
+                  Your profile
+                </Link>
+                <div className="my-1 border-t border-line" />
+              </>
+            )}
             <form action="/auth/signout" method="post">
               <button type="submit" role="menuitem" className={`${ITEM} w-full text-left`}>
                 Sign out

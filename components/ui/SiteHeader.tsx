@@ -10,8 +10,11 @@ import { AccountMenu } from "@/components/ui/AccountMenu";
 */
 export type SiteHeaderNav = {
   authenticated: boolean;
-  label?: string; // account name or email
+  label?: string; // account name, candidate name, or email
   plan?: "free" | "paid";
+  /** "employer" → employer controls; "candidate" → their own profile; otherwise a
+   *  bare signed-in state (account menu with Sign out only). */
+  role?: "employer" | "candidate";
 };
 
 const LINK =
@@ -24,14 +27,24 @@ export function SiteHeader({ nav }: { nav: SiteHeaderNav }) {
         <Logo />
         {nav.authenticated ? (
           <nav className="flex items-center gap-3 sm:gap-5" aria-label="Account">
-            {/* Inline links on desktop; the account menu carries them on mobile. */}
-            <Link href="/employer/saved" className={`hidden sm:inline-block ${LINK}`}>
-              Saved candidates
-            </Link>
-            <Link href="/employer/introductions" className={`hidden sm:inline-block ${LINK}`}>
-              Introductions
-            </Link>
-            <AccountMenu label={nav.label ?? "Account"} plan={nav.plan} />
+            {/* Inline links on desktop; the account menu carries them on mobile.
+                Employers get shortlist controls; candidates get their own profile. */}
+            {nav.role === "employer" && (
+              <>
+                <Link href="/employer/saved" className={`hidden sm:inline-block ${LINK}`}>
+                  Saved candidates
+                </Link>
+                <Link href="/employer/introductions" className={`hidden sm:inline-block ${LINK}`}>
+                  Introductions
+                </Link>
+              </>
+            )}
+            {nav.role === "candidate" && (
+              <Link href="/candidates/me" className={`hidden sm:inline-block ${LINK}`}>
+                Your profile
+              </Link>
+            )}
+            <AccountMenu label={nav.label ?? "Account"} plan={nav.plan} role={nav.role} />
           </nav>
         ) : (
           <nav className="flex items-center gap-4" aria-label="Account">
@@ -51,16 +64,20 @@ export function SiteHeader({ nav }: { nav: SiteHeaderNav }) {
   );
 }
 
-/** Build the header nav summary from a resolved Viewer. */
+/** Build the header nav summary from a resolved Viewer. Role-aware: employers get
+ *  employer controls, candidates get their own profile. */
 export function navFromViewer(viewer: {
   kind: "anonymous" | "user";
   email?: string;
   account?: { name: string; plan: "free" | "paid" } | null;
+  candidate?: { name: string } | null;
 }): SiteHeaderNav {
   if (viewer.kind !== "user") return { authenticated: false };
-  return {
-    authenticated: true,
-    label: viewer.account?.name ?? viewer.email ?? "Account",
-    plan: viewer.account?.plan,
-  };
+  if (viewer.account) {
+    return { authenticated: true, label: viewer.account.name, plan: viewer.account.plan, role: "employer" };
+  }
+  if (viewer.candidate) {
+    return { authenticated: true, label: viewer.candidate.name, role: "candidate" };
+  }
+  return { authenticated: true, label: viewer.email ?? "Account" };
 }
