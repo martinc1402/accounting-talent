@@ -115,6 +115,9 @@ export type ProfileAccess = {
   cta: ProfileCtaState;
   /** True when compensation is withheld and a registration CTA is shown instead. */
   compensationLocked: boolean;
+  /** Set when the OWNER is previewing their own profile as an employer sees it.
+   *  Drives the preview banner and makes all employer actions non-functional. */
+  candidatePreview?: "public" | "employer" | "introduced";
   paidFeatures: {
     assessmentBreakdown: boolean;
     resumeDownload: boolean;

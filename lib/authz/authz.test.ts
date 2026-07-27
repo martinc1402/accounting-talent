@@ -14,6 +14,7 @@ import {
   isActiveStatus,
 } from "./introductions";
 import { projectProfileView, type ProjectContext } from "./projectCandidate";
+import { disclosureRows } from "./disclosure";
 import type { EmployerAccount, Introduction, Viewer } from "./types";
 import type { CandidateProfile } from "@/lib/profile/candidate";
 
@@ -211,6 +212,38 @@ describe("projectProfileView field-level filtering", () => {
     const owner = projectProfileView(baseView, "owner", ctx({}));
     expect(owner.photo).toBeDefined();
     expect(owner.photo?.locked).toBeFalsy(); // owner sees their own clear photo
+  });
+
+  it("photo.alt is scrubbed for non-identity viewers (no full name in the payload)", () => {
+    const emp = projectProfileView(baseView, "free_verified_employer", ctx({ entitlements: PLAN_ENTITLEMENTS.free }));
+    expect(emp.photo?.alt).toBe("Candidate photo");
+    expect(JSON.stringify(emp)).not.toContain("Priya Sharma"); // full name never ships
+    // Identity viewers keep the descriptive alt.
+    const acc = projectProfileView(baseView, "accepted_introduction", ctx({ contact: CONTACT }));
+    expect(acc.photo?.alt).toContain("Priya Sharma");
+    const owner = projectProfileView(baseView, "owner", ctx({}));
+    expect(owner.name).toBe("Priya Sharma"); // owner sees own full name
+  });
+
+  it("owner-preview renders IDENTICAL content to a real render at the same level", () => {
+    // Same fn + level ⇒ identical projected CONTENT regardless of preview chrome
+    // (cta / candidatePreview). This is what guarantees "exactly what employers see".
+    const real = projectProfileView(baseView, "free_verified_employer", ctx({ cta: { kind: "request" }, entitlements: PLAN_ENTITLEMENTS.free }));
+    const preview = projectProfileView(baseView, "free_verified_employer", ctx({ cta: { kind: "request" }, candidatePreview: "employer", entitlements: PLAN_ENTITLEMENTS.free }));
+    const content = (p: typeof real) => ({ name: p.name, photo: p.photo, location: p.location, history: p.history, education: p.education, compensation: p.compensation });
+    expect(content(preview)).toEqual(content(real));
+  });
+
+  it("disclosureRows tracks the projection predicates", () => {
+    const at = (lvl: Parameters<typeof disclosureRows>[0]) => Object.fromEntries(disclosureRows(lvl).map((r) => [r.key, r.value]));
+    const before = at("free_verified_employer");
+    const after = at("accepted_introduction");
+    expect([before.name, after.name]).toEqual(["First name + last initial", "Full name"]);
+    expect([before.photo, after.photo]).toEqual(["Blurred until introduction", "Full photo"]);
+    expect([before.contact, after.contact]).toEqual(["Hidden", "Shared"]);
+    expect(before.employer).toContain("Withheld"); // withheld even after introduction
+    expect(after.employer).toContain("Withheld");
+    expect(at("anonymous").photo).toBe("Hidden"); // logged-out: no photo
   });
 
   it("(3) free verified: photo, exact city, named institutions; no identity", () => {

@@ -17,6 +17,7 @@ import { SiteHeader, type SiteHeaderNav } from "@/components/ui/SiteHeader";
 import { CandidateActions, type SaveMode } from "@/components/profile/CandidateActions";
 import { AssessmentResponse } from "@/components/profile/AssessmentResponse";
 import { AdminReadinessControls } from "@/components/profile/AdminReadinessControls";
+import { EmployerPreviewBanner } from "@/components/profile/EmployerPreviewBanner";
 import type {
   CandidateProfile as CandidateProfileData,
   ProfileAccess,
@@ -292,6 +293,7 @@ function Hero({ p }: { p: CandidateProfileData }) {
               candidateName={p.name}
               variant="hero"
               cta={p.access?.cta}
+              previewDisabled={!!p.access?.candidatePreview}
               saveMode={saveModeOf(p.access)}
               initialSaved={p.saved}
             />
@@ -498,6 +500,7 @@ function DecisionPanel({ p }: { p: CandidateProfileData }) {
           candidateName={p.name}
           variant="panel"
           cta={p.access?.cta}
+              previewDisabled={!!p.access?.candidatePreview}
           saveMode={saveModeOf(p.access)}
           initialSaved={p.saved}
         />
@@ -560,6 +563,7 @@ function HowItWorks({ p }: { p: CandidateProfileData }) {
             candidateName={p.name}
             variant="cta"
             cta={p.access?.cta}
+              previewDisabled={!!p.access?.candidatePreview}
           />
           <p className="max-w-[46ch] text-caption text-subtle">
             Contact details stay private until the candidate accepts the introduction.
@@ -693,8 +697,10 @@ export function CandidateProfile({
   nav?: SiteHeaderNav;
   admin?: AdminReadiness;
 }) {
+  const candidatePreview = p.access?.candidatePreview;
   return (
-    <div className="flex min-h-full flex-col bg-mist">
+    <div className={`flex min-h-full flex-col bg-mist ${candidatePreview ? "pt-12" : ""}`}>
+      {candidatePreview && <EmployerPreviewBanner candidateId={p.id} mode={candidatePreview} />}
       <SiteHeader nav={nav} />
 
       <main className="mx-auto w-full max-w-[1160px] flex-1 px-5 pt-6 pb-24 lg:px-8 lg:pb-16">
@@ -803,6 +809,7 @@ export function CandidateProfile({
               candidateName={p.name}
               variant="mobile"
               cta={p.access?.cta}
+              previewDisabled={!!p.access?.candidatePreview}
             />
           </div>
         </div>

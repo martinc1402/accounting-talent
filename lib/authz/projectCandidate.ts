@@ -27,6 +27,8 @@ export type ProjectContext = {
   /** Full contact, included ONLY at accepted-introduction / admin. */
   contact?: CandidateContact | null;
   cta: ProfileCtaState;
+  /** Owner-previewing-as-employer mode (drives the candidate preview banner). */
+  candidatePreview?: "public" | "employer" | "introduced";
   entitlements: Entitlements;
 };
 
@@ -88,7 +90,10 @@ export function projectProfileView(
   if (!showPhoto) {
     out.photo = undefined;
   } else if (out.photo && !identity) {
-    out.photo = { ...out.photo, locked: true };
+    // Frosted for non-identity viewers — and SCRUB the alt text, which the mapper
+    // builds from the full name ("Sai Swaminathan Ramji, …"). Without this the real
+    // name ships in the serialized payload even though the visible alt is masked.
+    out.photo = { ...out.photo, alt: "Candidate photo", locked: true };
   }
 
   // Location: broad region for non-verified; exact city for verified+.
@@ -126,6 +131,7 @@ export function projectProfileView(
     adminControls: ctx.isAdminViewer,
     cta: ctx.cta,
     compensationLocked,
+    candidatePreview: ctx.candidatePreview,
     paidFeatures: {
       assessmentBreakdown: ctx.entitlements.assessmentBreakdown,
       resumeDownload: ctx.entitlements.resumeDownload,

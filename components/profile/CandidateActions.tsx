@@ -54,6 +54,7 @@ export function CandidateActions({
   cta = { kind: "request" },
   saveMode = "hidden",
   initialSaved = false,
+  previewDisabled = false,
 }: {
   candidateId: string;
   candidateName: string;
@@ -61,6 +62,8 @@ export function CandidateActions({
   cta?: ProfileCtaState;
   saveMode?: SaveMode;
   initialSaved?: boolean;
+  /** Owner previewing as an employer: render the real buttons but non-functional. */
+  previewDisabled?: boolean;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [savePending, startSave] = useTransition();
@@ -118,10 +121,43 @@ export function CandidateActions({
     tone === "onLight"
       ? "border border-line px-6 py-3 text-subtle"
       : "border border-paper/30 px-5 py-3 text-paper/70";
+  const outline =
+    tone === "onLight"
+      ? `border border-navy/30 px-6 py-3 text-navy hover:bg-navy/5 ${FOCUS_NAVY}`
+      : `border border-paper/40 px-5 py-3 text-paper hover:bg-paper/10 ${FOCUS_PAPER}`;
+
+  const BASE = "inline-flex items-center justify-center gap-2 rounded-card text-small font-semibold transition active:translate-y-px";
+
+  // Owner self-view buttons (route to the dashboard / into preview).
+  const editBtn = (extra: string) => (
+    <a href="/candidates/me" className={`${BASE} ${extra} ${solid}`}>
+      Edit profile
+    </a>
+  );
+  const previewBtn = (extra: string) => (
+    <a href="?viewAs=employer" className={`${BASE} ${extra} ${outline}`}>
+      Preview as employer
+    </a>
+  );
+
+  // Owner-preview: the real employer label, rendered inert.
+  const previewLabel =
+    cta.kind === "register"
+      ? "Create an employer account"
+      : cta.kind === "accepted"
+        ? "View introduction details"
+        : "Request introduction";
 
   // The primary control, switched on the server-derived CTA state.
   const primaryBtn = (extra: string) => {
-    const base = `inline-flex items-center justify-center gap-2 rounded-card text-small font-semibold transition active:translate-y-px ${extra}`;
+    const base = `${BASE} ${extra}`;
+    if (previewDisabled) {
+      return (
+        <span className={`${base} ${disabled} cursor-not-allowed`} aria-disabled>
+          {previewLabel}
+        </span>
+      );
+    }
     switch (cta.kind) {
       case "register":
         return (
@@ -178,10 +214,11 @@ export function CandidateActions({
   const saveBtn = (extra: string) => (
     <button
       type="button"
-      aria-pressed={saveMode === "toggle" ? saved : undefined}
+      aria-pressed={previewDisabled ? undefined : saveMode === "toggle" ? saved : undefined}
       aria-label={saveAria}
-      disabled={savePending}
-      onClick={toggleSave}
+      aria-disabled={previewDisabled || undefined}
+      disabled={savePending || previewDisabled}
+      onClick={previewDisabled ? undefined : toggleSave}
       className={`inline-flex items-center justify-center gap-2 rounded-card border px-5 py-3 text-small font-semibold text-paper transition disabled:opacity-70 ${
         saved ? "border-verified bg-verified/10" : "border-paper/30 hover:border-paper/60"
       } ${FOCUS_PAPER} ${extra}`}
@@ -196,7 +233,12 @@ export function CandidateActions({
     </button>
   );
 
-  const showSave = saveMode !== "hidden" && cta.kind !== "preview" && cta.kind !== "self";
+  const isSelf = cta.kind === "self" && !previewDisabled;
+  // In owner-preview show the (disabled) Save for fidelity; otherwise hide it in
+  // preview / self states.
+  const showSave = previewDisabled
+    ? saveMode !== "hidden"
+    : saveMode !== "hidden" && cta.kind !== "preview" && cta.kind !== "self";
 
   return (
     <>
@@ -205,25 +247,41 @@ export function CandidateActions({
         {saveNote}
       </span>
 
+      {/* Owner self-view: Edit profile + Preview as employer (per variant). */}
       {variant === "hero" && (
         <div className="flex flex-wrap gap-2.5">
-          {primaryBtn("")}
-          {showSave && saveBtn("")}
+          {isSelf ? (
+            <>
+              {editBtn("")}
+              {previewBtn("")}
+            </>
+          ) : (
+            <>
+              {primaryBtn("")}
+              {showSave && saveBtn("")}
+            </>
+          )}
         </div>
       )}
 
       {variant === "panel" && (
         <div className="flex flex-col gap-2.5">
-          {primaryBtn("w-full")}
-          {showSave && saveBtn("w-full")}
+          {isSelf ? (
+            previewBtn("w-full")
+          ) : (
+            <>
+              {primaryBtn("w-full")}
+              {showSave && saveBtn("w-full")}
+            </>
+          )}
         </div>
       )}
 
-      {variant === "cta" && primaryBtn("")}
+      {variant === "cta" && (isSelf ? editBtn("") : primaryBtn(""))}
 
       {/* Mobile bar shows only the primary action (compensation sits beside it in
           the sticky bar); Save stays in the hero + Decision Summary. */}
-      {variant === "mobile" && primaryBtn("w-full")}
+      {variant === "mobile" && (isSelf ? editBtn("w-full") : primaryBtn("w-full"))}
 
       {open && (
         <RequestIntroModal

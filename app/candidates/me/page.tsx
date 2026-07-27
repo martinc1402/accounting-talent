@@ -5,8 +5,50 @@ import { SiteHeader, navFromViewer } from "@/components/ui/SiteHeader";
 import { getViewer } from "@/lib/authz/viewer";
 import { supabase } from "@/lib/supabase";
 import { compensation, compensationLine, type ApplicationRow } from "@/lib/search/candidate";
+import { disclosureRows } from "@/lib/authz/disclosure";
 import { CandidateDashboard, type DashboardData } from "@/components/candidate/CandidateDashboard";
 import type { ReactNode } from "react";
+
+// "Who sees what" — the two employer stages, from the SAME predicates the
+// projection uses (lib/authz/disclosure). Static content, no drift.
+function WhoSeesWhat({ candidateId }: { candidateId: string }) {
+  const before = disclosureRows("free_verified_employer");
+  const after = disclosureRows("accepted_introduction");
+  return (
+    <section className="mb-5 rounded-card border border-line bg-white p-6 lg:p-7">
+      <h2 className="font-display text-[1.15rem] font-medium text-ink">Who sees what</h2>
+      <p className="mt-1 text-caption text-muted">
+        Employers see only limited details until you accept an introduction.
+      </p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[440px] text-small">
+          <thead>
+            <tr className="text-caption tracking-wide text-subtle uppercase">
+              <th className="py-2 text-left font-semibold" />
+              <th className="py-2 pr-4 text-left font-semibold">Before introduction</th>
+              <th className="py-2 text-left font-semibold">After accepted introduction</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {before.map((row, i) => (
+              <tr key={row.key}>
+                <td className="py-2.5 pr-4 font-medium text-ink">{row.label}</td>
+                <td className="py-2.5 pr-4 text-muted">{row.value}</td>
+                <td className="py-2.5 text-muted">{after[i].value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Link
+        href={`/candidates/${candidateId}?viewAs=employer`}
+        className="mt-4 inline-block text-caption font-semibold text-navy underline underline-offset-2"
+      >
+        See it for yourself → Preview as employer
+      </Link>
+    </section>
+  );
+}
 
 /*
   The candidate's own dashboard. Owner-only: resolved by applications.user_id, which
@@ -118,6 +160,7 @@ export default async function CandidateMePage({
           ))}
         </div>
       )}
+      <WhoSeesWhat candidateId={selected.id} />
       <CandidateDashboard data={dto} />
     </>,
   );

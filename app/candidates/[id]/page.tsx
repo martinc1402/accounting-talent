@@ -73,6 +73,20 @@ const PREVIEW_LEVELS: VisibilityLevel[] = [
   "accepted_introduction",
 ];
 
+// Owner "Preview as employer" modes → the level each renders at, and the real
+// employer CTA to show (disabled) for fidelity.
+type PreviewMode = "public" | "employer" | "introduced";
+const VIEW_AS: Record<PreviewMode, VisibilityLevel> = {
+  public: "anonymous",
+  employer: "free_verified_employer",
+  introduced: "accepted_introduction",
+};
+const PREVIEW_CTA: Record<PreviewMode, ProfileCtaState> = {
+  public: { kind: "register" },
+  employer: { kind: "request" },
+  introduced: { kind: "accepted" },
+};
+
 function anonymizeName(name: string): string {
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
   if (parts.length <= 1) return parts[0] ?? "Candidate";
@@ -149,10 +163,10 @@ export default async function CandidateProfilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ preview?: string; bare?: string }>;
+  searchParams: Promise<{ preview?: string; bare?: string; viewAs?: string }>;
 }) {
   const { id } = await params;
-  const { preview, bare } = await searchParams;
+  const { preview, bare, viewAs } = await searchParams;
   const data = await loadCandidate(id);
   if (!data) notFound();
 
@@ -178,15 +192,24 @@ export default async function CandidateProfilePage({
   // without the admin chrome. Admin-only, and only meaningful alongside ?preview=.
   const bareView = previewAs !== null && bare === "1";
 
+  // Owner "Preview as employer": the owner viewing their OWN profile as an employer
+  // (or the public) sees it. Owner-only; renders at a LOWER-disclosure level (the
+  // projection projects down, so it's safe — it's the owner's own data).
+  const candidatePreview: PreviewMode | null =
+    isOwner && viewAs && viewAs in VIEW_AS ? (viewAs as PreviewMode) : null;
+
   // The viewer's OWN introduction for this candidate (scoped to their account).
   const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
   const introduction = await getViewerIntroduction(id, accountId);
 
   const derived = deriveVisibility(viewer, introduction, { previewAs });
-  // Owner self-view overrides the derived (employer/anonymous) level, except when an
-  // admin is previewing or is themselves the derived admin.
-  const level =
-    isOwner && !previewAs && derived.level !== "admin" ? "owner" : derived.level;
+  // Owner-preview renders at the previewed level; otherwise owner self-view overrides
+  // the derived level (except when an admin previews or is themselves the derived admin).
+  const level: VisibilityLevel = candidatePreview
+    ? VIEW_AS[candidatePreview]
+    : isOwner && !previewAs && derived.level !== "admin"
+      ? "owner"
+      : derived.level;
   // In bare mode the admin views AS the level, so the preview chrome/flags are off.
   const isPreview = derived.isPreview && !bareView;
   const isAdminViewer = isAdmin && !bareView;
@@ -196,7 +219,11 @@ export default async function CandidateProfilePage({
   const canRequest =
     !isPreview && canCreateIntroduction({ level, activeCount, entitlements }).ok;
 
-  const cta = deriveCta({ level, isPreview, introduction, canRequest });
+  // In owner-preview show the REAL employer CTA for the level (rendered disabled for
+  // fidelity); otherwise derive normally.
+  const cta = candidatePreview
+    ? PREVIEW_CTA[candidatePreview]
+    : deriveCta({ level, isPreview, introduction, canRequest });
 
   // Build the FULL view-model server-side, then project down to the level.
   const assessment = data.assessment?.writing_sample
@@ -218,6 +245,7 @@ export default async function CandidateProfilePage({
     contact:
       level === "accepted_introduction" || level === "admin" ? buildContact(app) : null,
     cta,
+    candidatePreview: candidatePreview ?? undefined,
     entitlements,
   });
 
@@ -227,9 +255,10 @@ export default async function CandidateProfilePage({
     projected.photo = { ...projected.photo, src: `/api/candidates/${id}/photo` };
   }
 
-  // Saved state, scoped to the viewer's employer account (verified only).
+  // Saved state, scoped to the viewer's employer account (verified only). Never in
+  // owner-preview (the owner has no employer account; the button is inert anyway).
   projected.saved =
-    !isPreview && level !== "anonymous" && level !== "unverified_employer"
+    !candidatePreview && !isPreview && level !== "anonymous" && level !== "unverified_employer"
       ? await isCandidateSaved(accountId, id)
       : false;
 
