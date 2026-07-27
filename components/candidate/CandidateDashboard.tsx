@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Plus, Trash } from "@phosphor-icons/react";
+import { CheckCircle, Lock, Plus, Trash } from "@phosphor-icons/react";
 import {
   candidateConfirmAvailability,
   candidateSetSoftwareDepth,
@@ -11,6 +11,7 @@ import {
   candidateConfirmCompensationBasis,
   candidateApprovePublication,
   candidateSetPublished,
+  candidateUploadPhoto,
 } from "@/app/actions";
 
 /*
@@ -41,7 +42,17 @@ export type DashboardData = {
   compBasis?: string;
   compBasisConfirmed: boolean;
   publicationApproved: boolean;
+  hasPhoto: boolean;
 };
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return ((parts[0][0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] ?? "" : "")).toUpperCase();
+}
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const LEVELS = ["Basic", "Intermediate", "Advanced", "Expert"] as const;
@@ -110,6 +121,13 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
     data.education.length ? data.education : [{ degree: "", field_of_study: "", institution: "", year: "", completion_status: "" }],
   );
 
+  // Profile photo: a local object-URL preview shows the picked/uploaded image
+  // immediately; otherwise the current photo is served (owner-authorized) from the
+  // signing endpoint. Object URLs are revoked to avoid leaks.
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
+
   function run(key: string, fn: () => Promise<{ status: string; message?: string }>, ok: string) {
     setError(null);
     setNote(null);
@@ -123,6 +141,27 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
         router.refresh();
       }
     });
+  }
+
+  function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file after an error
+    if (!file) return;
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+      setError("Please choose a PNG, JPEG, or WebP image.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setError("That image is too large — please use one under 5 MB.");
+      return;
+    }
+    setPhotoPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return URL.createObjectURL(file);
+    });
+    const fd = new FormData();
+    fd.append("photo", file);
+    run("photo", () => candidateUploadPhoto(data.id, fd), "Photo updated.");
   }
 
   const toggleDay = (d: string) => setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
@@ -149,6 +188,55 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
       )}
 
       <div className="mt-6 flex flex-col gap-5">
+        {/* Profile photo */}
+        <Section
+          title="Profile photo"
+          badge={
+            <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-subtle">
+              <Lock size={14} weight="fill" aria-hidden /> Private
+            </span>
+          }
+        >
+          <div className="flex items-center gap-5">
+            <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-mist ring-1 ring-line">
+              {photoPreview || data.hasPhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoPreview ?? `/api/candidates/${data.id}/photo`}
+                  alt="Your profile photo"
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="flex size-full items-center justify-center bg-navy text-lede font-semibold text-paper">
+                  {initialsOf(data.fullName)}
+                </span>
+              )}
+            </div>
+            <div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                onChange={onPickPhoto}
+              />
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => photoInputRef.current?.click()}
+                className="rounded-card border border-navy px-4 py-2.5 text-small font-semibold text-navy transition hover:bg-navy hover:text-paper disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
+              >
+                {busy === "photo" ? "Uploading…" : data.hasPhoto ? "Change photo" : "Upload photo"}
+              </button>
+              <p className="mt-2 max-w-[42ch] text-caption text-muted">
+                PNG, JPEG, or WebP, up to 5 MB. Only you, AccountingTalent, and an employer whose introduction
+                you&rsquo;ve accepted can see it — verified employers see a blurred version until then, and the
+                public never sees it.
+              </p>
+            </div>
+          </div>
+        </Section>
+
         {/* Availability */}
         <Section
           title="Availability"

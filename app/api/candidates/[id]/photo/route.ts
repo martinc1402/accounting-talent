@@ -41,7 +41,7 @@ export async function GET(
   const app = data as
     | { photo_url: string | null; verified_at: string | null; user_id: string | null }
     | null;
-  if (!app || !app.verified_at || !app.photo_url) return deny();
+  if (!app || !app.photo_url) return deny();
 
   const viewer = await getViewer();
   const owner = isApplicationOwner(viewer, app);
@@ -51,7 +51,12 @@ export async function GET(
 
   // Access rule: owner / admin / accepted-introduction / verified employer may
   // receive photo bytes. public_photo is NOT a factor — a photo is never public.
-  if (!owner && !canViewPhoto(level)) return deny();
+  // The owner may always see their OWN photo (e.g. on the dashboard) even before
+  // the profile is verified; everyone else needs a verified profile first.
+  if (!owner) {
+    if (!app.verified_at) return deny();
+    if (!canViewPhoto(level)) return deny();
+  }
 
   // Resolve photo_url to a concrete target to redirect the <img> at:
   //  - a private-bucket object key -> a short-lived signed URL (never public);

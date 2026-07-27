@@ -976,6 +976,73 @@ export async function candidateApprovePublication(applicationId: string): Promis
   );
 }
 
+const PHOTO_BUCKET = "candidate-photos";
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+// "<id>.jpg" -> "<id>-frosted.jpg": must match the photo route's frostedObjectKey.
+const frostedKeyOf = (key: string) => key.replace(/(\.[^./]+)$/, "-frosted$1");
+
+/* Candidate uploads or replaces their OWN profile photo. Not review-gated — it goes
+   live immediately, but visibility is unchanged: the CLEAR photo only ever reaches
+   the candidate, AccountingTalent, and an employer with an accepted introduction;
+   verified employers get a downscaled+blurred derivative until then; the public
+   never sees it (see app/api/candidates/[id]/photo). Rate-limited per candidate.
+   The image is re-encoded server-side, which strips EXIF (incl. any GPS) and caps
+   dimensions, and the blurred derivative is regenerated so the two never diverge. */
+export async function candidateUploadPhoto(
+  applicationId: string,
+  formData: FormData,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const rl = await isRateLimited("candidate_photo", gate.id, { limit: 6, windowMs: 10 * 60_000 });
+  if (rl.limited) {
+    return { status: "error", message: "You've updated your photo a few times just now — please wait a few minutes and try again." };
+  }
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { status: "error", message: "Choose a photo to upload." };
+  if (file.size > MAX_PHOTO_BYTES) return { status: "error", message: "That image is too large — please use one under 5 MB." };
+  if (!ALLOWED_PHOTO_TYPES.has(file.type)) return { status: "error", message: "Please upload a PNG, JPEG, or WebP image." };
+
+  const input = Buffer.from(await file.arrayBuffer());
+
+  // Lazy-load sharp so the native module isn't pulled in for every other action.
+  const sharp = (await import("sharp")).default;
+  let clear: Buffer;
+  let frosted: Buffer;
+  try {
+    // rotate() applies EXIF orientation then metadata is dropped (default), so no
+    // location data survives. Frosted = hard downscale THEN blur, so the stored
+    // bytes carry no recoverable facial detail (not a CSS-only blur).
+    clear = await sharp(input).rotate().resize(1000, 1000, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+    frosted = await sharp(input).rotate().resize(40).blur(6).jpeg({ quality: 70 }).toBuffer();
+  } catch {
+    return { status: "error", message: "That file doesn't look like a valid image — please try another." };
+  }
+
+  // Fetch the previous key so a legacy object under a different extension (the ops
+  // script stored .png) can be cleaned up rather than orphaned.
+  const { data: prev } = await supabase!.from("applications").select("photo_url").eq("id", gate.id).maybeSingle();
+  const prevKey = String((prev as { photo_url?: string | null } | null)?.photo_url ?? "");
+
+  const key = `${gate.id}.jpg`;
+  const frostedKey = frostedKeyOf(key);
+
+  const up1 = await supabase!.storage.from(PHOTO_BUCKET).upload(key, clear, { contentType: "image/jpeg", upsert: true });
+  if (up1.error) return { status: "error", message: "Upload failed — please try again." };
+  const up2 = await supabase!.storage.from(PHOTO_BUCKET).upload(frostedKey, frosted, { contentType: "image/jpeg", upsert: true });
+  if (up2.error) return { status: "error", message: "Upload failed — please try again." };
+
+  // Best-effort: remove a superseded object pair whose key differs from the new one.
+  if (prevKey && prevKey !== key && !/^https?:\/\//i.test(prevKey) && !prevKey.startsWith("/")) {
+    await supabase!.storage.from(PHOTO_BUCKET).remove([prevKey, frostedKeyOf(prevKey)]);
+  }
+
+  return ownerUpdate(gate.id, gate.actor, { photo_url: key }, "candidate_photo_uploaded");
+}
+
 // Statuses in which AccountingTalent has completed its review, so the candidate is
 // allowed to flip their own live listing (published <-> paused) themselves.
 const CANDIDATE_TOGGLEABLE_STATUSES = new Set(["approved", "published", "paused"]);

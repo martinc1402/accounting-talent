@@ -149,6 +149,7 @@ export default async function CandidateMePage({
         : undefined,
     compBasisConfirmed: !!selected.compensation_basis_confirmed_at,
     publicationApproved: !!selected.candidate_publication_approved_at,
+    hasPhoto: !!selected.photo_url,
   };
 
   return shell(

@@ -31,7 +31,10 @@ export async function isRateLimited(
     | "assessment_submit"
     | "admin"
     | "employer_lead"
-    | "introduction",
+    | "introduction"
+    | "candidate_photo",
+  // The value the limit is keyed on. Usually an IP; may be any stable identifier
+  // (e.g. an application id for per-candidate limits) — it is only ever hashed.
   ip: string,
   { limit, windowMs }: { limit: number; windowMs: number },
 ): Promise<{ limited: boolean; ipHash: string }> {
