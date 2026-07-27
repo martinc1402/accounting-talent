@@ -20,6 +20,7 @@ export async function GET(request: Request) {
       if (!error) {
         const { data } = await client.auth.getUser();
         const user = data.user;
+        let dest = next;
         if (user && serviceClient) {
           const email = normalizeEmail(user.email);
           await serviceClient
@@ -35,8 +36,27 @@ export async function GET(request: Request) {
               .eq("email", email)
               .is("user_id", null);
           }
+          // Smart landing (only when no explicit destination): a candidate — owns an
+          // application and has no employer account — lands on their own dashboard.
+          if (dest === "/") {
+            const { data: membership } = await serviceClient
+              .from("employer_members")
+              .select("user_id")
+              .eq("user_id", user.id)
+              .limit(1)
+              .maybeSingle();
+            if (!membership) {
+              const { data: owned } = await serviceClient
+                .from("applications")
+                .select("id")
+                .eq("user_id", user.id)
+                .limit(1)
+                .maybeSingle();
+              if (owned) dest = "/candidates/me";
+            }
+          }
         }
-        return NextResponse.redirect(new URL(next, url.origin));
+        return NextResponse.redirect(new URL(dest, url.origin));
       }
     }
   }

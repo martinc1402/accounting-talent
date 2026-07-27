@@ -18,7 +18,7 @@ import {
   sendEmail,
 } from "@/lib/assessment/emails";
 import { getViewer } from "@/lib/authz/viewer";
-import { deriveVisibility } from "@/lib/authz/visibility";
+import { deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
 import { publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
 import { entitlementsFor } from "@/lib/authz/plans";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
@@ -793,6 +793,159 @@ export async function adminVerifyCheck(
     actor: gate.email,
   });
   return { status: "success" };
+}
+
+/* --- Candidate self-service (owner-scoped) ------------------------------------
+   The candidate dashboard (/candidates/me) lets a candidate provide + confirm
+   THEIR OWN candidate-provided data. Every action re-authorizes ownership from
+   scratch (isApplicationOwner against applications.user_id) and only ever writes
+   candidate-provided fields + the candidate-confirmation timestamps the readiness
+   model already reads. Candidates can NEVER set AccountingTalent verification
+   checks (identity/English/qualification), the publication status, or make a photo
+   public — those are admin-only / non-existent by design. Audited via admin_actions
+   with the candidate's email as actor. */
+
+export type OwnerActionState = { status: "success" | "error"; message?: string };
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+async function requireOwner(
+  applicationId: string,
+): Promise<{ ok: true; id: string; actor: string | null } | { ok: false; res: OwnerActionState }> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { ok: false, res: { status: "error", message: "Invalid profile." } };
+  if (!supabase) return { ok: false, res: { status: "error", message: "Unavailable." } };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user") return { ok: false, res: { status: "error", message: "Sign in to edit your profile." } };
+  const { data } = await supabase.from("applications").select("user_id").eq("id", id).maybeSingle();
+  if (!isApplicationOwner(viewer, data as { user_id?: string | null } | null)) {
+    return { ok: false, res: { status: "error", message: "Not authorized." } };
+  }
+  return { ok: true, id, actor: viewer.email };
+}
+
+async function ownerUpdate(
+  id: string,
+  actor: string | null,
+  patch: Record<string, unknown>,
+  action: string,
+): Promise<OwnerActionState> {
+  const { error } = await supabase!.from("applications").update(patch).eq("id", id);
+  if (error) return { status: "error", message: "Could not save." };
+  await supabase!.from("admin_actions").insert({ action, application_id: id, actor, detail: "candidate self-service" });
+  return { status: "success" };
+}
+
+const availabilitySchema = z.object({
+  days: z.array(z.enum(DAYS)).max(7).optional(),
+  startTime: z.string().regex(HHMM).optional(),
+  finishTime: z.string().regex(HHMM).optional(),
+  timezone: z.string().trim().min(1).max(64).optional(),
+  maxHours: z.number().int().min(1).max(80).optional(),
+  busySeasonFlexible: z.boolean().optional(),
+});
+
+/* Candidate confirms their structured availability. Stamps
+   availability_structured_confirmed_at (unlocks the confirmed-availability display
+   + ET-overlap calc). */
+export async function candidateConfirmAvailability(
+  applicationId: string,
+  input: z.infer<typeof availabilitySchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = availabilitySchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "Please check the availability details." };
+  const v = parsed.data;
+  const patch: Record<string, unknown> = { availability_structured_confirmed_at: new Date().toISOString() };
+  if (v.days) patch.avail_days = v.days;
+  if (v.startTime) patch.avail_start_time = v.startTime;
+  if (v.finishTime) patch.avail_finish_time = v.finishTime;
+  if (v.timezone) patch.timezone = v.timezone;
+  if (v.maxHours != null) patch.avail_max_weekly_hours = v.maxHours;
+  if (v.busySeasonFlexible != null) patch.avail_busy_season_flexible = v.busySeasonFlexible;
+  return ownerUpdate(gate.id, gate.actor, patch, "candidate_availability_confirmed");
+}
+
+const softwareSchema = z.array(
+  z.object({
+    name: z.string().trim().min(1).max(80),
+    level: z.enum(["Basic", "Intermediate", "Advanced", "Expert"]).optional(),
+    years: z.number().int().min(0).max(50).optional(),
+    last_used: z.string().trim().max(20).optional(),
+  }),
+).max(20);
+
+/* Candidate sets their software list + optional depth (level/years/last used).
+   Marks each candidate-confirmed and stamps software_confirmed_at. */
+export async function candidateSetSoftwareDepth(
+  applicationId: string,
+  items: z.infer<typeof softwareSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = softwareSchema.safeParse(items);
+  if (!parsed.success) return { status: "error", message: "Please check the software details." };
+  const software_proficiency = parsed.data.map((s) => ({ ...s, confirmed_by_candidate: true }));
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { software_proficiency, software_confirmed_at: new Date().toISOString() },
+    "candidate_software_confirmed",
+  );
+}
+
+const educationSchema = z.array(
+  z.object({
+    degree: z.string().trim().min(1).max(120),
+    field_of_study: z.string().trim().max(120).optional(),
+    institution: z.string().trim().max(160).optional(),
+    year: z.union([z.string().trim().max(10), z.number()]).optional(),
+    completion_status: z.enum(["Completed", "In progress"]).optional(),
+  }),
+).max(10);
+
+/* Candidate provides/confirms their education. Stamps education_confirmed_at. */
+export async function candidateConfirmEducation(
+  applicationId: string,
+  items: z.infer<typeof educationSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = educationSchema.safeParse(items);
+  if (!parsed.success) return { status: "error", message: "Please check the education details." };
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { education: parsed.data, education_confirmed_at: new Date().toISOString() },
+    "candidate_education_confirmed",
+  );
+}
+
+/* Candidate confirms the compensation basis (the up-to-N-hours/week framing). */
+export async function candidateConfirmCompensationBasis(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { compensation_basis_confirmed_at: new Date().toISOString() },
+    "candidate_compensation_basis_confirmed",
+  );
+}
+
+/* Candidate approves their profile copy for publication. Publication itself stays
+   admin+publicationRequirements-gated; this only records the candidate's approval. */
+export async function candidateApprovePublication(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { candidate_publication_approved_at: new Date().toISOString() },
+    "candidate_publication_approved",
+  );
 }
 
 export type WaitlistState = {
