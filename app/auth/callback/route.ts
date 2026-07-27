@@ -26,26 +26,26 @@ export async function GET(request: Request) {
           await serviceClient
             .from("profiles")
             .upsert({ user_id: user.id, email }, { onConflict: "user_id" });
-          // Candidate ownership auto-claim: the magic link proves control of this
-          // email, so any application submitted with it belongs to this user. Claim
-          // all still-unclaimed matching rows (a candidate may have applied twice).
-          if (email) {
+          // An account is either an employer OR a candidate, never both. Only claim
+          // candidate applications for users who are NOT employers.
+          const { data: membership } = await serviceClient
+            .from("employer_members")
+            .select("user_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+          if (!membership && email) {
+            // Candidate ownership auto-claim: the magic link proves control of this
+            // email, so any application submitted with it belongs to this user. Claim
+            // all still-unclaimed matching rows (a candidate may have applied twice).
             await serviceClient
               .from("applications")
               .update({ user_id: user.id })
               .eq("email", email)
               .is("user_id", null);
-          }
-          // Smart landing (only when no explicit destination): a candidate — owns an
-          // application and has no employer account — lands on their own dashboard.
-          if (dest === "/") {
-            const { data: membership } = await serviceClient
-              .from("employer_members")
-              .select("user_id")
-              .eq("user_id", user.id)
-              .limit(1)
-              .maybeSingle();
-            if (!membership) {
+            // Smart landing: a candidate with no explicit destination lands on their
+            // own dashboard.
+            if (dest === "/") {
               const { data: owned } = await serviceClient
                 .from("applications")
                 .select("id")

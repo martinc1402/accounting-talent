@@ -524,6 +524,22 @@ export async function createEmployerAccount(name: string): Promise<IntroState> {
   }
   if (viewer.account) return { status: "success" }; // already has one
 
+  // Mutual exclusivity: an account is either an employer OR a candidate, never
+  // both. If this user owns a candidate application, block employer sign-up.
+  const { data: owned } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("user_id", viewer.userId)
+    .limit(1)
+    .maybeSingle();
+  if (owned) {
+    return {
+      status: "error",
+      message:
+        "This account is registered as a candidate, so it can't also be an employer. Please use a different email for employer access.",
+    };
+  }
+
   const firmName = String(name ?? "").trim().slice(0, 200);
   if (!firmName) return { status: "error", message: "Enter your firm name." };
 
