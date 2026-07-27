@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Lock, Plus, Trash } from "@phosphor-icons/react";
+import { CaretRight, CheckCircle, Lock, Plus, Trash } from "@phosphor-icons/react";
 import {
   candidateConfirmAvailability,
   candidateSetSoftwareDepth,
@@ -13,7 +13,11 @@ import {
   candidateSetPublished,
   candidateUploadPhoto,
   candidateRemovePhoto,
+  candidateSaveWorkPreferences,
+  candidateRequestChange,
 } from "@/app/actions";
+import { isAtReviewed, type CandidateVisibility, type ConfirmationStatus } from "@/lib/candidate/visibilityStatus";
+import type { ProfileHistoryEntry, ProfileStat } from "@/lib/profile/candidate";
 
 /*
   Candidate self-service dashboard (/candidates/me). Owner-scoped: every action
@@ -44,10 +48,32 @@ export type DashboardData = {
   compBasisConfirmed: boolean;
   publicationApproved: boolean;
   hasPhoto: boolean;
+  status: CandidateVisibility;
+  activeIntroCount: number;
+  workPrefs: { employmentType: string; engagement: string; willingFullShift: boolean; earliestStart: string };
+  readOnly: {
+    summary?: string;
+    writingSample?: { text: string; attribution: string };
+    capabilities?: { title: string; subtitle: string; primary: string[]; extra: string[] };
+    history: ProfileHistoryEntry[];
+    targetRole: string;
+    alternativeRoles: string[];
+    proofPoints: ProfileStat[];
+  };
+  // Section keys with an open change request (render "Change requested — under review").
+  openChangeRequests: string[];
 };
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+// Status-dot tint per derived visibility state (header + checklist).
+const STATE_DOT: Record<CandidateVisibility["state"], string> = {
+  live: "bg-verified-deep",
+  ready_to_publish: "bg-navy",
+  action_needed: "bg-amber-500",
+  in_review: "bg-subtle",
+};
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -74,29 +100,317 @@ function Confirmed({ label = "Confirmed" }: { label?: string }) {
   );
 }
 
+const NEEDS_CONFIRM = <span className="text-caption font-semibold text-amber-600">Needs your confirmation</span>;
+const NEEDS_RECONFIRM = <span className="text-caption font-semibold text-amber-600">Needs reconfirmation</span>;
+
+// The header pill for a confirmable section, aging-aware. "Needs reconfirmation"
+// (a lapsed confirmation) is a distinct label from first-time "Needs your confirmation".
+function statusBadge(status: ConfirmationStatus): React.ReactNode {
+  switch (status) {
+    case "confirmed":
+      return <Confirmed />;
+    case "needs_reconfirmation":
+      return NEEDS_RECONFIRM;
+    default:
+      return NEEDS_CONFIRM;
+  }
+}
+
 function Section({
+  id,
   title,
   hint,
   confirmed,
+  status,
   badge,
   children,
 }: {
+  id?: string;
   title: string;
   hint?: string;
   confirmed?: boolean;
+  // Aging-aware confirmation status; takes precedence over the `confirmed` boolean.
+  status?: ConfirmationStatus;
   // Overrides the default confirmed / needs-confirmation status pill in the header.
   badge?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-card border border-line bg-white p-6 lg:p-7">
+    <section id={id} className="scroll-mt-6 rounded-card border border-line bg-white p-6 lg:p-7">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-[1.15rem] font-medium text-ink">{title}</h2>
-        {badge ?? (confirmed ? <Confirmed /> : <span className="text-caption text-amber-600">Needs your confirmation</span>)}
+        {badge ?? (status ? statusBadge(status) : confirmed ? <Confirmed /> : NEEDS_CONFIRM)}
       </div>
       {hint && <p className="mt-1 text-caption text-muted">{hint}</p>}
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+type ChecklistTone = "action" | "done" | "optional";
+type ChecklistRow = { label: string; anchor: string; tone: ChecklistTone; statusLabel: string };
+
+const STATUS_TO_CHECKLIST: Record<ConfirmationStatus, { tone: ChecklistTone; label: string }> = {
+  confirmed: { tone: "done", label: "Confirmed" },
+  needs_confirmation: { tone: "action", label: "Needs your confirmation" },
+  needs_reconfirmation: { tone: "action", label: "Needs reconfirmation" },
+  missing: { tone: "action", label: "Add your details" },
+};
+
+// A guided checklist of every dashboard section, jump-linked (anchor scroll),
+// action-needed first. Collapses to a single line once the profile is live.
+function TaskChecklist({ data }: { data: DashboardData }) {
+  const { status } = data;
+
+  if (status.state === "live") {
+    return (
+      <section className="mt-6 rounded-card border border-line bg-white px-6 py-4">
+        <p className="flex items-center gap-2 text-small font-medium text-ink">
+          <CheckCircle size={17} weight="fill" className="text-verified-deep" aria-hidden />
+          All sections up to date.
+        </p>
+      </section>
+    );
+  }
+
+  const rows: ChecklistRow[] = status.sections.map((s) => {
+    const m = STATUS_TO_CHECKLIST[s.status];
+    return { label: s.label, anchor: s.anchor, tone: m.tone, statusLabel: m.label };
+  });
+  rows.push({
+    label: "Profile photo",
+    anchor: "photo",
+    tone: data.hasPhoto ? "done" : "optional",
+    statusLabel: data.hasPhoto ? "Added" : "Optional",
+  });
+  rows.push(
+    status.state === "ready_to_publish"
+      ? { label: "Publication", anchor: "publication", tone: "action", statusLabel: "Ready — publish below" }
+      : {
+          label: "Publication",
+          anchor: "publication",
+          tone: "optional",
+          statusLabel: status.state === "in_review" ? "Awaiting AccountingTalent" : "Publish once confirmed",
+        },
+  );
+
+  const rank: Record<ChecklistTone, number> = { action: 0, done: 1, optional: 2 };
+  const sorted = [...rows].sort((a, b) => rank[a.tone] - rank[b.tone]);
+  const actionCount = rows.filter((r) => r.tone === "action").length;
+
+  return (
+    <section className="mt-6 rounded-card border border-line bg-white p-6 lg:p-7">
+      <h2 className="font-display text-[1.15rem] font-medium text-ink">
+        {actionCount > 0 ? `${actionCount} thing${actionCount === 1 ? "" : "s"} to finish` : "Your profile checklist"}
+      </h2>
+      <p className="mt-1 text-caption text-muted">Jump to a section to update it.</p>
+      <ul className="mt-3 divide-y divide-line">
+        {sorted.map((r) => (
+          <li key={r.anchor}>
+            <a href={`#${r.anchor}`} className="group flex items-center justify-between gap-3 py-2.5">
+              <span className="flex items-center gap-2.5">
+                {r.tone === "done" ? (
+                  <CheckCircle size={18} weight="fill" className="text-verified-deep" aria-hidden />
+                ) : (
+                  <span
+                    className={`size-[18px] rounded-full border-2 ${r.tone === "action" ? "border-amber-500" : "border-line"}`}
+                    aria-hidden
+                  />
+                )}
+                <span className={`text-small ${r.tone === "action" ? "font-semibold text-ink" : "text-muted"}`}>{r.label}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className={`text-caption ${r.tone === "action" ? "font-semibold text-amber-600" : "text-subtle"}`}>
+                  {r.statusLabel}
+                </span>
+                <CaretRight size={12} weight="bold" className="text-subtle transition group-hover:translate-x-0.5" aria-hidden />
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+type RunFn = (key: string, fn: () => Promise<{ status: string; message?: string }>, ok: string) => void;
+
+// Inline "Request a change" for AT-maintained / confirm-only fields. Shows the
+// current open-request state; otherwise reveals a small form that persists a change
+// request (never an instant edit). The compensation variant adds structured fields.
+function ChangeRequest({
+  data,
+  section,
+  run,
+  busy,
+  pending,
+  prompt = "What would you like changed?",
+  placeholder = "Describe the change you'd like…",
+  compensation = false,
+}: {
+  data: DashboardData;
+  section: string;
+  run: RunFn;
+  busy: string | null;
+  pending: boolean;
+  prompt?: string;
+  placeholder?: string;
+  compensation?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [min, setMin] = useState("");
+  const [max, setMax] = useState("");
+  const [hours, setHours] = useState("");
+
+  if (data.openChangeRequests.includes(section)) {
+    return <span className="text-caption font-semibold text-amber-600">Change requested — under review</span>;
+  }
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-caption font-semibold text-navy underline underline-offset-2"
+      >
+        Request a change
+      </button>
+    );
+  }
+
+  const key = `cr:${section}`;
+  const requestedValue = compensation
+    ? [min && max ? `Proposed: $${min}–$${max}/month` : "", hours ? `based on ${hours} hours/week` : ""]
+        .filter(Boolean)
+        .join(", ") || undefined
+    : undefined;
+  const canSubmit = compensation ? !!(min && max) || !!note.trim() : !!note.trim();
+
+  return (
+    <div className="mt-3 rounded-card border border-line bg-paper p-4">
+      {compensation && (
+        <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div>
+            <label className={LABEL}>Min $/mo</label>
+            <input type="number" min={0} value={min} onChange={(e) => setMin(e.target.value)} className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Max $/mo</label>
+            <input type="number" min={0} value={max} onChange={(e) => setMax(e.target.value)} className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Hours/week</label>
+            <input type="number" min={0} value={hours} onChange={(e) => setHours(e.target.value)} className={INPUT} />
+          </div>
+        </div>
+      )}
+      <label className={LABEL} htmlFor={key}>{prompt}</label>
+      <textarea id={key} value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={placeholder} className={INPUT} />
+      <div className="mt-3 flex items-center gap-4">
+        <button
+          type="button"
+          disabled={pending || !canSubmit}
+          onClick={() =>
+            run(
+              key,
+              () => candidateRequestChange(data.id, { section, requestedValue, note: note.trim() || undefined }),
+              "Thanks — we'll review your request.",
+            )
+          }
+          className={BTN}
+        >
+          {busy === key ? "Submitting…" : "Submit request"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setNote("");
+          }}
+          className="text-caption text-muted underline underline-offset-2"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// A profile section the candidate can't edit directly (AT-maintained / assessment
+// sourced). Shows the current content read-only + a caption + a change-request path.
+function ReadOnlyCard({
+  data,
+  section,
+  title,
+  caption,
+  run,
+  busy,
+  pending,
+  children,
+}: {
+  data: DashboardData;
+  section: string;
+  title: string;
+  caption: string;
+  run: RunFn;
+  busy: string | null;
+  pending: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Section id={section} title={title} badge={<span className="text-caption font-medium text-subtle">Read-only</span>}>
+      {children}
+      <p className="mt-3 text-caption text-muted">{caption}</p>
+      <div className="mt-3">
+        <ChangeRequest data={data} section={section} run={run} busy={busy} pending={pending} />
+      </div>
+    </Section>
+  );
+}
+
+// Candidate-provided work preferences (not confirm-gated) — employment type,
+// engagement, willing-to-work-a-full-shift, earliest start.
+function WorkPreferencesCard({ data, run, busy, pending }: { data: DashboardData; run: RunFn; busy: string | null; pending: boolean }) {
+  const [employmentType, setEmploymentType] = useState(data.workPrefs.employmentType);
+  const [engagement, setEngagement] = useState(data.workPrefs.engagement);
+  const [willingFullShift, setWillingFullShift] = useState(data.workPrefs.willingFullShift);
+  const [earliestStart, setEarliestStart] = useState(data.workPrefs.earliestStart);
+
+  return (
+    <Section id="work-preferences" title="Work preferences" badge={<span className="text-caption font-medium text-subtle">Optional</span>}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className={LABEL} htmlFor="employmentType">Employment type</label>
+          <input id="employmentType" value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} placeholder="Full-time" className={INPUT} />
+        </div>
+        <div>
+          <label className={LABEL} htmlFor="earliestStart">Earliest start</label>
+          <input id="earliestStart" value={earliestStart} onChange={(e) => setEarliestStart(e.target.value)} placeholder="Within 30 days" className={INPUT} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={LABEL} htmlFor="engagement">Engagement</label>
+          <input id="engagement" value={engagement} onChange={(e) => setEngagement(e.target.value)} placeholder="Employer of record / contractor" className={INPUT} />
+        </div>
+      </div>
+      <label className="mt-4 flex items-center gap-2 text-small text-ink">
+        <input type="checkbox" checked={willingFullShift} onChange={(e) => setWillingFullShift(e.target.checked)} className="size-4" />
+        I&rsquo;m willing to work a full US shift
+      </label>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          run(
+            "workprefs",
+            () => candidateSaveWorkPreferences(data.id, { employmentType, engagement, willingFullShift, earliestStart }),
+            "Work preferences saved.",
+          )
+        }
+        className={`mt-5 ${BTN}`}
+      >
+        {busy === "workprefs" ? "Saving…" : "Save work preferences"}
+      </button>
+    </Section>
   );
 }
 
@@ -178,15 +492,20 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
 
   const toggleDay = (d: string) => setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
 
+  // Per-section aging-aware status, keyed for the section badges + checklist.
+  const sectionStatus = Object.fromEntries(
+    data.status.sections.map((s) => [s.key, s.status]),
+  ) as Record<string, ConfirmationStatus>;
+
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-[1.7rem] font-medium text-navy">Your profile</h1>
-          <p className="mt-1 text-small text-muted">
-            Keep your details accurate — this is what US firms see. Status:{" "}
-            <span className="font-semibold text-ink">{data.profileStatus.replace(/_/g, " ")}</span>.
-          </p>
+          <div className="mt-1.5 flex items-start gap-2">
+            <span className={`mt-[7px] size-2 shrink-0 rounded-full ${STATE_DOT[data.status.state]}`} aria-hidden />
+            <p className="text-small font-medium text-ink">{data.status.headline}</p>
+          </div>
         </div>
         <Link href={`/candidates/${data.id}?viewAs=employer`} className="text-caption font-semibold text-navy underline underline-offset-2">
           Preview as employer →
@@ -199,9 +518,12 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
         </p>
       )}
 
+      <TaskChecklist data={data} />
+
       <div className="mt-6 flex flex-col gap-5">
         {/* Profile photo */}
         <Section
+          id="photo"
           title="Profile photo"
           badge={
             <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-subtle">
@@ -284,9 +606,10 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
 
         {/* Availability */}
         <Section
+          id="availability"
           title="Availability"
           hint="Your working days and hours. Start/finish times let us show your US (ET) overlap."
-          confirmed={data.availabilityConfirmed}
+          status={sectionStatus.availability}
         >
           <fieldset>
             <legend className={LABEL}>Available days</legend>
@@ -365,8 +688,11 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
           </button>
         </Section>
 
+        {/* Work preferences */}
+        <WorkPreferencesCard data={data} run={run} busy={busy} pending={pending} />
+
         {/* Software */}
-        <Section title="Software" hint="Add the tax/accounting software you use, with your level and years where you can." confirmed={data.softwareConfirmed}>
+        <Section id="software" title="Software" hint="Add the tax/accounting software you use, with your level and years where you can." status={sectionStatus.software}>
           <div className="flex flex-col gap-3">
             {software.map((s, i) => (
               <div key={i} className="grid gap-2 sm:grid-cols-[1fr_120px_90px_110px_auto] sm:items-end">
@@ -441,7 +767,7 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
         </Section>
 
         {/* Education */}
-        <Section title="Education" hint="Your degree(s). Completion, institution and year appear to verified firms once confirmed." confirmed={data.educationConfirmed}>
+        <Section id="education" title="Education" hint="Your degree(s). Completion, institution and year appear to verified firms once confirmed." status={sectionStatus.education}>
           <div className="flex flex-col gap-4">
             {education.map((e, i) => (
               <div key={i} className="grid gap-2 sm:grid-cols-2">
@@ -502,7 +828,7 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
         </Section>
 
         {/* Compensation basis */}
-        <Section title="Compensation" hint="Confirm the monthly range and the weekly-hours it's based on." confirmed={data.compBasisConfirmed}>
+        <Section id="compensation" title="Compensation" hint="Confirm the monthly range and the weekly-hours it's based on." status={sectionStatus.compensation}>
           {data.compLine ? (
             <p className="text-body text-ink">
               <span className="font-semibold">{data.compLine}</span>
@@ -511,10 +837,136 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
           ) : (
             <p className="text-small text-muted">No compensation range on file yet — AccountingTalent will add this from your application.</p>
           )}
-          <button type="button" disabled={pending || !data.compLine} onClick={() => run("comp", () => candidateConfirmCompensationBasis(data.id), "Compensation basis confirmed.")} className={`mt-5 ${BTN}`}>
-            {busy === "comp" ? "Saving…" : "Confirm this is correct"}
-          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <button type="button" disabled={pending || !data.compLine} onClick={() => run("comp", () => candidateConfirmCompensationBasis(data.id), "Compensation basis confirmed.")} className={BTN}>
+              {busy === "comp" ? "Saving…" : "Confirm this is correct"}
+            </button>
+            <ChangeRequest
+              data={data}
+              section="compensation"
+              run={run}
+              busy={busy}
+              pending={pending}
+              compensation
+              prompt="Anything to add about the range or hours?"
+              placeholder="Optional note…"
+            />
+          </div>
         </Section>
+
+        {/* Read-only profile sections the candidate can't edit directly — each with
+            a change-request path (persisted to profile_change_requests). */}
+        <ReadOnlyCard
+          data={data}
+          section="target_role"
+          title="Target role"
+          caption="Set with you by AccountingTalent. Request a change if your focus has shifted."
+          run={run}
+          busy={busy}
+          pending={pending}
+        >
+          <p className="text-body font-semibold text-ink">{data.readOnly.targetRole}</p>
+          {data.readOnly.alternativeRoles.length > 0 && (
+            <p className="mt-1 text-small text-muted">Also open to: {data.readOnly.alternativeRoles.join(", ")}</p>
+          )}
+        </ReadOnlyCard>
+
+        {data.readOnly.summary && (
+          <ReadOnlyCard
+            data={data}
+            section="professional_summary"
+            title="Professional summary"
+            caption="Maintained by AccountingTalent from your assessment and interview."
+            run={run}
+            busy={busy}
+            pending={pending}
+          >
+            <p className="text-body leading-relaxed text-ink">{data.readOnly.summary}</p>
+          </ReadOnlyCard>
+        )}
+
+        {data.readOnly.writingSample && (
+          <ReadOnlyCard
+            data={data}
+            section="writing_sample"
+            title="In their own words"
+            caption="Your unedited assessment response."
+            run={run}
+            busy={busy}
+            pending={pending}
+          >
+            <blockquote className="border-l-2 border-navy/25 pl-4 text-body leading-relaxed text-ink">
+              {data.readOnly.writingSample.text.split(/\n+/).map((p, i) => (
+                <p key={i} className={i > 0 ? "mt-3" : ""}>{p.trim()}</p>
+              ))}
+            </blockquote>
+          </ReadOnlyCard>
+        )}
+
+        {data.readOnly.capabilities && (
+          <ReadOnlyCard
+            data={data}
+            section="capabilities"
+            title={data.readOnly.capabilities.title}
+            caption="Maintained by AccountingTalent from your assessment and interview."
+            run={run}
+            busy={busy}
+            pending={pending}
+          >
+            <div className="flex flex-wrap gap-2">
+              {[...data.readOnly.capabilities.primary, ...data.readOnly.capabilities.extra].map((c) => (
+                <span key={c} className="rounded-card border border-line bg-mist px-3 py-1.5 text-caption font-medium text-ink">
+                  {c}
+                </span>
+              ))}
+            </div>
+          </ReadOnlyCard>
+        )}
+
+        {data.readOnly.history.length > 0 && (
+          <ReadOnlyCard
+            data={data}
+            section="employment_history"
+            title="Employment history"
+            caption="Maintained by AccountingTalent from your assessment and interview."
+            run={run}
+            busy={busy}
+            pending={pending}
+          >
+            <div className="flex flex-col gap-4">
+              {data.readOnly.history.map((h, i) => (
+                <div key={i}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-small font-semibold text-ink">{h.title}</span>
+                    <span className="text-caption text-subtle">{h.dates}</span>
+                  </div>
+                  <p className="text-caption text-muted">{h.meta}</p>
+                </div>
+              ))}
+            </div>
+          </ReadOnlyCard>
+        )}
+
+        {data.readOnly.proofPoints.length > 0 && (
+          <ReadOnlyCard
+            data={data}
+            section="proof_points"
+            title="Highlights"
+            caption="Maintained by AccountingTalent from your assessment and interview."
+            run={run}
+            busy={busy}
+            pending={pending}
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              {data.readOnly.proofPoints.map((p, i) => (
+                <div key={i}>
+                  <div className="font-display text-[1.35rem] font-medium text-ink">{p.value}</div>
+                  <div className="text-caption text-muted">{p.label}</div>
+                </div>
+              ))}
+            </div>
+          </ReadOnlyCard>
+        )}
 
         {/* Publication. Two phases:
             1. Pre-review — the candidate records consent (Approve my profile). AT
@@ -527,8 +979,6 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
   );
 }
 
-const AT_APPROVED = new Set(["approved", "published", "paused"]);
-
 function PublicationSection({
   data,
   busy,
@@ -540,13 +990,34 @@ function PublicationSection({
   pending: boolean;
   run: (key: string, fn: () => Promise<{ status: string; message?: string }>, ok: string) => void;
 }) {
-  const canToggle = AT_APPROVED.has(data.profileStatus);
+  const canToggle = isAtReviewed(data.profileStatus);
   const isLive = data.profileStatus === "published";
+  const { unconfirmedCount } = data.status;
+  // Publishing is blocked while any required section is unconfirmed/lapsed. A LIVE
+  // profile can always be switched OFF (expiry never traps a live listing).
+  const blockedFromPublishing = !isLive && unconfirmedCount > 0;
+  const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
+
+  function toggle() {
+    if (blockedFromPublishing) return;
+    // Switching OFF with introductions in progress → confirm first.
+    if (isLive && data.activeIntroCount > 0 && !confirmingUnpublish) {
+      setConfirmingUnpublish(true);
+      return;
+    }
+    setConfirmingUnpublish(false);
+    run(
+      "pub",
+      () => candidateSetPublished(data.id, !isLive),
+      isLive ? "Your profile is now unpublished." : "Your profile is now live.",
+    );
+  }
 
   // Phase 2: AT has approved — the candidate flips their own live listing.
   if (canToggle) {
     return (
       <Section
+        id="publication"
         title="Publication"
         badge={
           isLive ? (
@@ -563,8 +1034,10 @@ function PublicationSection({
             </p>
             <p className="mt-0.5 text-caption text-muted">
               {isLive
-                ? "Verified employers can find it and request an introduction. Switch off any time to take it down."
-                : "Publish to let verified employers find your profile. You can switch it off again whenever you like."}
+                ? "Switching off hides you from new discovery and saves; employers who already saved you keep the card but can't request new introductions; introductions already in progress continue."
+                : blockedFromPublishing
+                  ? `Confirm the ${unconfirmedCount} remaining section${unconfirmedCount === 1 ? "" : "s"} to publish.`
+                  : "Publish to let verified employers find your profile. You can switch it off again whenever you like."}
             </p>
           </div>
           <button
@@ -572,17 +1045,11 @@ function PublicationSection({
             role="switch"
             aria-checked={isLive}
             aria-label="List my profile to employers"
-            disabled={pending}
-            onClick={() =>
-              run(
-                "pub",
-                () => candidateSetPublished(data.id, !isLive),
-                isLive ? "Your profile is now unpublished." : "Your profile is now live.",
-              )
-            }
-            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 ${
-              isLive ? "bg-navy" : "bg-line"
-            }`}
+            disabled={pending || blockedFromPublishing}
+            onClick={toggle}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 ${
+              blockedFromPublishing ? "cursor-not-allowed opacity-40" : "disabled:opacity-60"
+            } ${isLive ? "bg-navy" : "bg-line"}`}
           >
             <span
               className={`inline-block size-5 transform rounded-full bg-white shadow transition ${
@@ -591,6 +1058,31 @@ function PublicationSection({
             />
           </button>
         </div>
+        {confirmingUnpublish && (
+          <div className="mt-3 rounded-card border border-amber-300 bg-amber-50 p-4">
+            <p className="text-small text-ink">
+              {`You have ${data.activeIntroCount} ${data.activeIntroCount === 1 ? "introduction" : "introductions"} in progress. Those continue, but employers won't be able to start new ones while you're unpublished.`}
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={toggle}
+                className="text-caption font-semibold text-red-700 underline underline-offset-2 disabled:opacity-60"
+              >
+                {busy === "pub" ? "Unpublishing…" : "Unpublish anyway"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setConfirmingUnpublish(false)}
+                className="text-caption text-muted underline underline-offset-2 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </Section>
     );
   }
@@ -598,6 +1090,7 @@ function PublicationSection({
   // Phase 1: pre-review consent.
   return (
     <Section
+      id="publication"
       title="Approve for publication"
       hint="When your details are right, approve your profile to be shown to firms."
       confirmed={data.publicationApproved}

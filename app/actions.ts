@@ -19,7 +19,8 @@ import {
 } from "@/lib/assessment/emails";
 import { getViewer } from "@/lib/authz/viewer";
 import { deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
-import { publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
+import { isPublished, publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
+import { isAtReviewed } from "@/lib/candidate/visibilityStatus";
 import { entitlementsFor } from "@/lib/authz/plans";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
 import {
@@ -416,6 +417,22 @@ export async function requestIntroduction(
     };
   }
 
+  // Publish gate: a candidate must be LIVE to receive a NEW introduction. An
+  // in-progress introduction continues through a pause (the profile-page gate keeps
+  // that employer's access), but a paused/unpublished profile can't be freshly
+  // requested — enforced server-side, not just by the hidden UI.
+  const { data: target } = await supabase
+    .from("applications")
+    .select("profile_status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!target || !isPublished(target as ReadinessRow)) {
+    return {
+      status: "error",
+      message: "This candidate isn't accepting new introductions right now.",
+    };
+  }
+
   const res = await insertIntroduction({
     applicationId: id,
     employerAccountId: accountId,
@@ -730,6 +747,7 @@ export async function adminSetProfileStatus(
   const gate = await requireAdmin();
   if (!gate.ok) return gate.res;
 
+  const patch: Record<string, unknown> = { profile_status: status };
   if (status === "published") {
     const { data: row } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
     if (!row) return { status: "error", message: "Candidate not found." };
@@ -737,11 +755,15 @@ export async function adminSetProfileStatus(
     if (!req.met) {
       return { status: "error", message: `Cannot publish — missing: ${req.missing.join(", ")}` };
     }
+    // Stamp published_at on first publish; preserve it across later pause/resume.
+    if (!(row as { published_at?: string | null }).published_at) {
+      patch.published_at = new Date().toISOString();
+    }
   }
 
   const { error } = await supabase
     .from("applications")
-    .update({ profile_status: status })
+    .update(patch)
     .eq("id", id);
   if (error) return { status: "error", message: "Update failed." };
   await supabase.from("admin_actions").insert({
@@ -1060,12 +1082,82 @@ export async function candidateRemovePhoto(applicationId: string): Promise<Owner
   return ownerUpdate(gate.id, gate.actor, { photo_url: null }, "candidate_photo_removed");
 }
 
-// Statuses in which AccountingTalent has completed its review, so the candidate is
-// allowed to flip their own live listing (published <-> paused) themselves.
-const CANDIDATE_TOGGLEABLE_STATUSES = new Set(["approved", "published", "paused"]);
+const workPrefsSchema = z.object({
+  employmentType: z.string().trim().max(60).optional(),
+  engagement: z.string().trim().max(120).optional(),
+  willingFullShift: z.boolean().optional(),
+  earliestStart: z.string().trim().max(120).optional(),
+});
+
+/* Candidate saves their work preferences (all candidate-provided, not confirm-gated):
+   employment type, engagement, willing-full-shift, earliest start. */
+export async function candidateSaveWorkPreferences(
+  applicationId: string,
+  input: z.infer<typeof workPrefsSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = workPrefsSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "Please check your work preferences." };
+  const v = parsed.data;
+  const patch: Record<string, unknown> = {
+    employment_type: (v.employmentType ?? "").trim() || null,
+    engagement: (v.engagement ?? "").trim() || null,
+    start_date: (v.earliestStart ?? "").trim() || null,
+  };
+  if (v.willingFullShift != null) patch.willing_full_shift = v.willingFullShift;
+  return ownerUpdate(gate.id, gate.actor, patch, "candidate_work_preferences_saved");
+}
+
+const changeRequestSchema = z.object({
+  section: z.string().trim().min(1).max(60),
+  requestedValue: z.string().trim().max(4000).optional(),
+  note: z.string().trim().max(4000).optional(),
+});
+
+/* Candidate requests a change to an AT-maintained / confirm-only field (summary,
+   employment history, compensation, target role, …). Persisted to
+   profile_change_requests for a future admin review queue — NOT an instant edit.
+   Rate-limited per candidate. */
+export async function candidateRequestChange(
+  applicationId: string,
+  input: z.infer<typeof changeRequestSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const parsed = changeRequestSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "Please describe the change you'd like." };
+  const v = parsed.data;
+  if (!v.requestedValue && !v.note) {
+    return { status: "error", message: "Add a note describing the change you'd like." };
+  }
+
+  const rl = await isRateLimited("candidate_change", gate.id, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (rl.limited) {
+    return { status: "error", message: "You've sent a few change requests just now — please wait a little and try again." };
+  }
+
+  const { error } = await supabase!.from("profile_change_requests").insert({
+    application_id: gate.id,
+    section: v.section,
+    requested_value: v.requestedValue ?? null,
+    note: v.note ?? null,
+    actor: gate.actor,
+  });
+  if (error) return { status: "error", message: "Could not submit your request. Please try again." };
+
+  await supabase!.from("admin_actions").insert({
+    action: "candidate_change_requested",
+    application_id: gate.id,
+    detail: `section=${v.section}`,
+    actor: gate.actor,
+  });
+  return { status: "success" };
+}
 
 /* Candidate flips their OWN live listing between published and paused. Only once AT
-   has approved the profile (status in CANDIDATE_TOGGLEABLE_STATUSES) — never from a
+   has approved the profile (status in AT_REVIEWED_STATUSES) — never from a
    draft/under-review state, so a candidate can't self-publish ahead of AT. Going
    live re-checks the SAME publicationRequirements the admin publish path enforces,
    so a toggle can never expose an incomplete profile. */
@@ -1080,7 +1172,7 @@ export async function candidateSetPublished(
   if (!row) return { status: "error", message: "Profile not found." };
 
   const current = String((row as ReadinessRow).profile_status ?? "draft");
-  if (!CANDIDATE_TOGGLEABLE_STATUSES.has(current)) {
+  if (!isAtReviewed(current)) {
     return { status: "error", message: "AccountingTalent is still reviewing your profile — you can publish once it's approved." };
   }
 
@@ -1091,10 +1183,17 @@ export async function candidateSetPublished(
     }
   }
 
+  // Stamp published_at only on the first time it goes live (keeps the original
+  // "live since" date across pause/resume).
+  const patch: Record<string, unknown> = { profile_status: published ? "published" : "paused" };
+  if (published && !(row as { published_at?: string | null }).published_at) {
+    patch.published_at = new Date().toISOString();
+  }
+
   return ownerUpdate(
     gate.id,
     gate.actor,
-    { profile_status: published ? "published" : "paused" },
+    patch,
     published ? "candidate_published" : "candidate_unpublished",
   );
 }

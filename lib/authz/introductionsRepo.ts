@@ -63,6 +63,18 @@ export async function countActiveIntroductions(employerAccountId: string): Promi
   return count ?? 0;
 }
 
+/** In-progress introductions for a CANDIDATE, across all employers (by application).
+ *  Drives the dashboard's "you have N introductions in progress" unpublish confirm. */
+export async function countActiveIntroductionsForCandidate(applicationId: string): Promise<number> {
+  if (!supabase) return 0;
+  const { count } = await supabase
+    .from("introduction_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("application_id", applicationId)
+    .in("status", ACTIVE_INTRO_STATUSES as unknown as string[]);
+  return count ?? 0;
+}
+
 async function writeEvent(
   introductionId: string,
   from: IntroductionStatus | null,

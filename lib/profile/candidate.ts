@@ -21,6 +21,7 @@ import {
   compensationLine,
   roleCategory,
 } from "@/lib/search/candidate";
+import { confirmationStatus } from "@/lib/candidate/visibilityStatus";
 
 // Availability is considered stale after this many days without reconfirmation.
 const AVAILABILITY_STALE_DAYS = (() => {
@@ -40,12 +41,12 @@ function availabilityFreshness(row: ProfileRow): {
   confirmed?: string;
 } {
   const ts = (row.availability_structured_confirmed_at ?? "").trim();
-  if (!ts) return { state: "unconfirmed" };
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return { state: "unconfirmed" };
-  const ageDays = (Date.now() - d.getTime()) / 86_400_000;
-  if (ageDays > AVAILABILITY_STALE_DAYS) return { state: "stale" };
-  const label = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  // Same aging rule the dashboard uses (confirmed / lapsed / never-confirmed), so
+  // the public claim and the dashboard status can't drift. Env-overridable window.
+  const status = confirmationStatus(ts, true, AVAILABILITY_STALE_DAYS, new Date());
+  if (status === "needs_reconfirmation") return { state: "stale" };
+  if (status !== "confirmed") return { state: "unconfirmed" };
+  const label = new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   return { state: "confirmed", confirmed: `Confirmed ${label}` };
 }
 

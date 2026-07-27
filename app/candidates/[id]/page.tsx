@@ -18,7 +18,7 @@ import {
   type ReadinessRow,
 } from "@/lib/authz/readiness";
 import { entitlementsFor } from "@/lib/authz/plans";
-import { canCreateIntroduction } from "@/lib/authz/introductions";
+import { ACTIVE_INTRO_STATUSES, canCreateIntroduction } from "@/lib/authz/introductions";
 import {
   countActiveIntroductions,
   getViewerIntroduction,
@@ -176,9 +176,17 @@ export default async function CandidateProfilePage({
   // Owner = the candidate viewing their own application (per-application ownership).
   const isOwner = isApplicationOwner(viewer, app as { user_id?: string | null });
 
+  // The viewer's OWN introduction for this candidate (scoped to their account).
+  const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
+  const introduction = await getViewerIntroduction(id, accountId);
+  // An employer with an in-progress introduction keeps access even if the candidate
+  // pauses/unpublishes — introductions already underway continue (graceful pause).
+  const hasActiveIntro = !!introduction && (ACTIVE_INTRO_STATUSES as readonly string[]).includes(introduction.status);
+
   // Publication gate: only published profiles are public. Admins preview any state;
-  // the owner may always view their own profile (even as a draft).
-  if (!isPublished(app as ReadinessRow) && !isAdmin && !isOwner) notFound();
+  // the owner may always view their own profile (even as a draft); an employer with
+  // an active introduction keeps access through a pause.
+  if (!isPublished(app as ReadinessRow) && !isAdmin && !isOwner && !hasActiveIntro) notFound();
 
   // Admin-only presentation preview.
   const previewAs =
@@ -197,10 +205,6 @@ export default async function CandidateProfilePage({
   // projection projects down, so it's safe — it's the owner's own data).
   const candidatePreview: PreviewMode | null =
     isOwner && viewAs && viewAs in VIEW_AS ? (viewAs as PreviewMode) : null;
-
-  // The viewer's OWN introduction for this candidate (scoped to their account).
-  const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
-  const introduction = await getViewerIntroduction(id, accountId);
 
   const derived = deriveVisibility(viewer, introduction, { previewAs });
   // Owner-preview renders at the previewed level; otherwise owner self-view overrides

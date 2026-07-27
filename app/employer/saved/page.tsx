@@ -7,6 +7,8 @@ import { listSavedApplicationIds } from "@/lib/authz/savedRepo";
 import { supabase } from "@/lib/supabase";
 import { resolveTargetRole } from "@/lib/candidate/role";
 import { compensation, compensationLine, type ApplicationRow } from "@/lib/search/candidate";
+import { isPublished } from "@/lib/authz/readiness";
+import { ACTIVE_INTRO_STATUSES } from "@/lib/authz/introductions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -28,16 +30,30 @@ export default async function SavedCandidatesPage() {
   const verified = viewer.account?.verificationState === "verified";
   const ids = verified && viewer.account ? await listSavedApplicationIds(viewer.account.id) : [];
 
-  let rows: { id: string; name: string; role: string; region: string; comp?: string; basis?: string }[] = [];
+  let rows: { id: string; name: string; role: string; region: string; comp?: string; basis?: string; available: boolean }[] = [];
   if (ids.length && supabase) {
     const { data } = await supabase
       .from("applications")
       .select(
-        "id, full_name, role, primary_target_role, role_confirmed_at, country, state, salary_min_usd, salary_max_usd, salary_expectation, compensation_currency, compensation_period, hours_per_week_basis, compensation_basis_confirmed_at",
+        "id, full_name, role, primary_target_role, role_confirmed_at, country, state, salary_min_usd, salary_max_usd, salary_expectation, compensation_currency, compensation_period, hours_per_week_basis, compensation_basis_confirmed_at, profile_status",
       )
       .in("id", ids);
-    type AppRow = ApplicationRow & { salary_expectation?: string | null };
+    type AppRow = ApplicationRow & { salary_expectation?: string | null; profile_status?: string | null };
     const byId = new Map((data ?? []).map((r) => [r.id, r as AppRow]));
+
+    // A saved candidate who paused stays on the shortlist but their profile is only
+    // viewable if we still have an active introduction with them (graceful pause).
+    let activeIntroIds = new Set<string>();
+    if (viewer.account) {
+      const { data: intros } = await supabase
+        .from("introduction_requests")
+        .select("application_id")
+        .eq("employer_account_id", viewer.account.id)
+        .in("application_id", ids)
+        .in("status", ACTIVE_INTRO_STATUSES as unknown as string[]);
+      activeIntroIds = new Set((intros ?? []).map((i) => i.application_id as string));
+    }
+
     rows = ids
       .map((id) => byId.get(id))
       .filter((r): r is AppRow => !!r)
@@ -55,6 +71,7 @@ export default async function SavedCandidatesPage() {
           region: r.country ?? r.state ?? "",
           comp,
           basis,
+          available: isPublished(r) || activeIntroIds.has(r.id),
         };
       });
   }
@@ -94,12 +111,18 @@ export default async function SavedCandidatesPage() {
                     </div>
                   )}
                 </div>
-                <Link
-                  href={`/candidates/${r.id}`}
-                  className="shrink-0 text-caption font-semibold text-navy hover:underline"
-                >
-                  View profile
-                </Link>
+                {r.available ? (
+                  <Link
+                    href={`/candidates/${r.id}`}
+                    className="shrink-0 text-caption font-semibold text-navy hover:underline"
+                  >
+                    View profile
+                  </Link>
+                ) : (
+                  <span className="shrink-0 text-caption font-medium text-subtle" title="This candidate has paused their profile">
+                    Currently unavailable
+                  </span>
+                )}
               </li>
             ))}
           </ul>

@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { SiteHeader, navFromViewer } from "@/components/ui/SiteHeader";
 import { getViewer } from "@/lib/authz/viewer";
 import { supabase } from "@/lib/supabase";
 import { compensation, compensationLine, type ApplicationRow } from "@/lib/search/candidate";
+import { applicationToProfile, type ProfileRow } from "@/lib/profile/candidate";
 import { disclosureRows } from "@/lib/authz/disclosure";
 import { CandidateDashboard, type DashboardData } from "@/components/candidate/CandidateDashboard";
+import { deriveCandidateVisibility } from "@/lib/candidate/visibilityStatus";
+import { emitSectionConfirmationExpired } from "@/lib/candidate/confirmationEvents";
+import { countActiveIntroductionsForCandidate } from "@/lib/authz/introductionsRepo";
 import type { ReactNode } from "react";
 
 // "Who sees what" — the two employer stages, from the SAME predicates the
@@ -113,6 +118,50 @@ export default async function CandidateMePage({
   const selected = apps.find((a) => a.id === appParam) ?? apps[0];
   const others = apps.filter((a) => a.id !== selected.id);
 
+  const activeIntroCount = await countActiveIntroductionsForCandidate(selected.id);
+
+  // The employer-facing view-model, reused so the dashboard's read-only cards show
+  // exactly what employers see (summary, "in their own words", capabilities,
+  // history, target role, proof points).
+  const { data: assessmentRow } = await supabase
+    .from("assessments")
+    .select("writing_sample, quiz_score")
+    .eq("application_id", selected.id)
+    .in("status", ["submitted", "passed", "failed"])
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const assessment = assessmentRow?.writing_sample
+    ? { name: "Skills assessment", score: assessmentRow.quiz_score ?? null, writingSample: assessmentRow.writing_sample as string }
+    : null;
+  const profileView = applicationToProfile(selected as unknown as ProfileRow, assessment);
+
+  // Open change requests → cards render "Change requested — under review".
+  const { data: crRows } = await supabase
+    .from("profile_change_requests")
+    .select("section")
+    .eq("application_id", selected.id)
+    .eq("status", "open");
+  const openChangeRequests = [...new Set((crRows ?? []).map((r) => String((r as { section: string }).section)))];
+
+  const visibility = deriveCandidateVisibility(selected, new Date());
+
+  // Best-effort: record a section_confirmation_expired event when a confirmation has
+  // newly lapsed, so a future nudge system has an event to subscribe to. Deduped in
+  // the emitter; only availability + compensation carry an expiry.
+  const expiredSections = visibility.sections.filter((s) => s.status === "needs_reconfirmation");
+  if (expiredSections.length > 0) {
+    const tsByKey: Record<string, unknown> = {
+      availability: selected.availability_structured_confirmed_at,
+      compensation: selected.compensation_basis_confirmed_at,
+    };
+    after(async () => {
+      for (const s of expiredSections) {
+        await emitSectionConfirmationExpired(selected.id, s.key, String(tsByKey[s.key] ?? ""));
+      }
+    });
+  }
+
   const comp = compensation(selected);
   const software = ((selected.software_proficiency as { name?: string; level?: string; years?: number; last_used?: string }[] | null) ?? [])
     .filter((s) => s?.name)
@@ -150,6 +199,26 @@ export default async function CandidateMePage({
     compBasisConfirmed: !!selected.compensation_basis_confirmed_at,
     publicationApproved: !!selected.candidate_publication_approved_at,
     hasPhoto: !!selected.photo_url,
+    // One derived visibility state consumed by the header, checklist, and
+    // publication card (see lib/candidate/visibilityStatus).
+    status: visibility,
+    activeIntroCount,
+    workPrefs: {
+      employmentType: String(selected.employment_type ?? ""),
+      engagement: String(selected.engagement ?? ""),
+      willingFullShift: selected.willing_full_shift === true,
+      earliestStart: String(selected.start_date ?? ""),
+    },
+    readOnly: {
+      summary: profileView.summary,
+      writingSample: profileView.writingSample,
+      capabilities: profileView.capabilities,
+      history: profileView.history,
+      targetRole: profileView.role,
+      alternativeRoles: profileView.alternativeRoles ?? [],
+      proofPoints: profileView.evidence ?? [],
+    },
+    openChangeRequests,
   };
 
   return shell(
