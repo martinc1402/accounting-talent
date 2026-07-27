@@ -12,6 +12,7 @@ import {
   candidateApprovePublication,
   candidateSetPublished,
   candidateUploadPhoto,
+  candidateRemovePhoto,
 } from "@/app/actions";
 
 /*
@@ -126,6 +127,7 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
   // signing endpoint. Object URLs are revoked to avoid leaks.
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [confirmingRemovePhoto, setConfirmingRemovePhoto] = useState(false);
   useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
 
   function run(key: string, fn: () => Promise<{ status: string; message?: string }>, ok: string) {
@@ -155,6 +157,7 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
       setError("That image is too large — please use one under 5 MB.");
       return;
     }
+    setConfirmingRemovePhoto(false);
     setPhotoPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return URL.createObjectURL(file);
@@ -162,6 +165,15 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
     const fd = new FormData();
     fd.append("photo", file);
     run("photo", () => candidateUploadPhoto(data.id, fd), "Photo updated.");
+  }
+
+  function removePhoto() {
+    setConfirmingRemovePhoto(false);
+    setPhotoPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    run("removePhoto", () => candidateRemovePhoto(data.id), "Photo removed.");
   }
 
   const toggleDay = (d: string) => setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
@@ -220,14 +232,47 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
                 hidden
                 onChange={onPickPhoto}
               />
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => photoInputRef.current?.click()}
-                className="rounded-card border border-navy px-4 py-2.5 text-small font-semibold text-navy transition hover:bg-navy hover:text-paper disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
-              >
-                {busy === "photo" ? "Uploading…" : data.hasPhoto ? "Change photo" : "Upload photo"}
-              </button>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => photoInputRef.current?.click()}
+                  className="rounded-card border border-navy px-4 py-2.5 text-small font-semibold text-navy transition hover:bg-navy hover:text-paper disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
+                >
+                  {busy === "photo" ? "Uploading…" : data.hasPhoto ? "Change photo" : "Upload photo"}
+                </button>
+                {data.hasPhoto &&
+                  (confirmingRemovePhoto ? (
+                    <span className="inline-flex items-center gap-3 text-caption">
+                      <span className="text-muted">Remove your photo?</span>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={removePhoto}
+                        className="font-semibold text-red-700 underline underline-offset-2 disabled:opacity-60"
+                      >
+                        {busy === "removePhoto" ? "Removing…" : "Yes, remove"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setConfirmingRemovePhoto(false)}
+                        className="text-muted underline underline-offset-2 disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => setConfirmingRemovePhoto(true)}
+                      className="text-caption font-semibold text-muted underline underline-offset-2 transition hover:text-red-700 disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  ))}
+              </div>
               <p className="mt-2 max-w-[42ch] text-caption text-muted">
                 PNG, JPEG, or WebP, up to 5 MB. Only you, AccountingTalent, and an employer whose introduction
                 you&rsquo;ve accepted can see it — verified employers see a blurred version until then, and the

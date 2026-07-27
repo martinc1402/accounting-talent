@@ -1043,6 +1043,23 @@ export async function candidateUploadPhoto(
   return ownerUpdate(gate.id, gate.actor, { photo_url: key }, "candidate_photo_uploaded");
 }
 
+/* Candidate removes their OWN profile photo — deletes the stored clear + frosted
+   objects and clears photo_url. Idempotent (no-op if there's nothing to remove).
+   A legacy absolute-URL photo can't be deleted from our bucket, so we just clear
+   the column. */
+export async function candidateRemovePhoto(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const { data: row } = await supabase!.from("applications").select("photo_url").eq("id", gate.id).maybeSingle();
+  const key = String((row as { photo_url?: string | null } | null)?.photo_url ?? "");
+  if (key && !/^https?:\/\//i.test(key) && !key.startsWith("/")) {
+    await supabase!.storage.from(PHOTO_BUCKET).remove([key, frostedKeyOf(key)]);
+  }
+
+  return ownerUpdate(gate.id, gate.actor, { photo_url: null }, "candidate_photo_removed");
+}
+
 // Statuses in which AccountingTalent has completed its review, so the candidate is
 // allowed to flip their own live listing (published <-> paused) themselves.
 const CANDIDATE_TOGGLEABLE_STATUSES = new Set(["approved", "published", "paused"]);
