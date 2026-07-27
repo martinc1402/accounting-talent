@@ -41,9 +41,12 @@ describe("overlap + compensation formatting (items 2, 12)", () => {
     expect(compensationLine(comp)).toBe("$900–$1,200/month");
   });
   it("the sample uses the standardized strings", () => {
-    expect(priya.overlap).toBe("4+ hours ET overlap");
+    expect(priya.overlap).toBe("~4 hours ET overlap");
     expect(priya.decision.find((d) => d.label === "Compensation")?.value).toBe("$900–$1,200/month");
-    expect(priya.preferences.find((p) => p.label === "Preferred hours")?.value).toBe("3:30 PM–11:30 PM IST");
+    // The free-text hours note now rides under the derived US-overlap fact as detail.
+    const overlap = priya.preferences.find((p) => p.label === "US overlap");
+    expect(overlap?.value).toBe("~4 hours ET overlap");
+    expect(overlap?.detail).toBe("3:30 PM–11:30 PM IST");
   });
 });
 
@@ -74,11 +77,16 @@ describe("availability freshness (item 4)", () => {
     expect(p.availabilityConfirmed).toBeUndefined();
     expect(p.decision.find((d) => d.label === "Availability")?.value).toBe("Part-time");
   });
-  it("raw 'Preferred hours' free-text is public only once availability is confirmed", () => {
-    const unconfirmed = applicationToProfile(row({ working_hours: "until ~10 pm IST", availability_structured_confirmed_at: null }));
-    expect(unconfirmed.preferences.find((p) => p.label === "Preferred hours")).toBeUndefined();
-    const confirmed = applicationToProfile(row({ working_hours: "until ~10 pm IST", availability_structured_confirmed_at: days(1) }));
-    expect(confirmed.preferences.find((p) => p.label === "Preferred hours")?.value).toBe("until ~10 pm IST");
+  it("the free-text hours note rides under the derived US overlap only once availability is confirmed", () => {
+    const base = { timezone: "Asia/Kolkata", avail_start_time: "15:30", avail_finish_time: "23:30", working_hours: "until ~10 pm IST" };
+    const unconfirmed = applicationToProfile(row({ ...base, availability_structured_confirmed_at: null }));
+    // Derived overlap value shows from the structured times, but the unstructured
+    // free-text note stays private until the candidate confirms.
+    const u = unconfirmed.preferences.find((p) => p.label === "US overlap");
+    expect(u?.value).toMatch(/hours ET overlap/);
+    expect(u?.detail).toBeUndefined();
+    const confirmed = applicationToProfile(row({ ...base, availability_structured_confirmed_at: days(1) }));
+    expect(confirmed.preferences.find((p) => p.label === "US overlap")?.detail).toBe("until ~10 pm IST");
   });
   it("public availability claim can't contradict the readiness panel (Sai's bug)", () => {
     // Same row through both surfaces: an unconfirmed structured availability must
@@ -224,7 +232,7 @@ describe("final refinement (employer-facing precision)", () => {
     expect(p.currentSeniority).toBe("Assistant Manager");
   });
 
-  it("Decision Summary order: role, comp, availability, earliest start, ET overlap — no Preference row", () => {
+  it("Decision Summary order: role, comp, availability, earliest start, US overlap — no Preference row", () => {
     const r = row({
       primary_target_role: "Senior US Tax Reviewer", role_confirmed_at: "2026-07-26T00:00:00Z",
       salary_min_usd: 1800, salary_max_usd: 2500,
@@ -233,7 +241,7 @@ describe("final refinement (employer-facing precision)", () => {
       timezone: "Asia/Kolkata", avail_start_time: "15:30", avail_finish_time: "23:30",
     });
     const labels = applicationToProfile(r).decision.map((d) => d.label);
-    expect(labels).toEqual(["Target role", "Compensation", "Availability", "Earliest start", "ET overlap"]);
+    expect(labels).toEqual(["Target role", "Compensation", "Availability", "Earliest start", "US overlap"]);
     expect(labels).not.toContain("Preference");
     expect(applicationToProfile(r).decision.find((d) => d.label === "Earliest start")?.value).toBe("Available immediately");
   });
@@ -266,10 +274,10 @@ describe("final refinement (employer-facing precision)", () => {
     expect(u.compensationBasis).toBeUndefined();
   });
 
-  it("missing availability (days/start times) is never invented into an ET overlap", () => {
+  it("missing availability (days/start times) is never invented into a US overlap", () => {
     // Sai-like: max hours + tz, but NO start/finish and NO days.
     const p = applicationToProfile(row({ availability: "Part-time (up to 20 hrs/week)", avail_max_weekly_hours: 20, timezone: "Asia/Kolkata", availability_structured_confirmed_at: "2026-07-26T00:00:00Z" }));
-    expect(p.decision.find((d) => d.label === "ET overlap")).toBeUndefined();
+    expect(p.decision.find((d) => d.label === "US overlap")).toBeUndefined();
     expect(p.overlap).toBeUndefined();
   });
 });

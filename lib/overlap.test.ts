@@ -19,6 +19,18 @@ describe("etOverlapHours (DST worst-case)", () => {
   });
 });
 
+describe("etOverlapHours (referenceDate = current offset, DST boundary)", () => {
+  // IST has no DST; ET does. The SAME window yields a different live overlap
+  // depending on whether the reference date falls in EST (winter) or EDT (summer).
+  const win = { timeZone: "Asia/Kolkata", startMinutes: 15 * 60 + 30, endMinutes: 23 * 60 + 30 };
+  it("winter (EST) reference date → 4h", () => {
+    expect(etOverlapHours({ ...win, referenceDate: new Date("2027-01-15T12:00:00Z") })).toBe(4);
+  });
+  it("summer (EDT) reference date → 5h", () => {
+    expect(etOverlapHours({ ...win, referenceDate: new Date("2027-07-15T12:00:00Z") })).toBe(5);
+  });
+});
+
 describe("parseWorkingHours", () => {
   it("parses en-dash 12h ranges", () => {
     expect(parseWorkingHours("3:30 PM–11:30 PM IST")).toEqual({ startMinutes: 15 * 60 + 30, endMinutes: 23 * 60 + 30 });

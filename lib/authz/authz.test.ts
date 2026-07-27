@@ -245,6 +245,19 @@ describe("projectProfileView field-level filtering", () => {
     expect(before.employer).toContain("Withheld"); // withheld even after introduction
     expect(after.employer).toContain("Withheld");
     expect(at("anonymous").photo).toBe("Hidden"); // logged-out: no photo
+
+    // Location + compensation rows follow canSeeVerifiedEmployerFields.
+    const pub = at("anonymous");
+    expect([pub.location, before.location, after.location]).toEqual([
+      "Region only",
+      "Exact city",
+      "Exact city",
+    ]);
+    expect([pub.compensation, before.compensation, after.compensation]).toEqual([
+      "Hidden",
+      "Shown",
+      "Shown",
+    ]);
   });
 
   it("(3) free verified: photo, exact city, named institutions; no identity", () => {

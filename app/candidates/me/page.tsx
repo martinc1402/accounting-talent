@@ -12,7 +12,9 @@ import type { ReactNode } from "react";
 // "Who sees what" — the two employer stages, from the SAME predicates the
 // projection uses (lib/authz/disclosure). Static content, no drift.
 function WhoSeesWhat({ candidateId }: { candidateId: string }) {
-  const before = disclosureRows("free_verified_employer");
+  // Three tiers, all derived from the SAME predicates the projection uses.
+  const publicTier = disclosureRows("anonymous");
+  const verified = disclosureRows("free_verified_employer");
   const after = disclosureRows("accepted_introduction");
   return (
     <section className="mb-5 rounded-card border border-line bg-white p-6 lg:p-7">
@@ -21,19 +23,21 @@ function WhoSeesWhat({ candidateId }: { candidateId: string }) {
         Employers see only limited details until you accept an introduction.
       </p>
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[440px] text-small">
+        <table className="w-full min-w-[560px] text-small">
           <thead>
             <tr className="text-caption tracking-wide text-subtle uppercase">
               <th className="py-2 text-left font-semibold" />
-              <th className="py-2 pr-4 text-left font-semibold">Before introduction</th>
+              <th className="py-2 pr-4 text-left font-semibold">Public (anyone online)</th>
+              <th className="py-2 pr-4 text-left font-semibold">Verified employers</th>
               <th className="py-2 text-left font-semibold">After accepted introduction</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {before.map((row, i) => (
+            {publicTier.map((row, i) => (
               <tr key={row.key}>
                 <td className="py-2.5 pr-4 font-medium text-ink">{row.label}</td>
                 <td className="py-2.5 pr-4 text-muted">{row.value}</td>
+                <td className="py-2.5 pr-4 text-muted">{verified[i].value}</td>
                 <td className="py-2.5 text-muted">{after[i].value}</td>
               </tr>
             ))}
@@ -44,7 +48,7 @@ function WhoSeesWhat({ candidateId }: { candidateId: string }) {
         href={`/candidates/${candidateId}?viewAs=employer`}
         className="mt-4 inline-block text-caption font-semibold text-navy underline underline-offset-2"
       >
-        See it for yourself → Preview as employer
+        Preview as employer
       </Link>
     </section>
   );

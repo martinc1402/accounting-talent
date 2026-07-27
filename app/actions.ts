@@ -854,11 +854,13 @@ async function ownerUpdate(
 }
 
 const availabilitySchema = z.object({
-  days: z.array(z.enum(DAYS)).max(7).optional(),
-  startTime: z.string().regex(HHMM).optional(),
-  finishTime: z.string().regex(HHMM).optional(),
-  timezone: z.string().trim().min(1).max(64).optional(),
-  maxHours: z.number().int().min(1).max(80).optional(),
+  // Confirming availability REQUIRES the full set — a "Confirmed" badge must mean
+  // an employer sees complete, real availability, never a partial guess.
+  days: z.array(z.enum(DAYS)).min(1, "Select at least one available day").max(7),
+  startTime: z.string().regex(HHMM, "Enter a preferred start time"),
+  finishTime: z.string().regex(HHMM, "Enter a preferred finish time"),
+  timezone: z.string().trim().min(1, "Select your timezone").max(64),
+  maxHours: z.number({ error: "Enter your max hours per week" }).int().min(1).max(80),
   busySeasonFlexible: z.boolean().optional(),
 });
 
@@ -872,14 +874,18 @@ export async function candidateConfirmAvailability(
   const gate = await requireOwner(applicationId);
   if (!gate.ok) return gate.res;
   const parsed = availabilitySchema.safeParse(input);
-  if (!parsed.success) return { status: "error", message: "Please check the availability details." };
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Please check the availability details." };
+  }
   const v = parsed.data;
-  const patch: Record<string, unknown> = { availability_structured_confirmed_at: new Date().toISOString() };
-  if (v.days) patch.avail_days = v.days;
-  if (v.startTime) patch.avail_start_time = v.startTime;
-  if (v.finishTime) patch.avail_finish_time = v.finishTime;
-  if (v.timezone) patch.timezone = v.timezone;
-  if (v.maxHours != null) patch.avail_max_weekly_hours = v.maxHours;
+  const patch: Record<string, unknown> = {
+    availability_structured_confirmed_at: new Date().toISOString(),
+    avail_days: v.days,
+    avail_start_time: v.startTime,
+    avail_finish_time: v.finishTime,
+    timezone: v.timezone,
+    avail_max_weekly_hours: v.maxHours,
+  };
   if (v.busySeasonFlexible != null) patch.avail_busy_season_flexible = v.busySeasonFlexible;
   return ownerUpdate(gate.id, gate.actor, patch, "candidate_availability_confirmed");
 }
@@ -887,8 +893,12 @@ export async function candidateConfirmAvailability(
 const softwareSchema = z.array(
   z.object({
     name: z.string().trim().min(1).max(80),
-    level: z.enum(["Basic", "Intermediate", "Advanced", "Expert"]).optional(),
-    years: z.number().int().min(0).max(50).optional(),
+    // Level + years are REQUIRED per product — an empty depth reads as unconfirmed.
+    // Last used stays optional.
+    level: z.enum(["Basic", "Intermediate", "Advanced", "Expert"], {
+      error: "Choose a level for each product",
+    }),
+    years: z.number({ error: "Enter years for each product" }).int().min(0).max(50),
     last_used: z.string().trim().max(20).optional(),
   }),
 ).max(20);
@@ -902,7 +912,9 @@ export async function candidateSetSoftwareDepth(
   const gate = await requireOwner(applicationId);
   if (!gate.ok) return gate.res;
   const parsed = softwareSchema.safeParse(items);
-  if (!parsed.success) return { status: "error", message: "Please check the software details." };
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Please check the software details." };
+  }
   const software_proficiency = parsed.data.map((s) => ({ ...s, confirmed_by_candidate: true }));
   return ownerUpdate(
     gate.id,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { User } from "@phosphor-icons/react/dist/ssr";
 import { Logo } from "@/components/ui/Logo";
 import { AccountMenu } from "@/components/ui/AccountMenu";
 
@@ -15,17 +16,63 @@ export type SiteHeaderNav = {
   /** "employer" → employer controls; "candidate" → their own profile; otherwise a
    *  bare signed-in state (account menu with Sign out only). */
   role?: "employer" | "candidate";
+  /** Rendered for fidelity but fully inert (the owner previewing as an employer).
+   *  Every control is disabled; the yellow preview banner is the only live chrome. */
+  preview?: boolean;
 };
 
 const LINK =
   "text-caption font-semibold text-muted transition hover:text-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 rounded-card px-1 py-1";
+const INERT = "text-caption font-semibold text-muted rounded-card px-1 py-1 opacity-50 cursor-not-allowed";
+const PREVIEW_TITLE = "Shown for preview only";
+
+// A header that renders EXACTLY what the previewed viewer sees, but every control
+// is inert (no navigation, no menu) — for the owner's "Preview as employer".
+function PreviewHeader({ nav }: { nav: SiteHeaderNav }) {
+  return (
+    <nav className="flex items-center gap-3 sm:gap-5" aria-label="Account (preview)">
+      {nav.authenticated ? (
+        <>
+          <span className={`hidden sm:inline-block ${INERT}`} aria-disabled title={PREVIEW_TITLE}>
+            Saved candidates
+          </span>
+          <span className={`hidden sm:inline-block ${INERT}`} aria-disabled title={PREVIEW_TITLE}>
+            Introductions
+          </span>
+          <span
+            aria-disabled
+            title={PREVIEW_TITLE}
+            className="flex size-9 items-center justify-center rounded-full bg-navy text-paper opacity-50"
+          >
+            <User size={18} weight="fill" aria-hidden />
+          </span>
+        </>
+      ) : (
+        <>
+          <span className={`hidden sm:inline-block ${INERT}`} aria-disabled title={PREVIEW_TITLE}>
+            For employers
+          </span>
+          <span
+            aria-disabled
+            title={PREVIEW_TITLE}
+            className="rounded-card bg-navy px-4 py-2 text-caption font-semibold text-paper opacity-50 cursor-not-allowed"
+          >
+            Sign in
+          </span>
+        </>
+      )}
+    </nav>
+  );
+}
 
 export function SiteHeader({ nav }: { nav: SiteHeaderNav }) {
   return (
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex h-16 max-w-[1160px] items-center justify-between gap-4 px-5 lg:h-[72px] lg:px-8">
         <Logo />
-        {nav.authenticated ? (
+        {nav.preview ? (
+          <PreviewHeader nav={nav} />
+        ) : nav.authenticated ? (
           <nav className="flex items-center gap-3 sm:gap-5" aria-label="Account">
             {/* Inline links on desktop; the account menu carries them on mobile.
                 Employers get shortlist controls; candidates get their own profile. */}

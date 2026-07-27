@@ -189,9 +189,15 @@ export function resolveEtOverlap(row: ReadinessRow): Resolved {
     const [h, m] = t.split(":").map(Number);
     return (h % 24) * 60 + (m || 0);
   };
-  const hours = etOverlapHours({ timeZone: tz, startMinutes: toMin(start), endMinutes: toMin(finish) });
+  // Live value uses the CURRENT ET offset (referenceDate = now); the profile shows
+  // today's real overlap, not the DST worst-case validation uses.
+  const hours = etOverlapHours({
+    timeZone: tz,
+    startMinutes: toMin(start),
+    endMinutes: toMin(finish),
+    referenceDate: new Date(),
+  });
   if (hours <= 0) return { value: undefined, needsConfirmation: false };
-  const lo = Math.floor(hours);
-  const label = hours >= lo + 0.5 ? `${lo}–${lo + 1} hours ET overlap` : `${lo}+ hours ET overlap`;
+  const label = `~${Math.round(hours)} hours ET overlap`;
   return { value: label, needsConfirmation: !has(row.availability_structured_confirmed_at) };
 }

@@ -9,7 +9,7 @@
 
 const ET_ZONE = "America/New_York";
 const ET_START_MIN = 9 * 60; // 09:00
-const ET_END_MIN = 17 * 60; // 17:00
+const ET_END_MIN = 18 * 60; // 18:00 — US business day 09:00–18:00 ET
 // Reference days that straddle US DST (standard winter / daylight summer).
 const REF_DAYS: [number, number, number][] = [
   [2027, 1, 15],
@@ -49,22 +49,44 @@ function overlapHours(aStart: number, aEnd: number, bStart: number, bEnd: number
   return ms / 3_600_000;
 }
 
+/** ET calendar date (y, m, d) at a given instant — the day whose 09:00–18:00 ET
+ *  window we compare against, using that date's actual DST offset. */
+function etDateParts(instant: Date): [number, number, number] {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: ET_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const p: Record<string, string> = {};
+  for (const part of dtf.formatToParts(instant)) p[part.type] = part.value;
+  return [Number(p.year), Number(p.month), Number(p.day)];
+}
+
 /**
- * Worst-case daily overlap (hours) between the candidate window and the ET 9–5.
+ * Daily overlap (hours) between the candidate window and the ET 09:00–18:00 workday.
  * @param startMinutes minute-of-day the candidate's window opens (local)
  * @param endMinutes   minute-of-day it closes; if <= start, treated as crossing midnight
+ * @param referenceDate when provided, compute for THAT date's ET offset (the current
+ *   offset at render time — used for the live profile value); when omitted, return the
+ *   WORST-CASE across US DST (used by validation/search so a claim can't be inflated).
  */
 export function etOverlapHours(args: {
   timeZone: string;
   startMinutes: number;
   endMinutes: number;
+  referenceDate?: Date;
 }): number {
   const { timeZone } = args;
   const startMin = args.startMinutes;
   const endMin = args.endMinutes <= args.startMinutes ? args.endMinutes + 1440 : args.endMinutes;
 
+  const days: [number, number, number][] = args.referenceDate
+    ? [etDateParts(args.referenceDate)]
+    : REF_DAYS;
+
   let worst = Infinity;
-  for (const [y, m, d] of REF_DAYS) {
+  for (const [y, m, d] of days) {
     const cStart = wallClockToUTCms(timeZone, y, m, d, startMin);
     const cEnd = wallClockToUTCms(timeZone, y, m, d, endMin);
     const etStart = wallClockToUTCms(ET_ZONE, y, m, d, ET_START_MIN);

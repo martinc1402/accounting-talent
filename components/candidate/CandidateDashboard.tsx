@@ -51,6 +51,7 @@ const INPUT =
   "mt-2 w-full rounded-card border border-line px-3.5 py-3 text-small text-ink outline-none focus:border-navy focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2";
 const BTN =
   "rounded-card bg-navy px-5 py-3 text-small font-semibold text-paper transition hover:bg-navy-deep active:translate-y-px disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2";
+const ERR = "mt-1.5 text-caption font-medium text-red-700";
 
 function Confirmed() {
   return (
@@ -97,6 +98,9 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
   const [timezone, setTimezone] = useState(data.timezone);
   const [maxHours, setMaxHours] = useState(data.availMaxHours?.toString() ?? "");
   const [busySeason, setBusySeason] = useState(data.busySeasonFlexible);
+  // Per-field validation errors — a section can't be confirmed with required fields empty.
+  const [availErr, setAvailErr] = useState<Record<string, string>>({});
+  const [swErr, setSwErr] = useState<Record<number, string>>({});
   const [software, setSoftware] = useState(data.software.length ? data.software : [{ name: "", level: "", years: null, last_used: "" }]);
   const [education, setEducation] = useState(
     data.education.length ? data.education : [{ degree: "", field_of_study: "", institution: "", year: "", completion_status: "" }],
@@ -129,8 +133,8 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
             <span className="font-semibold text-ink">{data.profileStatus.replace(/_/g, " ")}</span>.
           </p>
         </div>
-        <Link href={`/candidates/${data.id}`} className="text-caption font-semibold text-navy underline underline-offset-2">
-          View how employers see it →
+        <Link href={`/candidates/${data.id}?viewAs=employer`} className="text-caption font-semibold text-navy underline underline-offset-2">
+          Preview as employer →
         </Link>
       </div>
 
@@ -164,23 +168,28 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
                 </button>
               ))}
             </div>
+            {availErr.days && <p className={ERR}>{availErr.days}</p>}
           </fieldset>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label className={LABEL} htmlFor="start">Preferred start (IST)</label>
               <input id="start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={INPUT} />
+              {availErr.startTime && <p className={ERR}>{availErr.startTime}</p>}
             </div>
             <div>
               <label className={LABEL} htmlFor="finish">Preferred finish (IST)</label>
               <input id="finish" type="time" value={finishTime} onChange={(e) => setFinishTime(e.target.value)} className={INPUT} />
+              {availErr.finishTime && <p className={ERR}>{availErr.finishTime}</p>}
             </div>
             <div>
               <label className={LABEL} htmlFor="tz">Timezone</label>
               <input id="tz" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Kolkata" className={INPUT} />
+              {availErr.timezone && <p className={ERR}>{availErr.timezone}</p>}
             </div>
             <div>
               <label className={LABEL} htmlFor="hours">Max hours / week</label>
               <input id="hours" type="number" min={1} max={80} value={maxHours} onChange={(e) => setMaxHours(e.target.value)} className={INPUT} />
+              {availErr.maxHours && <p className={ERR}>{availErr.maxHours}</p>}
             </div>
           </div>
           <label className="mt-4 flex items-center gap-2 text-small text-ink">
@@ -190,21 +199,29 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() =>
+            onClick={() => {
+              const errs: Record<string, string> = {};
+              if (days.length === 0) errs.days = "Select at least one available day.";
+              if (!startTime) errs.startTime = "Enter a preferred start time.";
+              if (!finishTime) errs.finishTime = "Enter a preferred finish time.";
+              if (!timezone.trim()) errs.timezone = "Enter your timezone.";
+              if (!maxHours || Number(maxHours) < 1) errs.maxHours = "Enter your max hours per week.";
+              setAvailErr(errs);
+              if (Object.keys(errs).length) return;
               run(
                 "avail",
                 () =>
                   candidateConfirmAvailability(data.id, {
-                    days: days.length ? (days as ("Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun")[]) : undefined,
-                    startTime: startTime || undefined,
-                    finishTime: finishTime || undefined,
-                    timezone: timezone.trim() || undefined,
-                    maxHours: maxHours ? Number(maxHours) : undefined,
+                    days: days as ("Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun")[],
+                    startTime,
+                    finishTime,
+                    timezone: timezone.trim(),
+                    maxHours: Number(maxHours),
                     busySeasonFlexible: busySeason,
                   }),
                 "Availability confirmed.",
-              )
-            }
+              );
+            }}
             className={`mt-5 ${BTN}`}
           >
             {busy === "avail" ? "Saving…" : "Confirm availability"}
@@ -238,6 +255,7 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
                 <button type="button" aria-label="Remove" onClick={() => setSoftware((c) => c.filter((_, j) => j !== i))} className="mb-1 inline-flex size-10 items-center justify-center rounded-card border border-line text-subtle hover:border-navy/40">
                   <Trash size={16} aria-hidden />
                 </button>
+                {swErr[i] && <p className={`sm:col-span-5 ${ERR}`}>{swErr[i]}</p>}
               </div>
             ))}
           </div>
@@ -248,24 +266,36 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
             <button
               type="button"
               disabled={pending}
-              onClick={() =>
+              onClick={() => {
+                const named = software.filter((s) => s.name.trim());
+                if (named.length === 0) {
+                  setSwErr({});
+                  setError("Add at least one software product with a level and years.");
+                  return;
+                }
+                const errs: Record<number, string> = {};
+                software.forEach((s, i) => {
+                  if (!s.name.trim()) return;
+                  if (!s.level) errs[i] = "Choose a level.";
+                  else if (s.years == null || Number.isNaN(s.years)) errs[i] = "Enter years of experience.";
+                });
+                setSwErr(errs);
+                if (Object.keys(errs).length) return;
                 run(
                   "sw",
                   () =>
                     candidateSetSoftwareDepth(
                       data.id,
-                      software
-                        .filter((s) => s.name.trim())
-                        .map((s) => ({
-                          name: s.name.trim(),
-                          level: (s.level || undefined) as "Basic" | "Intermediate" | "Advanced" | "Expert" | undefined,
-                          years: s.years ?? undefined,
-                          last_used: s.last_used.trim() || undefined,
-                        })),
+                      named.map((s) => ({
+                        name: s.name.trim(),
+                        level: s.level as "Basic" | "Intermediate" | "Advanced" | "Expert",
+                        years: s.years as number,
+                        last_used: s.last_used.trim() || undefined,
+                      })),
                     ),
                   "Software saved.",
-                )
-              }
+                );
+              }}
               className={`mt-5 ${BTN}`}
             >
               {busy === "sw" ? "Saving…" : "Save software"}
@@ -354,9 +384,13 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
           <p className="text-small text-muted">
             Your profile is only listed once AccountingTalent completes its checks — approving here records your consent to be shown (anonymously) to employers.
           </p>
-          <button type="button" disabled={pending || data.publicationApproved} onClick={() => run("pub", () => candidateApprovePublication(data.id), "Thanks — publication approved.")} className={`mt-5 ${BTN}`}>
-            {data.publicationApproved ? "Approved" : busy === "pub" ? "Saving…" : "Approve my profile"}
-          </button>
+          {/* Once approved, the Section's Confirmed badge carries the state — no greyed
+              button. Withdrawing approval isn't a candidate-facing action today. */}
+          {!data.publicationApproved && (
+            <button type="button" disabled={pending} onClick={() => run("pub", () => candidateApprovePublication(data.id), "Thanks — publication approved.")} className={`mt-5 ${BTN}`}>
+              {busy === "pub" ? "Saving…" : "Approve my profile"}
+            </button>
+          )}
         </Section>
       </div>
     </div>

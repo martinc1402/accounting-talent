@@ -19,7 +19,6 @@ import {
   SHOW_ASSESSMENT,
   compensation,
   compensationLine,
-  overlapPhrase,
   roleCategory,
 } from "@/lib/search/candidate";
 
@@ -148,7 +147,7 @@ export type ProfileEducationEntry = {
   note?: string;
 };
 export type ProfileSoftware = { name: string; meta?: string };
-export type ProfileFact = { label: string; value: string };
+export type ProfileFact = { label: string; value: string; detail?: string };
 
 export type CandidateProfile = {
   id: string;
@@ -452,22 +451,26 @@ function education(row: ProfileRow): ProfileEducationEntry[] {
 }
 
 function preferences(row: ProfileRow): ProfileFact[] {
-  const overlap = overlapPhrase(row);
-  // The raw working-hours note is unstructured free-text; like the search card
-  // (lib/search/candidate.ts), we don't surface it publicly as fact until the
-  // structured availability is candidate-confirmed. Unconfirmed -> admin-only.
+  // Derived US (ET) overlap is the primary value; the free-text hours note
+  // ("Available until ~10 PM IST") rides underneath as secondary detail. The note
+  // is unstructured free-text, so like the search card (lib/search/candidate.ts) we
+  // only surface it once the structured availability is candidate-confirmed.
+  const overlap = resolveEtOverlap(row).value;
   const workingHours = row.availability_structured_confirmed_at
     ? (row.working_hours ?? "").trim()
     : "";
-  const entries: [string, string][] = [
-    ["Employment", (row.employment_type ?? "").trim()],
-    ["Earliest start", (row.start_date ?? "").trim()],
-    ["Preferred hours", workingHours],
-    ["ET overlap", overlap ?? ""],
-    ["Full US shift", row.willing_full_shift ? "Willing to work a full US shift" : ""],
-    ["Engagement", (row.engagement ?? "").trim()],
-  ];
-  return entries.filter(([, v]) => v).map(([label, value]) => ({ label, value }));
+
+  const facts: ProfileFact[] = [];
+  const push = (label: string, value: string, detail?: string) => {
+    if (value) facts.push(detail ? { label, value, detail } : { label, value });
+  };
+  push("Employment", (row.employment_type ?? "").trim());
+  push("Earliest start", (row.start_date ?? "").trim());
+  // Primary = derived overlap; secondary detail = the raw hours note (when any).
+  push("US overlap", overlap ?? "", workingHours || undefined);
+  push("Full US shift", row.willing_full_shift ? "Willing to work a full US shift" : "");
+  push("Engagement", (row.engagement ?? "").trim());
+  return facts;
 }
 
 /** Map an applications row (+ its assessment) to the full profile view-model. */
@@ -477,9 +480,10 @@ export function applicationToProfile(
 ): CandidateProfile {
   const comp = compensation(row);
   const compResolved = resolveCompensation(row);
-  // ET overlap: structured et_overlap_hours, else computed from confirmed avail
-  // times, else nothing (never echo free-text).
-  const overlap = overlapPhrase(row) ?? resolveEtOverlap(row).value;
+  // US (ET) overlap: derived from the confirmed start/finish + timezone at the
+  // current ET offset (resolveEtOverlap); nothing when those are missing — never a
+  // guess, never the free-text note.
+  const overlap = resolveEtOverlap(row).value;
   const rawAvailability = (row.availability ?? "").trim() || undefined;
   const location = [row.city, row.country ?? row.state].filter(Boolean).join(", ") || undefined;
 
@@ -511,7 +515,7 @@ export function applicationToProfile(
   if (comp) decision.push({ label: "Compensation", value: compResolved.line ?? comp.value });
   if (availability) decision.push({ label: "Availability", value: availability });
   if (earliestStart) decision.push({ label: "Earliest start", value: earliestStart });
-  if (overlap) decision.push({ label: "ET overlap", value: overlap });
+  if (overlap) decision.push({ label: "US overlap", value: overlap });
 
   // Experience label: exact only from confirmed data, else a grammatical range.
   const qualLine = [row.qualification?.trim(), resolveExperienceLabel(row).value].filter(Boolean).join(" · ");
@@ -587,7 +591,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { value: "4", label: "tax seasons", verified: true },
     ],
     location: "Ahmedabad, India",
-    overlap: "4+ hours ET overlap",
+    overlap: "~4 hours ET overlap",
     availability: "Available within 30 days",
     availabilityConfirmed: "Confirmed 22 Jul 2026",
     compensation: { value: "$900–$1,200", unit: "USD / month" },
@@ -650,8 +654,7 @@ export const sampleProfiles: CandidateProfile[] = [
     preferences: [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Within 30 days" },
-      { label: "Preferred hours", value: "3:30 PM–11:30 PM IST" },
-      { label: "ET overlap", value: "4+ hours ET overlap" },
+      { label: "US overlap", value: "~4 hours ET overlap", detail: "3:30 PM–11:30 PM IST" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Employer of record / contractor" },
     ],
@@ -659,7 +662,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Target role", value: "US Tax Preparer" },
       { label: "Compensation", value: "$900–$1,200/month" },
       { label: "Availability", value: "Available within 30 days" },
-      { label: "ET overlap", value: "4+ hours ET overlap" },
+      { label: "US overlap", value: "~4 hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },
@@ -677,7 +680,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { value: "3", label: "years remote US" },
     ],
     location: "Manila, Philippines",
-    overlap: "6+ hours ET overlap",
+    overlap: "~6 hours ET overlap",
     availability: "Available immediately",
     availabilityConfirmed: "Confirmed 20 Jul 2026",
     compensation: { value: "$700–$950", unit: "USD / month" },
@@ -721,8 +724,7 @@ export const sampleProfiles: CandidateProfile[] = [
     preferences: [
       { label: "Employment", value: "Full-time" },
       { label: "Earliest start", value: "Immediately" },
-      { label: "Preferred hours", value: "9:00 PM–5:00 AM PHT" },
-      { label: "ET overlap", value: "6+ hours ET overlap" },
+      { label: "US overlap", value: "~6 hours ET overlap", detail: "9:00 PM–5:00 AM PHT" },
       { label: "Full US shift", value: "Willing to work a full US shift" },
       { label: "Engagement", value: "Contractor" },
     ],
@@ -730,7 +732,7 @@ export const sampleProfiles: CandidateProfile[] = [
       { label: "Target role", value: "Bookkeeper" },
       { label: "Compensation", value: "$700–$950/month" },
       { label: "Availability", value: "Available immediately" },
-      { label: "ET overlap", value: "6+ hours ET overlap" },
+      { label: "US overlap", value: "~6 hours ET overlap" },
       { label: "Preference", value: "Full-time" },
     ],
   },

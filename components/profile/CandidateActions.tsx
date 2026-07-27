@@ -13,6 +13,9 @@ import {
   type IntroState,
 } from "@/app/actions";
 import type { ProfileCtaState } from "@/lib/profile/candidate";
+import { PREVIEW_TITLE, primaryIsLive } from "@/lib/profile/previewInteractivity";
+
+export { primaryIsLive };
 
 /*
   The profile's interactive controls. The primary action is DRIVEN BY the
@@ -153,7 +156,11 @@ export function CandidateActions({
     const base = `${BASE} ${extra}`;
     if (previewDisabled) {
       return (
-        <span className={`${base} ${disabled} cursor-not-allowed`} aria-disabled>
+        <span
+          className={`${base} ${disabled} cursor-not-allowed opacity-60`}
+          aria-disabled
+          title={PREVIEW_TITLE}
+        >
           {previewLabel}
         </span>
       );
@@ -172,8 +179,15 @@ export function CandidateActions({
           </a>
         );
       case "request":
+        // primaryIsLive is the single gate for attaching the mutating handler; in
+        // preview the early return above already renders an inert span, and this
+        // guard ensures the handler can never attach even if that changed.
         return (
-          <button type="button" onClick={() => setOpen(true)} className={`${base} ${solid}`}>
+          <button
+            type="button"
+            onClick={primaryIsLive(cta, previewDisabled) ? () => setOpen(true) : undefined}
+            className={`${base} ${solid}`}
+          >
             Request introduction
           </button>
         );
@@ -218,10 +232,11 @@ export function CandidateActions({
       aria-label={saveAria}
       aria-disabled={previewDisabled || undefined}
       disabled={savePending || previewDisabled}
+      title={previewDisabled ? PREVIEW_TITLE : undefined}
       onClick={previewDisabled ? undefined : toggleSave}
       className={`inline-flex items-center justify-center gap-2 rounded-card border px-5 py-3 text-small font-semibold text-paper transition disabled:opacity-70 ${
-        saved ? "border-verified bg-verified/10" : "border-paper/30 hover:border-paper/60"
-      } ${FOCUS_PAPER} ${extra}`}
+        previewDisabled ? "cursor-not-allowed" : ""
+      } ${saved ? "border-verified bg-verified/10" : "border-paper/30 hover:border-paper/60"} ${FOCUS_PAPER} ${extra}`}
     >
       <BookmarkSimple
         size={16}

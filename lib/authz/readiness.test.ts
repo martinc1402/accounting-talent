@@ -130,10 +130,12 @@ describe("resolvers", () => {
     expect(unconf.basis).toBeUndefined();
     expect(unconf.needsConfirmation).toBe(true);
   });
-  it("(8) ET overlap only with start+finish; computes 4h for 3:30–11:30 PM IST", () => {
+  it("(8) US overlap only with start+finish; ~4h (EST) or ~5h (EDT) for 3:30–11:30 PM IST", () => {
     expect(resolveEtOverlap({ availability: "partial overlap" }).value).toBeUndefined();
+    // Uses the CURRENT ET offset (live clock), so the count is 4 in winter, 5 in
+    // summer — assert the derived format, not a season-specific number.
     const v = resolveEtOverlap(ready({ avail_start_time: "15:30", avail_finish_time: "23:30" }));
-    expect(v.value).toBe("4+ hours ET overlap");
+    expect(v.value).toMatch(/^~[45] hours ET overlap$/);
   });
 });
 

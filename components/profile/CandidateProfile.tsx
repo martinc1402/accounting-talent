@@ -505,13 +505,24 @@ function DecisionPanel({ p }: { p: CandidateProfileData }) {
           initialSaved={p.saved}
         />
       </div>
-      <a
-        href="#how-it-works"
-        className="mt-3.5 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
-      >
-        What happens next?
-        <CaretRight size={11} weight="bold" aria-hidden />
-      </a>
+      {p.access?.candidatePreview ? (
+        <span
+          aria-disabled
+          title="Shown for preview only"
+          className="mt-3.5 inline-flex cursor-not-allowed items-center gap-1.5 py-0.5 text-caption font-medium text-paper/40"
+        >
+          What happens next?
+          <CaretRight size={11} weight="bold" aria-hidden />
+        </span>
+      ) : (
+        <a
+          href="#how-it-works"
+          className="mt-3.5 inline-flex items-center gap-1.5 py-0.5 text-caption font-medium text-paper/75 underline-offset-4 hover:text-paper hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-paper focus-visible:ring-offset-2 focus-visible:ring-offset-navy"
+        >
+          What happens next?
+          <CaretRight size={11} weight="bold" aria-hidden />
+        </a>
+      )}
       <p className="mt-4 text-fine text-paper/70">
         Contact details are shared only after an introduction is accepted.
       </p>
@@ -778,6 +789,7 @@ export function CandidateProfile({
                         {pref.label}
                       </div>
                       <div className="mt-1 text-small font-medium text-ink">{pref.value}</div>
+                      {pref.detail && <div className="mt-0.5 text-caption text-muted">{pref.detail}</div>}
                     </div>
                   ))}
                 </div>

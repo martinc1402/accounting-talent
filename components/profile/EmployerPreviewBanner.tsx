@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation";
   different viewer level; Exit returns to the owner view with scroll preserved.
 */
 const MODES = [
-  { value: "public", label: "Public (logged out)" },
-  { value: "employer", label: "Before introduction" },
+  { value: "public", label: "Public (anyone online)" },
+  { value: "employer", label: "Verified employers" },
   { value: "introduced", label: "After accepted introduction" },
 ] as const;
 
@@ -23,17 +23,19 @@ export function EmployerPreviewBanner({
 }) {
   const router = useRouter();
   return (
-    <div className="fixed inset-x-0 top-0 z-50 border-b border-amber-600/40 bg-amber-400 text-amber-950 shadow-sm">
-      <div className="mx-auto flex max-w-[1160px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 lg:px-8">
-        <span className="text-small font-semibold">
+    <div className="fixed inset-x-0 top-0 z-50 h-12 border-b border-amber-600/40 bg-amber-400 text-amber-950 shadow-sm">
+      <div className="mx-auto flex h-12 max-w-[1160px] flex-nowrap items-center gap-x-3 px-4 lg:px-8">
+        {/* On narrow screens the amber bar + stage dropdown already signal preview,
+            so the lead sentence is hidden rather than truncated to a stray glyph. */}
+        <span className="hidden truncate text-small font-semibold sm:inline">
           You&rsquo;re previewing how employers see your profile
         </span>
-        <label className="ml-auto flex items-center gap-2 text-caption font-medium">
+        <label className="ml-auto flex min-w-0 shrink items-center gap-2 text-caption font-medium">
           <span className="sr-only">Preview stage</span>
           <select
             value={mode}
             onChange={(e) => router.push(`/candidates/${candidateId}?viewAs=${e.target.value}`, { scroll: false })}
-            className="rounded-card border border-amber-700/40 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
+            className="min-w-0 truncate rounded-card border border-amber-700/40 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
           >
             {MODES.map((m) => (
               <option key={m.value} value={m.value}>
@@ -45,7 +47,7 @@ export function EmployerPreviewBanner({
         <button
           type="button"
           onClick={() => router.push(`/candidates/${candidateId}`, { scroll: false })}
-          className="rounded-card border border-amber-800/50 px-3 py-1 text-caption font-semibold text-amber-950 hover:bg-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
+          className="shrink-0 whitespace-nowrap rounded-card border border-amber-800/50 px-3 py-1 text-caption font-semibold text-amber-950 hover:bg-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
         >
           Exit preview
         </button>

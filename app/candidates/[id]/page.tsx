@@ -262,7 +262,13 @@ export default async function CandidateProfilePage({
       ? await isCandidateSaved(accountId, id)
       : false;
 
-  const nav = navFromViewer(viewer);
+  // In owner-preview, render the header EXACTLY as the previewed viewer sees it
+  // (public → logged-out header; employer/introduced → employer header), fully inert.
+  const nav = candidatePreview
+    ? candidatePreview === "public"
+      ? { authenticated: false, preview: true }
+      : { authenticated: true, role: "employer" as const, preview: true }
+    : navFromViewer(viewer);
 
   // Admin readiness (draft banner + checklist + publication requirements). Only
   // ever sent to admins; suppressed in bare mode so the view is chrome-free.
