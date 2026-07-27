@@ -976,6 +976,45 @@ export async function candidateApprovePublication(applicationId: string): Promis
   );
 }
 
+// Statuses in which AccountingTalent has completed its review, so the candidate is
+// allowed to flip their own live listing (published <-> paused) themselves.
+const CANDIDATE_TOGGLEABLE_STATUSES = new Set(["approved", "published", "paused"]);
+
+/* Candidate flips their OWN live listing between published and paused. Only once AT
+   has approved the profile (status in CANDIDATE_TOGGLEABLE_STATUSES) — never from a
+   draft/under-review state, so a candidate can't self-publish ahead of AT. Going
+   live re-checks the SAME publicationRequirements the admin publish path enforces,
+   so a toggle can never expose an incomplete profile. */
+export async function candidateSetPublished(
+  applicationId: string,
+  published: boolean,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const { data: row } = await supabase!.from("applications").select("*").eq("id", gate.id).maybeSingle();
+  if (!row) return { status: "error", message: "Profile not found." };
+
+  const current = String((row as ReadinessRow).profile_status ?? "draft");
+  if (!CANDIDATE_TOGGLEABLE_STATUSES.has(current)) {
+    return { status: "error", message: "AccountingTalent is still reviewing your profile — you can publish once it's approved." };
+  }
+
+  if (published) {
+    const req = publicationRequirements(row as ReadinessRow);
+    if (!req.met) {
+      return { status: "error", message: `Can't publish yet — still needed: ${req.missing.join(", ")}.` };
+    }
+  }
+
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { profile_status: published ? "published" : "paused" },
+    published ? "candidate_published" : "candidate_unpublished",
+  );
+}
+
 export type WaitlistState = {
   status: "idle" | "success" | "error";
   message?: string;

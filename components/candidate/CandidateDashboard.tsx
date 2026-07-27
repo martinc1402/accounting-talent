@@ -10,6 +10,7 @@ import {
   candidateConfirmEducation,
   candidateConfirmCompensationBasis,
   candidateApprovePublication,
+  candidateSetPublished,
 } from "@/app/actions";
 
 /*
@@ -53,10 +54,10 @@ const BTN =
   "rounded-card bg-navy px-5 py-3 text-small font-semibold text-paper transition hover:bg-navy-deep active:translate-y-px disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2";
 const ERR = "mt-1.5 text-caption font-medium text-red-700";
 
-function Confirmed() {
+function Confirmed({ label = "Confirmed" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-verified-deep">
-      <CheckCircle size={15} weight="fill" aria-hidden /> Confirmed
+      <CheckCircle size={15} weight="fill" aria-hidden /> {label}
     </span>
   );
 }
@@ -65,18 +66,21 @@ function Section({
   title,
   hint,
   confirmed,
+  badge,
   children,
 }: {
   title: string;
   hint?: string;
   confirmed?: boolean;
+  // Overrides the default confirmed / needs-confirmation status pill in the header.
+  badge?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-card border border-line bg-white p-6 lg:p-7">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-[1.15rem] font-medium text-ink">{title}</h2>
-        {confirmed ? <Confirmed /> : <span className="text-caption text-amber-600">Needs your confirmation</span>}
+        {badge ?? (confirmed ? <Confirmed /> : <span className="text-caption text-amber-600">Needs your confirmation</span>)}
       </div>
       {hint && <p className="mt-1 text-caption text-muted">{hint}</p>}
       <div className="mt-4">{children}</div>
@@ -379,20 +383,107 @@ export function CandidateDashboard({ data }: { data: DashboardData }) {
           </button>
         </Section>
 
-        {/* Approve for publication */}
-        <Section title="Approve for publication" hint="When your details are right, approve your profile to be shown to firms." confirmed={data.publicationApproved}>
-          <p className="text-small text-muted">
-            Your profile is only listed once AccountingTalent completes its checks — approving here records your consent to be shown (anonymously) to employers.
-          </p>
-          {/* Once approved, the Section's Confirmed badge carries the state — no greyed
-              button. Withdrawing approval isn't a candidate-facing action today. */}
-          {!data.publicationApproved && (
-            <button type="button" disabled={pending} onClick={() => run("pub", () => candidateApprovePublication(data.id), "Thanks — publication approved.")} className={`mt-5 ${BTN}`}>
-              {busy === "pub" ? "Saving…" : "Approve my profile"}
-            </button>
-          )}
-        </Section>
+        {/* Publication. Two phases:
+            1. Pre-review — the candidate records consent (Approve my profile). AT
+               then runs its checks and moves the profile to "approved".
+            2. Post-review — once AT has approved (status approved/published/paused),
+               the candidate owns a live on/off switch (publish <-> pause). */}
+        <PublicationSection data={data} busy={busy} pending={pending} run={run} />
       </div>
     </div>
+  );
+}
+
+const AT_APPROVED = new Set(["approved", "published", "paused"]);
+
+function PublicationSection({
+  data,
+  busy,
+  pending,
+  run,
+}: {
+  data: DashboardData;
+  busy: string | null;
+  pending: boolean;
+  run: (key: string, fn: () => Promise<{ status: string; message?: string }>, ok: string) => void;
+}) {
+  const canToggle = AT_APPROVED.has(data.profileStatus);
+  const isLive = data.profileStatus === "published";
+
+  // Phase 2: AT has approved — the candidate flips their own live listing.
+  if (canToggle) {
+    return (
+      <Section
+        title="Publication"
+        badge={
+          isLive ? (
+            <Confirmed label="Published" />
+          ) : (
+            <span className="text-caption font-semibold text-amber-600">Unpublished</span>
+          )
+        }
+      >
+        <div className="flex items-center justify-between gap-4 rounded-card border border-line p-4">
+          <div>
+            <p className="text-small font-semibold text-ink">
+              {isLive ? "Your profile is live" : "Your profile is hidden"}
+            </p>
+            <p className="mt-0.5 text-caption text-muted">
+              {isLive
+                ? "Verified employers can find it and request an introduction. Switch off any time to take it down."
+                : "Publish to let verified employers find your profile. You can switch it off again whenever you like."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isLive}
+            aria-label="List my profile to employers"
+            disabled={pending}
+            onClick={() =>
+              run(
+                "pub",
+                () => candidateSetPublished(data.id, !isLive),
+                isLive ? "Your profile is now unpublished." : "Your profile is now live.",
+              )
+            }
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2 ${
+              isLive ? "bg-navy" : "bg-line"
+            }`}
+          >
+            <span
+              className={`inline-block size-5 transform rounded-full bg-white shadow transition ${
+                isLive ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+      </Section>
+    );
+  }
+
+  // Phase 1: pre-review consent.
+  return (
+    <Section
+      title="Approve for publication"
+      hint="When your details are right, approve your profile to be shown to firms."
+      confirmed={data.publicationApproved}
+    >
+      <p className="text-small text-muted">
+        {data.publicationApproved
+          ? "Approved — AccountingTalent is completing its checks. Once it's done you'll be able to publish your profile here and switch it on or off any time."
+          : "Your profile is only listed once AccountingTalent completes its checks — approving here records your consent to be shown (anonymously) to employers."}
+      </p>
+      {!data.publicationApproved && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run("pub", () => candidateApprovePublication(data.id), "Thanks — publication approved.")}
+          className={`mt-5 ${BTN}`}
+        >
+          {busy === "pub" ? "Saving…" : "Approve my profile"}
+        </button>
+      )}
+    </Section>
   );
 }
