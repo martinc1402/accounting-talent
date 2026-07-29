@@ -424,7 +424,7 @@ export const honest = {
   h2: "Where we are right now",
   lede: "We'll be straight with you, because you've seen enough websites that aren't.",
   body: [
-    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. We open it to US\u00A0accounting firms in ${LAUNCH_WORKER}.`,
+    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. US\u00A0firms start hiring from it in ${LAUNCH_WORKER}.`,
   ],
   // Pulled out of `body` and given its own field because it is the sentence the
   // whole brand rests on. Same words, its own weight on the page.
@@ -451,7 +451,7 @@ export const honest = {
 } as const;
 
 export const finalCta = {
-  h2: `The database opens to US\u00A0firms in ${LAUNCH_WORKER_SHORT}. Be in it on day one.`,
+  h2: `US\u00A0firms start hiring in ${LAUNCH_WORKER_SHORT}. Be in the database on day one.`,
   // Same label as the hero. One intent, one label, everywhere on the page.
   cta: "Apply free, takes 3\u00A0minutes",
   referral:
