@@ -1,57 +1,18 @@
 import "server-only";
-import { Resend } from "resend";
 
 /*
   The three Stage 2 emails, verbatim from spec Part 4. Plain text on purpose: the
   spec is explicit that "trust reads better than HTML gloss for this audience."
 
-  Sending is environment-keyed, per the agreed behaviour:
-  - Development (VERCEL_ENV !== "production"): if RESEND_API_KEY is missing, log
-    the fully composed email prefixed [EMAIL-MOCK] and report success, so the
-    whole invite/result flow is testable without Resend or DNS.
-  - Production: a missing key or any Resend error reports FAILURE. Callers must
-    not complete their state transition unless send() returned ok — no "verified
-    but never told them" rows.
+  The transport (sendEmail, the dev [EMAIL-MOCK] behaviour, from/reply-to) moved
+  to lib/email.ts once auth started sending its own mail. It is re-exported here
+  so existing call sites keep importing it from where they always have.
 */
 
-const FROM = "AccountingTalent.in <hello@mail.accountingtalent.in>";
-const REPLY_TO = "contact@accountingtalent.in";
+import type { Composed } from "@/lib/email";
 
-const apiKey = process.env.RESEND_API_KEY;
-export const resendConfigured = Boolean(apiKey);
-const isProd = process.env.VERCEL_ENV === "production";
-
-const resend = apiKey ? new Resend(apiKey) : null;
-
-export type Composed = { subject: string; text: string };
-export type SendResult = { ok: boolean; error?: string; mocked?: boolean };
-
-export async function sendEmail(to: string, email: Composed): Promise<SendResult> {
-  if (!resend) {
-    if (isProd) {
-      return { ok: false, error: "RESEND_API_KEY is not set in production" };
-    }
-    // Dev mock: prove exactly what would have gone out.
-    console.info(
-      `[EMAIL-MOCK] to=${to} from=${FROM}\n[EMAIL-MOCK] subject: ${email.subject}\n[EMAIL-MOCK] body:\n${email.text}`,
-    );
-    return { ok: true, mocked: true };
-  }
-
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM,
-      to,
-      replyTo: REPLY_TO,
-      subject: email.subject,
-      text: email.text,
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
+export { sendEmail, resendConfigured } from "@/lib/email";
+export type { Composed, SendResult } from "@/lib/email";
 
 // Applicant's first name for the greeting, falling back to a friendly default.
 // Shared by the Stage 1 confirmation and the Stage 2 assessment emails.

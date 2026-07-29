@@ -32,6 +32,12 @@ const INVITE_URL = `${BASE_URL}/api/admin/assessment/invite`;
 const ELIGIBLE_TIERS = ["waitlist", "standard", "fast_track"];
 const TIER_RANK = { fast_track: 3, standard: 2, waitlist: 1 };
 
+// Non-real / non-deliverable applicants that must never get an invite. The E2E
+// dev-harness account uses the reserved `.test` TLD (RFC 6761), which is not a
+// deliverable domain, so we drop anything @*.test automatically. Without this the
+// e2e account (2fc86c72-…) lingers forever in the "uninvited" list.
+const isTestEmail = (email) => /\.test$/i.test((email ?? "").trim());
+
 const SEND_INTERVAL_MS = 7000; // ~8.5/min, under the 10/min limit
 const THROTTLE_BACKOFF_MS = 65000; // 404 => wait past the 60s sliding window
 const MAX_THROTTLE_RETRIES = 5;
@@ -67,7 +73,11 @@ async function main() {
   if (aErr) throw new Error(`assessments query failed: ${aErr.message}`);
   const invited = new Set(rows.map((r) => r.application_id));
 
-  const uninvited = apps.filter((a) => !invited.has(a.id));
+  const uninvitedAll = apps.filter((a) => !invited.has(a.id));
+  // Test-harness accounts (@*.test) are never real recipients — hold them out and
+  // report separately so they stop showing up as "would send".
+  const skippedTest = uninvitedAll.filter((a) => isTestEmail(a.email));
+  const uninvited = uninvitedAll.filter((a) => !isTestEmail(a.email));
 
   // Emails that already have an invite (via some other application row). A person
   // who applied twice and was already invited on one row must NOT be re-invited on
@@ -110,9 +120,16 @@ async function main() {
   // 4. Report.
   console.log(
     `\nEligible (${ELIGIBLE_TIERS.join(", ")}): ${apps.length}  |  ` +
-      `already have an assessment row: ${apps.length - uninvited.length}  |  ` +
-      `uninvited: ${uninvited.length}`,
+      `already have an assessment row: ${apps.length - uninvitedAll.length}  |  ` +
+      `uninvited: ${uninvited.length}` +
+      (skippedTest.length ? ` (+${skippedTest.length} test account excluded)` : ""),
   );
+  if (skippedTest.length) {
+    console.log(`\nTest-harness account (@*.test) — never invited:`);
+    for (const a of skippedTest) {
+      console.log(`  SKIP  ${a.email}  ${a.tier}  ${a.full_name}  (${a.id})`);
+    }
+  }
   if (skippedAlreadyInvited.length) {
     console.log(`\nEmail already invited under another application row — skipping:`);
     for (const a of skippedAlreadyInvited) {

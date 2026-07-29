@@ -17,6 +17,20 @@ import {
   firstNameOf,
   sendEmail,
 } from "@/lib/assessment/emails";
+import { getViewer } from "@/lib/authz/viewer";
+import { deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
+import { isPublished, publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
+import { isAtReviewed } from "@/lib/candidate/visibilityStatus";
+import { entitlementsFor } from "@/lib/authz/plans";
+import { EMPLOYER_SIGNUP_OPEN } from "@/lib/authz/employerSignup";
+import { canCreateIntroduction } from "@/lib/authz/introductions";
+import {
+  countActiveIntroductions,
+  getViewerIntroduction,
+  insertIntroduction,
+  transitionIntroduction,
+} from "@/lib/authz/introductionsRepo";
+import type { IntroductionStatus } from "@/lib/authz/types";
 
 /*
   Server Functions are reachable by direct POST, not just through our UI, so
@@ -320,6 +334,882 @@ export async function submitEmployerLead(
   });
 
   return { status: "success" };
+}
+
+/*
+  A firm asking to be introduced to a verified candidate, from the profile page's
+  "Request introduction" modal. AUTHORIZED: the caller must be a signed-in,
+  VERIFIED employer with introduction capacity under their plan. Every rule is
+  re-derived server-side (never trusted from the client): guards -> rate limit ->
+  validate -> AUTHORIZE (viewer + entitlement limit) -> insert (with a DB partial
+  unique index as the final backstop against duplicate active requests). Candidate
+  contact details are never returned here; identity is released only when an
+  introduction reaches `accepted`, and only to the associated employer account.
+*/
+export type IntroState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  // Extra reasons the UI can act on without re-deriving anything.
+  reason?: "unauthenticated" | "not_verified" | "at_limit" | "duplicate";
+};
+
+const applicationUuid = z.uuid();
+
+export async function requestIntroduction(
+  applicationId: string,
+  message: string,
+  guard: Guard = {},
+): Promise<IntroState> {
+  const ip = await clientIp();
+
+  if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 1200 })) {
+    logDrop("introduction", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("introduction", ip, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (rl.limited) {
+    logDrop("introduction", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) {
+    return {
+      status: "error",
+      message: "We couldn't identify that candidate. Please reopen the profile and try again.",
+    };
+  }
+  const msg = String(message ?? "").trim().slice(0, 4000) || null;
+
+  if (!supabaseConfigured || !supabase) {
+    return { status: "error", message: "Introductions are temporarily unavailable." };
+  }
+
+  // --- Authorization (server-side, non-negotiable) ---------------------------
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return {
+      status: "error",
+      reason: "unauthenticated",
+      message: "Please sign in with a verified employer account to request an introduction.",
+    };
+  }
+  const accountId = viewer.account.id;
+  const existing = await getViewerIntroduction(id, accountId);
+  const { level } = deriveVisibility(viewer, existing);
+  const entitlements = entitlementsFor(viewer.account);
+  const activeCount = await countActiveIntroductions(accountId);
+
+  const eligibility = canCreateIntroduction({ level, activeCount, entitlements });
+  if (!eligibility.ok) {
+    if (eligibility.reason === "not_verified") {
+      return {
+        status: "error",
+        reason: "not_verified",
+        message: "Verify your employer account to request introductions.",
+      };
+    }
+    return {
+      status: "error",
+      reason: "at_limit",
+      message:
+        "You've reached your plan's active-introduction limit. Upgrade to request more, or wait for a current request to close.",
+    };
+  }
+
+  // Publish gate: a candidate must be LIVE to receive a NEW introduction. An
+  // in-progress introduction continues through a pause (the profile-page gate keeps
+  // that employer's access), but a paused/unpublished profile can't be freshly
+  // requested — enforced server-side, not just by the hidden UI.
+  const { data: target } = await supabase
+    .from("applications")
+    .select("profile_status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!target || !isPublished(target as ReadinessRow)) {
+    return {
+      status: "error",
+      message: "This candidate isn't accepting new introductions right now.",
+    };
+  }
+
+  const res = await insertIntroduction({
+    applicationId: id,
+    employerAccountId: accountId,
+    createdBy: viewer.userId,
+    message: msg,
+    priority: entitlements.priority,
+  });
+
+  if (!res.ok) {
+    if (res.reason === "duplicate") {
+      return {
+        status: "error",
+        reason: "duplicate",
+        message: "You already have an active request for this candidate.",
+      };
+    }
+    return {
+      status: "error",
+      message:
+        "We couldn't send your request just now. Please try again in a moment, or email contact@accountingtalent.in.",
+    };
+  }
+
+  return { status: "success" };
+}
+
+/* Employer cancels their OWN active request. Ownership re-checked server-side. */
+export async function cancelIntroduction(introductionId: string): Promise<IntroState> {
+  const id = String(introductionId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid request." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in." };
+  }
+  const { data } = await supabase
+    .from("introduction_requests")
+    .select("id, application_id, employer_account_id, status, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as
+    | { id: string; employer_account_id: string | null; status: IntroductionStatus }
+    | null;
+  if (!row || row.employer_account_id !== viewer.account.id) {
+    // Never confirm existence of a request that isn't the viewer's.
+    return { status: "error", message: "Request not found." };
+  }
+  const result = await transitionIntroduction({
+    introductionId: id,
+    from: row.status,
+    to: "cancelled",
+    actorKind: "employer",
+    actorUserId: viewer.userId,
+  });
+  if (!result.ok) return { status: "error", message: "That request can no longer be cancelled." };
+  return { status: "success" };
+}
+
+/* Admin-only: drive an introduction through its lifecycle (review, invite,
+   accept/decline on the candidate's behalf until candidate auth exists). */
+export async function adminTransitionIntroduction(
+  introductionId: string,
+  to: IntroductionStatus,
+): Promise<IntroState> {
+  const id = String(introductionId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid request." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) {
+    return { status: "error", message: "Not authorized." };
+  }
+  const { data } = await supabase
+    .from("introduction_requests")
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle();
+  const row = data as { id: string; status: IntroductionStatus } | null;
+  if (!row) return { status: "error", message: "Request not found." };
+
+  const result = await transitionIntroduction({
+    introductionId: id,
+    from: row.status,
+    to,
+    actorKind: "admin",
+    actorUserId: viewer.userId,
+  });
+  if (!result.ok) {
+    return { status: "error", message: `Cannot move ${row.status} -> ${to}.` };
+  }
+  await supabase.from("admin_actions").insert({
+    action: "introduction_transition",
+    detail: `${row.status} -> ${to}`,
+    actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
+/* Create the caller's employer account + owner membership (once). Signed-in only.
+
+   Gated by EMPLOYER_SIGNUP_OPEN, which is false at this stage: firms submit a
+   brief on /employers and we provision accounts by hand from reviewed leads. The
+   check is first in the function, before the session lookup and before any
+   write, because this action is the door — the create form in EmployerPanel is
+   only the handle on it. */
+export async function createEmployerAccount(name: string): Promise<IntroState> {
+  if (!EMPLOYER_SIGNUP_OPEN) {
+    return {
+      status: "error",
+      message:
+        "Employer accounts aren't open yet. Tell us who you're hiring at /employers and we'll be in touch.",
+    };
+  }
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user") {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in first." };
+  }
+  if (viewer.account) return { status: "success" }; // already has one
+
+  // Mutual exclusivity: an account is either an employer OR a candidate, never
+  // both. If this user owns a candidate application, block employer sign-up.
+  const { data: owned } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("user_id", viewer.userId)
+    .limit(1)
+    .maybeSingle();
+  if (owned) {
+    return {
+      status: "error",
+      message:
+        "This account is registered as a candidate, so it can't also be an employer. Please use a different email for employer access.",
+    };
+  }
+
+  const firmName = String(name ?? "").trim().slice(0, 200);
+  if (!firmName) return { status: "error", message: "Enter your firm name." };
+
+  const { data, error } = await supabase
+    .from("employer_accounts")
+    .insert({ name: firmName })
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { status: "error", message: "Could not create account." };
+
+  const { error: memErr } = await supabase
+    .from("employer_members")
+    .insert({ employer_account_id: (data as { id: string }).id, user_id: viewer.userId, member_role: "owner" });
+  if (memErr) return { status: "error", message: "Could not link account." };
+  return { status: "success" };
+}
+
+/* Move the caller's employer account to `pending` verification. */
+export async function requestEmployerVerification(): Promise<IntroState> {
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { status: "error", reason: "unauthenticated", message: "Please sign in." };
+  }
+  if (viewer.account.verificationState === "verified") return { status: "success" };
+  const { error } = await supabase
+    .from("employer_accounts")
+    .update({ verification_state: "pending" })
+    .eq("id", viewer.account.id);
+  if (error) return { status: "error", message: "Could not start verification." };
+  return { status: "success" };
+}
+
+/* Admin-only test control: switch an employer account between free and paid.
+   Not a billing workflow — for exercising entitlements locally. */
+export async function adminSetEmployerPlan(
+  employerAccountId: string,
+  plan: "free" | "paid",
+): Promise<IntroState> {
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) return { status: "error", message: "Not authorized." };
+  if (plan !== "free" && plan !== "paid") return { status: "error", message: "Invalid plan." };
+
+  const { error } = await supabase
+    .from("employer_accounts")
+    .update({ plan, plan_updated_at: new Date().toISOString() })
+    .eq("id", String(employerAccountId));
+  if (error) return { status: "error", message: "Update failed." };
+
+  await supabase.from("admin_actions").insert({
+    action: "employer_plan_set",
+    detail: `account=${employerAccountId} plan=${plan}`,
+    actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
+/* Save / unsave a candidate to the employer's shortlist. Verified employers only;
+   scoped to the viewer's account; the DB unique index prevents duplicates. */
+export type SaveState = { status: "success" | "error"; saved?: boolean; reason?: "unauthenticated" | "not_verified"; message?: string };
+
+async function requireVerifiedEmployer(): Promise<
+  { ok: true; accountId: string; userId: string } | { ok: false; res: SaveState }
+> {
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.account) {
+    return { ok: false, res: { status: "error", reason: "unauthenticated", message: "Sign in with an employer account." } };
+  }
+  if (viewer.account.verificationState !== "verified") {
+    return { ok: false, res: { status: "error", reason: "not_verified", message: "Verify your employer account to save candidates." } };
+  }
+  return { ok: true, accountId: viewer.account.id, userId: viewer.userId };
+}
+
+export async function saveCandidate(applicationId: string): Promise<SaveState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const gate = await requireVerifiedEmployer();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("saved_candidates")
+    .insert({ employer_account_id: gate.accountId, application_id: id, created_by: gate.userId });
+  // 23505 = already saved; treat as success (idempotent, no duplicate row).
+  if (error && error.code !== "23505") return { status: "error", message: "Could not save." };
+  return { status: "success", saved: true };
+}
+
+export async function unsaveCandidate(applicationId: string): Promise<SaveState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const gate = await requireVerifiedEmployer();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("saved_candidates")
+    .delete()
+    .eq("employer_account_id", gate.accountId)
+    .eq("application_id", id);
+  if (error) return { status: "error", message: "Could not update." };
+  return { status: "success", saved: false };
+}
+
+/* Admin-only: reconfirm a candidate's availability (stamps now). Stamps the
+   structured-availability confirmation — the single source of truth the profile
+   mapper, readiness panel and publication gate all read (equivalent to
+   adminConfirmField(id, "availability")). */
+export async function adminReconfirmAvailability(applicationId: string): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) return { status: "error", message: "Not authorized." };
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ availability_structured_confirmed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "availability_reconfirmed",
+    application_id: id,
+    actor: viewer.email,
+  });
+  return { status: "success" };
+}
+
+/* --- Profile readiness (admin) ------------------------------------------------
+   The admin readiness panel drives three narrow actions. None of them edit
+   applicant content — they only record confirmations and checks (stamping a
+   timestamp) and move the publication status. Publication itself is gated
+   server-side by publicationRequirements(): the minimum data + AT checks must be
+   present, so an admin can never publish an incomplete profile from the UI. */
+
+const PROFILE_STATUSES = [
+  "draft",
+  "needs_candidate_confirmation",
+  "under_assessment",
+  "approved",
+  "published",
+  "paused",
+] as const;
+
+// A confirmable field key → the *_confirmed_at column it stamps. These are
+// candidate-provided confirmations, not AccountingTalent verifications.
+const CONFIRM_COLUMNS: Record<string, string> = {
+  role: "role_confirmed_at",
+  experience: "experience_confirmed_at",
+  compensation_basis: "compensation_basis_confirmed_at",
+  availability: "availability_structured_confirmed_at",
+  software: "software_confirmed_at",
+  education: "education_confirmed_at",
+  candidate_publication: "candidate_publication_approved_at",
+};
+
+// An AccountingTalent check → the *_verified/assessed_at column it stamps.
+const CHECK_COLUMNS: Record<string, string> = {
+  identity: "identity_verified_at",
+  english: "english_assessed_at",
+  qualification: "qualification_verified_at",
+};
+
+async function requireAdmin(): Promise<
+  { ok: true; email: string | null } | { ok: false; res: IntroState }
+> {
+  const viewer = await getViewer();
+  if (viewer.kind !== "user" || !viewer.isAdmin) {
+    return { ok: false, res: { status: "error", message: "Not authorized." } };
+  }
+  return { ok: true, email: viewer.email };
+}
+
+/* Move a profile between readiness states. Publishing is blocked unless the
+   publication requirements are met (checked against the live row). */
+export async function adminSetProfileStatus(
+  applicationId: string,
+  status: string,
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  if (!(PROFILE_STATUSES as readonly string[]).includes(status)) {
+    return { status: "error", message: "Invalid status." };
+  }
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const patch: Record<string, unknown> = { profile_status: status };
+  if (status === "published") {
+    const { data: row } = await supabase.from("applications").select("*").eq("id", id).maybeSingle();
+    if (!row) return { status: "error", message: "Candidate not found." };
+    const req = publicationRequirements(row as ReadinessRow);
+    if (!req.met) {
+      return { status: "error", message: `Cannot publish — missing: ${req.missing.join(", ")}` };
+    }
+    // Stamp published_at on first publish; preserve it across later pause/resume.
+    if (!(row as { published_at?: string | null }).published_at) {
+      patch.published_at = new Date().toISOString();
+    }
+  }
+
+  const { error } = await supabase
+    .from("applications")
+    .update(patch)
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_status_set",
+    application_id: id,
+    detail: `status=${status}`,
+    actor: gate.email,
+  });
+  return { status: "success" };
+}
+
+/* Toggle a candidate-provided confirmation (stamps now, or clears it). */
+export async function adminConfirmField(
+  applicationId: string,
+  key: string,
+  confirmed: boolean = true,
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const column = CONFIRM_COLUMNS[key];
+  if (!column) return { status: "error", message: "Unknown field." };
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const { error } = await supabase
+    .from("applications")
+    .update({ [column]: confirmed ? new Date().toISOString() : null })
+    .eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_field_confirmed",
+    application_id: id,
+    detail: `field=${key} confirmed=${confirmed}`,
+    actor: gate.email,
+  });
+  return { status: "success" };
+}
+
+/* Record an AccountingTalent check (identity / English / qualification). English
+   also carries the assessed level. Stamps now, or clears the check. */
+export async function adminVerifyCheck(
+  applicationId: string,
+  check: string,
+  opts: { confirmed?: boolean; englishLevel?: string } = {},
+): Promise<IntroState> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
+  if (!supabase) return { status: "error", message: "Unavailable." };
+  const column = CHECK_COLUMNS[check];
+  if (!column) return { status: "error", message: "Unknown check." };
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const confirmed = opts.confirmed ?? true;
+  const patch: Record<string, unknown> = { [column]: confirmed ? new Date().toISOString() : null };
+  if (check === "english" && confirmed && opts.englishLevel) patch.english_level = opts.englishLevel;
+
+  const { error } = await supabase.from("applications").update(patch).eq("id", id);
+  if (error) return { status: "error", message: "Update failed." };
+  await supabase.from("admin_actions").insert({
+    action: "profile_check_recorded",
+    application_id: id,
+    detail: `check=${check} confirmed=${confirmed}`,
+    actor: gate.email,
+  });
+  return { status: "success" };
+}
+
+/* --- Candidate self-service (owner-scoped) ------------------------------------
+   The candidate dashboard (/candidates/me) lets a candidate provide + confirm
+   THEIR OWN candidate-provided data. Every action re-authorizes ownership from
+   scratch (isApplicationOwner against applications.user_id) and only ever writes
+   candidate-provided fields + the candidate-confirmation timestamps the readiness
+   model already reads. Candidates can NEVER set AccountingTalent verification
+   checks (identity/English/qualification), the publication status, or make a photo
+   public — those are admin-only / non-existent by design. Audited via admin_actions
+   with the candidate's email as actor. */
+
+export type OwnerActionState = { status: "success" | "error"; message?: string };
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+async function requireOwner(
+  applicationId: string,
+): Promise<{ ok: true; id: string; actor: string | null } | { ok: false; res: OwnerActionState }> {
+  const id = String(applicationId ?? "").trim();
+  if (!applicationUuid.safeParse(id).success) return { ok: false, res: { status: "error", message: "Invalid profile." } };
+  if (!supabase) return { ok: false, res: { status: "error", message: "Unavailable." } };
+  const viewer = await getViewer();
+  if (viewer.kind !== "user") return { ok: false, res: { status: "error", message: "Sign in to edit your profile." } };
+  const { data } = await supabase.from("applications").select("user_id").eq("id", id).maybeSingle();
+  if (!isApplicationOwner(viewer, data as { user_id?: string | null } | null)) {
+    return { ok: false, res: { status: "error", message: "Not authorized." } };
+  }
+  return { ok: true, id, actor: viewer.email };
+}
+
+async function ownerUpdate(
+  id: string,
+  actor: string | null,
+  patch: Record<string, unknown>,
+  action: string,
+): Promise<OwnerActionState> {
+  const { error } = await supabase!.from("applications").update(patch).eq("id", id);
+  if (error) return { status: "error", message: "Could not save." };
+  await supabase!.from("admin_actions").insert({ action, application_id: id, actor, detail: "candidate self-service" });
+  return { status: "success" };
+}
+
+const availabilitySchema = z.object({
+  // Confirming availability REQUIRES the full set — a "Confirmed" badge must mean
+  // an employer sees complete, real availability, never a partial guess.
+  days: z.array(z.enum(DAYS)).min(1, "Select at least one available day").max(7),
+  startTime: z.string().regex(HHMM, "Enter a preferred start time"),
+  finishTime: z.string().regex(HHMM, "Enter a preferred finish time"),
+  timezone: z.string().trim().min(1, "Select your timezone").max(64),
+  maxHours: z.number({ error: "Enter your max hours per week" }).int().min(1).max(80),
+  busySeasonFlexible: z.boolean().optional(),
+});
+
+/* Candidate confirms their structured availability. Stamps
+   availability_structured_confirmed_at (unlocks the confirmed-availability display
+   + ET-overlap calc). */
+export async function candidateConfirmAvailability(
+  applicationId: string,
+  input: z.infer<typeof availabilitySchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = availabilitySchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Please check the availability details." };
+  }
+  const v = parsed.data;
+  const patch: Record<string, unknown> = {
+    availability_structured_confirmed_at: new Date().toISOString(),
+    avail_days: v.days,
+    avail_start_time: v.startTime,
+    avail_finish_time: v.finishTime,
+    timezone: v.timezone,
+    avail_max_weekly_hours: v.maxHours,
+  };
+  if (v.busySeasonFlexible != null) patch.avail_busy_season_flexible = v.busySeasonFlexible;
+  return ownerUpdate(gate.id, gate.actor, patch, "candidate_availability_confirmed");
+}
+
+const softwareSchema = z.array(
+  z.object({
+    name: z.string().trim().min(1).max(80),
+    // Level + years are REQUIRED per product — an empty depth reads as unconfirmed.
+    // Last used stays optional.
+    level: z.enum(["Basic", "Intermediate", "Advanced", "Expert"], {
+      error: "Choose a level for each product",
+    }),
+    years: z.number({ error: "Enter years for each product" }).int().min(0).max(50),
+    last_used: z.string().trim().max(20).optional(),
+  }),
+).max(20);
+
+/* Candidate sets their software list + optional depth (level/years/last used).
+   Marks each candidate-confirmed and stamps software_confirmed_at. */
+export async function candidateSetSoftwareDepth(
+  applicationId: string,
+  items: z.infer<typeof softwareSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = softwareSchema.safeParse(items);
+  if (!parsed.success) {
+    return { status: "error", message: parsed.error.issues[0]?.message ?? "Please check the software details." };
+  }
+  const software_proficiency = parsed.data.map((s) => ({ ...s, confirmed_by_candidate: true }));
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { software_proficiency, software_confirmed_at: new Date().toISOString() },
+    "candidate_software_confirmed",
+  );
+}
+
+const educationSchema = z.array(
+  z.object({
+    degree: z.string().trim().min(1).max(120),
+    field_of_study: z.string().trim().max(120).optional(),
+    institution: z.string().trim().max(160).optional(),
+    year: z.union([z.string().trim().max(10), z.number()]).optional(),
+    completion_status: z.enum(["Completed", "In progress"]).optional(),
+  }),
+).max(10);
+
+/* Candidate provides/confirms their education. Stamps education_confirmed_at. */
+export async function candidateConfirmEducation(
+  applicationId: string,
+  items: z.infer<typeof educationSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = educationSchema.safeParse(items);
+  if (!parsed.success) return { status: "error", message: "Please check the education details." };
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { education: parsed.data, education_confirmed_at: new Date().toISOString() },
+    "candidate_education_confirmed",
+  );
+}
+
+/* Candidate confirms the compensation basis (the up-to-N-hours/week framing). */
+export async function candidateConfirmCompensationBasis(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { compensation_basis_confirmed_at: new Date().toISOString() },
+    "candidate_compensation_basis_confirmed",
+  );
+}
+
+/* Candidate approves their profile copy for publication. Publication itself stays
+   admin+publicationRequirements-gated; this only records the candidate's approval. */
+export async function candidateApprovePublication(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    { candidate_publication_approved_at: new Date().toISOString() },
+    "candidate_publication_approved",
+  );
+}
+
+const PHOTO_BUCKET = "candidate-photos";
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+// "<id>.jpg" -> "<id>-frosted.jpg": must match the photo route's frostedObjectKey.
+const frostedKeyOf = (key: string) => key.replace(/(\.[^./]+)$/, "-frosted$1");
+
+/* Candidate uploads or replaces their OWN profile photo. Not review-gated — it goes
+   live immediately, but visibility is unchanged: the CLEAR photo only ever reaches
+   the candidate, AccountingTalent, and an employer with an accepted introduction;
+   verified employers get a downscaled+blurred derivative until then; the public
+   never sees it (see app/api/candidates/[id]/photo). Rate-limited per candidate.
+   The image is re-encoded server-side, which strips EXIF (incl. any GPS) and caps
+   dimensions, and the blurred derivative is regenerated so the two never diverge. */
+export async function candidateUploadPhoto(
+  applicationId: string,
+  formData: FormData,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const rl = await isRateLimited("candidate_photo", gate.id, { limit: 6, windowMs: 10 * 60_000 });
+  if (rl.limited) {
+    return { status: "error", message: "You've updated your photo a few times just now — please wait a few minutes and try again." };
+  }
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { status: "error", message: "Choose a photo to upload." };
+  if (file.size > MAX_PHOTO_BYTES) return { status: "error", message: "That image is too large — please use one under 5 MB." };
+  if (!ALLOWED_PHOTO_TYPES.has(file.type)) return { status: "error", message: "Please upload a PNG, JPEG, or WebP image." };
+
+  const input = Buffer.from(await file.arrayBuffer());
+
+  // Lazy-load sharp so the native module isn't pulled in for every other action.
+  const sharp = (await import("sharp")).default;
+  let clear: Buffer;
+  let frosted: Buffer;
+  try {
+    // rotate() applies EXIF orientation then metadata is dropped (default), so no
+    // location data survives. Frosted = hard downscale THEN blur, so the stored
+    // bytes carry no recoverable facial detail (not a CSS-only blur).
+    clear = await sharp(input).rotate().resize(1000, 1000, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+    frosted = await sharp(input).rotate().resize(40).blur(6).jpeg({ quality: 70 }).toBuffer();
+  } catch {
+    return { status: "error", message: "That file doesn't look like a valid image — please try another." };
+  }
+
+  // Fetch the previous key so a legacy object under a different extension (the ops
+  // script stored .png) can be cleaned up rather than orphaned.
+  const { data: prev } = await supabase!.from("applications").select("photo_url").eq("id", gate.id).maybeSingle();
+  const prevKey = String((prev as { photo_url?: string | null } | null)?.photo_url ?? "");
+
+  const key = `${gate.id}.jpg`;
+  const frostedKey = frostedKeyOf(key);
+
+  const up1 = await supabase!.storage.from(PHOTO_BUCKET).upload(key, clear, { contentType: "image/jpeg", upsert: true });
+  if (up1.error) return { status: "error", message: "Upload failed — please try again." };
+  const up2 = await supabase!.storage.from(PHOTO_BUCKET).upload(frostedKey, frosted, { contentType: "image/jpeg", upsert: true });
+  if (up2.error) return { status: "error", message: "Upload failed — please try again." };
+
+  // Best-effort: remove a superseded object pair whose key differs from the new one.
+  if (prevKey && prevKey !== key && !/^https?:\/\//i.test(prevKey) && !prevKey.startsWith("/")) {
+    await supabase!.storage.from(PHOTO_BUCKET).remove([prevKey, frostedKeyOf(prevKey)]);
+  }
+
+  return ownerUpdate(gate.id, gate.actor, { photo_url: key }, "candidate_photo_uploaded");
+}
+
+/* Candidate removes their OWN profile photo — deletes the stored clear + frosted
+   objects and clears photo_url. Idempotent (no-op if there's nothing to remove).
+   A legacy absolute-URL photo can't be deleted from our bucket, so we just clear
+   the column. */
+export async function candidateRemovePhoto(applicationId: string): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const { data: row } = await supabase!.from("applications").select("photo_url").eq("id", gate.id).maybeSingle();
+  const key = String((row as { photo_url?: string | null } | null)?.photo_url ?? "");
+  if (key && !/^https?:\/\//i.test(key) && !key.startsWith("/")) {
+    await supabase!.storage.from(PHOTO_BUCKET).remove([key, frostedKeyOf(key)]);
+  }
+
+  return ownerUpdate(gate.id, gate.actor, { photo_url: null }, "candidate_photo_removed");
+}
+
+const workPrefsSchema = z.object({
+  employmentType: z.string().trim().max(60).optional(),
+  engagement: z.string().trim().max(120).optional(),
+  willingFullShift: z.boolean().optional(),
+  earliestStart: z.string().trim().max(120).optional(),
+});
+
+/* Candidate saves their work preferences (all candidate-provided, not confirm-gated):
+   employment type, engagement, willing-full-shift, earliest start. */
+export async function candidateSaveWorkPreferences(
+  applicationId: string,
+  input: z.infer<typeof workPrefsSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+  const parsed = workPrefsSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "Please check your work preferences." };
+  const v = parsed.data;
+  const patch: Record<string, unknown> = {
+    employment_type: (v.employmentType ?? "").trim() || null,
+    engagement: (v.engagement ?? "").trim() || null,
+    start_date: (v.earliestStart ?? "").trim() || null,
+  };
+  if (v.willingFullShift != null) patch.willing_full_shift = v.willingFullShift;
+  return ownerUpdate(gate.id, gate.actor, patch, "candidate_work_preferences_saved");
+}
+
+const changeRequestSchema = z.object({
+  section: z.string().trim().min(1).max(60),
+  requestedValue: z.string().trim().max(4000).optional(),
+  note: z.string().trim().max(4000).optional(),
+});
+
+/* Candidate requests a change to an AT-maintained / confirm-only field (summary,
+   employment history, compensation, target role, …). Persisted to
+   profile_change_requests for a future admin review queue — NOT an instant edit.
+   Rate-limited per candidate. */
+export async function candidateRequestChange(
+  applicationId: string,
+  input: z.infer<typeof changeRequestSchema>,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const parsed = changeRequestSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "Please describe the change you'd like." };
+  const v = parsed.data;
+  if (!v.requestedValue && !v.note) {
+    return { status: "error", message: "Add a note describing the change you'd like." };
+  }
+
+  const rl = await isRateLimited("candidate_change", gate.id, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (rl.limited) {
+    return { status: "error", message: "You've sent a few change requests just now — please wait a little and try again." };
+  }
+
+  const { error } = await supabase!.from("profile_change_requests").insert({
+    application_id: gate.id,
+    section: v.section,
+    requested_value: v.requestedValue ?? null,
+    note: v.note ?? null,
+    actor: gate.actor,
+  });
+  if (error) return { status: "error", message: "Could not submit your request. Please try again." };
+
+  await supabase!.from("admin_actions").insert({
+    action: "candidate_change_requested",
+    application_id: gate.id,
+    detail: `section=${v.section}`,
+    actor: gate.actor,
+  });
+  return { status: "success" };
+}
+
+/* Candidate flips their OWN live listing between published and paused. Only once AT
+   has approved the profile (status in AT_REVIEWED_STATUSES) — never from a
+   draft/under-review state, so a candidate can't self-publish ahead of AT. Going
+   live re-checks the SAME publicationRequirements the admin publish path enforces,
+   so a toggle can never expose an incomplete profile. */
+export async function candidateSetPublished(
+  applicationId: string,
+  published: boolean,
+): Promise<OwnerActionState> {
+  const gate = await requireOwner(applicationId);
+  if (!gate.ok) return gate.res;
+
+  const { data: row } = await supabase!.from("applications").select("*").eq("id", gate.id).maybeSingle();
+  if (!row) return { status: "error", message: "Profile not found." };
+
+  const current = String((row as ReadinessRow).profile_status ?? "draft");
+  if (!isAtReviewed(current)) {
+    return { status: "error", message: "AccountingTalent is still reviewing your profile — you can publish once it's approved." };
+  }
+
+  if (published) {
+    const req = publicationRequirements(row as ReadinessRow);
+    if (!req.met) {
+      return { status: "error", message: `Can't publish yet — still needed: ${req.missing.join(", ")}.` };
+    }
+  }
+
+  // Stamp published_at only on the first time it goes live (keeps the original
+  // "live since" date across pause/resume).
+  const patch: Record<string, unknown> = { profile_status: published ? "published" : "paused" };
+  if (published && !(row as { published_at?: string | null }).published_at) {
+    patch.published_at = new Date().toISOString();
+  }
+
+  return ownerUpdate(
+    gate.id,
+    gate.actor,
+    patch,
+    published ? "candidate_published" : "candidate_unpublished",
+  );
 }
 
 export type WaitlistState = {

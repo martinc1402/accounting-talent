@@ -303,7 +303,7 @@ export const firms = {
       "Work history",
       "Availability and working-hour overlap",
       "Compensation expectations",
-      "References or identity verification, where completed",
+      "Identity verification, where completed",
     ],
     note: "Not every check applies to every candidate. We tell you what has been verified for the people on your shortlist, so you can interview with the full picture.",
   },

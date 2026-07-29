@@ -161,7 +161,7 @@ export const employerFaq: FaqItem[] = [
     id: "interview-before-paying",
     q: "Can I interview candidates before paying?",
     a: [
-      "Yes. You review the shortlist and interview candidates directly, at no cost. You pay only when you decide to hire someone.",
+      "Yes. You review the shortlist and interview candidates directly before deciding whether to proceed. We confirm the commercial terms with you up front, so there are no surprises.",
     ],
   },
   {
@@ -203,7 +203,7 @@ export const employerFaq: FaqItem[] = [
     id: "how-assessed",
     q: "How are candidates assessed?",
     a: [
-      "Before we introduce someone, our review may include written English, accounting knowledge, relevant software experience, US accounting or tax experience, work history, availability, and compensation expectations, with references or identity verification where completed. Not every check applies to every candidate; we tell you what has been verified for the people on your shortlist.",
+      "Before we introduce someone, our review may include written English, accounting knowledge, relevant software experience, US accounting or tax experience, work history, availability, and compensation expectations, with identity verification where completed. Not every check applies to every candidate; we tell you what has been verified for the people on your shortlist.",
     ],
   },
   {
