@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache } from "react";
-import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { loadCandidate, resolveProfileAccess } from "./access";
 import {
   applicationToProfile,
   type CandidateContact,
@@ -40,30 +40,9 @@ import type { Introduction, VisibilityLevel } from "@/lib/authz/types";
 */
 export const dynamic = "force-dynamic";
 
-const loadCandidate = cache(async (id: string) => {
-  if (!supabaseConfigured || !supabase) return null;
-
-  const { data: app, error } = await supabase
-    .from("applications")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  // No publication gate here — the page decides (published for the public,
-  // any state for admins previewing a draft).
-  if (error || !app) return null;
-
-  const { data: assessment } = await supabase
-    .from("assessments")
-    .select("writing_sample, quiz_score")
-    .eq("application_id", id)
-    .in("status", ["submitted", "passed", "failed"])
-    .order("submitted_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return { app, assessment };
-});
+// loadCandidate + the authorization gate live in ./access.ts so layout.tsx,
+// generateMetadata and this page all resolve them identically (and share the
+// queries via React.cache).
 
 const PREVIEW_LEVELS: VisibilityLevel[] = [
   "anonymous",
@@ -100,8 +79,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const data = await loadCandidate(id);
-  if (!data) return { title: "Candidate profile", robots: { index: false, follow: false } };
+  // Gated exactly like the page: a viewer who may not see the profile must not
+  // learn its role or even that the id resolves. Previously this titled the tab
+  // "Sai R. · Tax Reviewer" for anyone holding the UUID, including viewers the
+  // page then refused. Same generic metadata for missing and forbidden.
+  const { data, allowed } = await resolveProfileAccess(id);
+  if (!data || !allowed) {
+    return { title: "Candidate profile", robots: { index: false, follow: false } };
+  }
 
   const app = data.app as ProfileRow & {
     verified_at?: string | null;
@@ -167,26 +152,17 @@ export default async function CandidateProfilePage({
 }) {
   const { id } = await params;
   const { preview, bare, viewAs } = await searchParams;
-  const data = await loadCandidate(id);
-  if (!data) notFound();
+
+  // Resolved once per request and shared with layout.tsx + generateMetadata via
+  // React.cache. layout.tsx has already turned `!allowed` into a 404 — this
+  // repeat is the second lock on the same door, and costs a cached boolean.
+  const { data, viewer, isAdmin, isOwner, introduction, hasActiveIntro, allowed } =
+    await resolveProfileAccess(id);
+  if (!data || !allowed) notFound();
 
   const app = data.app as Record<string, unknown>;
-  const viewer = await getViewer();
-  const isAdmin = viewer.kind === "user" && viewer.isAdmin;
-  // Owner = the candidate viewing their own application (per-application ownership).
-  const isOwner = isApplicationOwner(viewer, app as { user_id?: string | null });
-
-  // The viewer's OWN introduction for this candidate (scoped to their account).
+  // The viewer's employer account, if any — scopes the saved/limit lookups below.
   const accountId = viewer.kind === "user" ? viewer.account?.id ?? null : null;
-  const introduction = await getViewerIntroduction(id, accountId);
-  // An employer with an in-progress introduction keeps access even if the candidate
-  // pauses/unpublishes — introductions already underway continue (graceful pause).
-  const hasActiveIntro = !!introduction && (ACTIVE_INTRO_STATUSES as readonly string[]).includes(introduction.status);
-
-  // Publication gate: only published profiles are public. Admins preview any state;
-  // the owner may always view their own profile (even as a draft); an employer with
-  // an active introduction keeps access through a pause.
-  if (!isPublished(app as ReadinessRow) && !isAdmin && !isOwner && !hasActiveIntro) notFound();
 
   // Admin-only presentation preview.
   const previewAs =

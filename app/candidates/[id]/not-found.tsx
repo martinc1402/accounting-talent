@@ -3,9 +3,16 @@ import { Prohibit } from "@phosphor-icons/react/dist/ssr";
 import { Logo } from "@/components/ui/Logo";
 
 /*
-  Rendered by notFound() from the profile route: unknown id, or a candidate who
-  isn't verified. Deliberately gives no "wrong id" hint — a withdrawn, filled, or
-  never-valid profile all read the same, matching the assessment route's caution.
+  Rendered by notFound() from the profile route: unknown id, or a profile this
+  viewer may not see. Deliberately gives no "wrong id" hint — a withdrawn,
+  filled, unauthorized, or never-valid profile all read the same, matching the
+  assessment route's caution.
+
+  This only renders because the gate lives in page.tsx. Do not add a loading.tsx
+  to this segment and do not move the gate into a layout: a route-level
+  loading.tsx flushes the shell (locking the status at 200) before the page can
+  call notFound(), and a gate in a layout bubbles past this boundary to the bare
+  framework 404. Either change silently costs the 404 status or this page.
 */
 export default function CandidateNotFound() {
   return (
