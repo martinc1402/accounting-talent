@@ -113,7 +113,7 @@ export function emailPass(vars: {
     subject: `You're verified ✓ — founding member #${vars.profile_number}`,
     text: `Hi ${vars.first_name},
 
-You passed. Your profile is now Verified — English writing assessment and US tax & accounting exam (${vars.score}/10) — and marked as a founding member, which means it's shown first when US firms begin searching the database in late 2026 (October–December).
+You passed. Your profile is now Verified — English writing assessment and US tax & accounting exam (${vars.score}/10) — and marked as a founding member, which means it's shown first when US firms begin hiring in late 2026 (October–December).
 
 What happens now: honestly, mostly waiting — and we'd rather say that than invent activity. We're recruiting more verified professionals and signing up founding US firms. You'll get an email from us at launch, and one before it. That's it — no spam in between.
 

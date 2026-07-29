@@ -19,7 +19,7 @@ export const faq: FaqItem[] = [
     id: "free",
     q: "Is this really free?",
     a: [
-      "Yes, permanently, for accounting professionals. US\u00A0firms pay a subscription to search the database. If anyone ever asks you for money to join, it is not us.",
+      "Yes, permanently, for accounting professionals. US\u00A0firms pay us a one-time fee only when they hire someone. If anyone ever asks you for money to join, it is not us.",
     ],
   },
   {

@@ -6,10 +6,10 @@ import { Card } from "@/components/ui/Card";
   What a US firm sees when it searches the database.
 
   The hero shows one profile. This shows the search that profile turns up in,
-  which is the literal answer to the question step three is asking: "US firms
-  search the database, contact you directly, and hire you." Showing the search is
-  more persuasive than describing it, and it is honest, because it is the product
-  rather than a claim about traction.
+  which is the literal answer to the question step three is asking: we put your
+  verified profile in front of the firms that match, and they interview and
+  employ you directly. Showing the search is more persuasive than describing it,
+  and it is honest, because it is the product rather than a claim about traction.
 
   Same visual language as the hero's ProfileCard, at search-result scale: the
   anonymous avatar, the sealed Verified check, the name-then-credentials

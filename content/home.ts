@@ -23,7 +23,7 @@ export const hero = {
   h1: heroH1Lines.join(" "),
   sub: "US\u00A0CPA firms find your profile and hire you themselves. No agency, no commission, no cut of your salary, ever.",
   cta: "Apply free, takes 3\u00A0minutes",
-  microcopy: `Free for accounting professionals. Always. US\u00A0firms begin hiring in ${LAUNCH_WORKER}.`,
+  microcopy: `Free for accounting professionals. Always. US\u00A0firms begin hiring in ${LAUNCH_WORKER_SHORT}.`,
   /*
     A sample of the actual product. The page is arguing that a US firm will see
     your profile and hire you, so showing the profile is the most literal way to
@@ -371,7 +371,7 @@ export const howItWorks = {
     },
     {
       title: "Get hired, directly",
-      body: `When US\u00A0firms join in ${LAUNCH_WORKER_SHORT}, they search the database, contact you directly, interview you, and hire you. You negotiate your own salary. They pay you, not us.`,
+      body: `When US\u00A0firms hire in ${LAUNCH_WORKER_SHORT}, we put your verified profile in front of the firms that match your software, US\u00A0tax\u00A0experience, and working hours. You interview with the firm directly, negotiate your own salary, and they employ you. They pay you, not us.`,
     },
   ],
 } as const;
@@ -437,7 +437,11 @@ export const honest = {
     },
     {
       title: "A free, permanent profile",
-      body: "We will never charge accountants. Our revenue comes from firms paying for database access, the same model that has worked for over 15 years in the Philippines (OnlineJobs.ph), where more than 500,000 employers hire this way.",
+      body: "We will never charge accountants, at any stage. US\u00A0firms pay us a one-time fee only when they hire someone. Over 500,000\u00A0US\u00A0employers already hire offshore staff directly this way — we are bringing that model to accounting.",
+    },
+    {
+      title: "A monthly update, either way",
+      body: "We email every profile once a month with where things stand — how many firms are in conversation, what they are looking for — even in months when there is no news.",
     },
     {
       title: "No exclusivity, no lock-in",
