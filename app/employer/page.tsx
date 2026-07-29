@@ -16,6 +16,9 @@ export const metadata: Metadata = {
 export default async function EmployerPage() {
   const viewer = await getViewer();
   if (viewer.kind !== "user") redirect("/login?next=/employer");
+  // A candidate cannot become an employer on the same account (app/actions.ts
+  // createEmployerAccount refuses), so do not offer it to them here.
+  if (viewer.candidate) redirect("/candidates/me");
 
   const account = viewer.account
     ? {

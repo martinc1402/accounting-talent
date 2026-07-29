@@ -169,7 +169,7 @@ export function CandidateActions({
       case "register":
         return (
           <a href="/login" className={`${base} ${solid}`}>
-            Create an employer account
+            Sign in to request an introduction
           </a>
         );
       case "verify":

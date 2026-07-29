@@ -30,6 +30,7 @@ function anonymizeName(name: string): string {
 export default async function IntroductionsPage() {
   const viewer = await getViewer();
   if (viewer.kind !== "user") redirect("/login?next=/employer/introductions");
+  if (viewer.candidate) redirect("/candidates/me");
 
   const verified = viewer.account?.verificationState === "verified";
   type Row = { id: string; application_id: string; status: string; created_at: string; name: string; role: string; accepted: boolean };

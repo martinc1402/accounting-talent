@@ -26,6 +26,7 @@ function anonymizeName(name: string): string {
 export default async function SavedCandidatesPage() {
   const viewer = await getViewer();
   if (viewer.kind !== "user") redirect("/login?next=/employer/saved");
+  if (viewer.candidate) redirect("/candidates/me");
 
   const verified = viewer.account?.verificationState === "verified";
   const ids = verified && viewer.account ? await listSavedApplicationIds(viewer.account.id) : [];

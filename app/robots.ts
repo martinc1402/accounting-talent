@@ -5,15 +5,16 @@ import type { MetadataRoute } from "next";
   disallowed. /assessment is tokenised and must never be indexed; /api is the
   server surface (submit + admin); /apply is a paid-ad landing page that is
   already noindex at the page level; /candidates are PII-bearing profiles, also
-  noindex at the page level. There is no sitemap yet, so there is nothing to leak
-  an assessment or profile URL through.
+  noindex at the page level; /login is an account surface with nothing to rank
+  for. There is no sitemap yet, so there is nothing to leak an assessment or
+  profile URL through.
 */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/assessment/", "/api/", "/apply", "/candidates/"],
+      disallow: ["/assessment/", "/api/", "/apply", "/candidates/", "/login"],
     },
   };
 }

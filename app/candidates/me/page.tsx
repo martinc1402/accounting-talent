@@ -80,6 +80,9 @@ export default async function CandidateMePage({
   const { app: appParam } = await searchParams;
   const viewer = await getViewer();
   if (viewer.kind !== "user") redirect("/login?next=/candidates/me");
+  // An account is either an employer OR a candidate. An employer here has no
+  // profile to manage, so send them where they do have one.
+  if (viewer.account) redirect("/employer");
 
   const nav = navFromViewer(viewer);
   const shell = (children: ReactNode) => (
