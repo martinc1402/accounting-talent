@@ -433,7 +433,7 @@ export const honest = {
   promises: [
     {
       title: "Founding-member placement",
-      body: "Verified early profiles appear first when firms start searching.",
+      body: "Verified early profiles are the first ones we put in front of firms.",
     },
     {
       title: "A free, permanent profile",

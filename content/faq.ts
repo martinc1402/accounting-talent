@@ -33,7 +33,7 @@ export const faq: FaqItem[] = [
     id: "after-applying",
     q: "What happens after I apply?",
     a: [
-      "Make sure the email on your application is correct. It's how everything reaches you. Shortlisted applicants receive the skills assessment by email within 3 days. Pass it and your profile is marked Verified and shown first when US\u00A0firms begin searching in late 2026 (October to December). We email you at launch either way.",
+      "Make sure the email on your application is correct. It's how everything reaches you. Shortlisted applicants receive the skills assessment by email within 3 days. Pass it and your profile is marked Verified and shown first when US\u00A0firms begin hiring in late 2026 (October to December). We email you at launch either way.",
     ],
   },
   {
