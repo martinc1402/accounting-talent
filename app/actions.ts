@@ -22,6 +22,7 @@ import { deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
 import { isPublished, publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
 import { isAtReviewed } from "@/lib/candidate/visibilityStatus";
 import { entitlementsFor } from "@/lib/authz/plans";
+import { EMPLOYER_SIGNUP_OPEN } from "@/lib/authz/employerSignup";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
 import {
   countActiveIntroductions,
@@ -532,8 +533,21 @@ export async function adminTransitionIntroduction(
   return { status: "success" };
 }
 
-/* Create the caller's employer account + owner membership (once). Signed-in only. */
+/* Create the caller's employer account + owner membership (once). Signed-in only.
+
+   Gated by EMPLOYER_SIGNUP_OPEN, which is false at this stage: firms submit a
+   brief on /employers and we provision accounts by hand from reviewed leads. The
+   check is first in the function, before the session lookup and before any
+   write, because this action is the door — the create form in EmployerPanel is
+   only the handle on it. */
 export async function createEmployerAccount(name: string): Promise<IntroState> {
+  if (!EMPLOYER_SIGNUP_OPEN) {
+    return {
+      status: "error",
+      message:
+        "Employer accounts aren't open yet. Tell us who you're hiring at /employers and we'll be in touch.",
+    };
+  }
   if (!supabase) return { status: "error", message: "Unavailable." };
   const viewer = await getViewer();
   if (viewer.kind !== "user") {

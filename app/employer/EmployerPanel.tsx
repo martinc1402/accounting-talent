@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createEmployerAccount, requestEmployerVerification } from "@/app/actions";
+import { EMPLOYER_SIGNUP_OPEN } from "@/lib/authz/employerSignup";
 
 type Props = {
   account: { name: string; verificationState: string; plan: string } | null;
@@ -27,6 +28,29 @@ export function EmployerPanel({ account }: Props) {
       else window.location.reload();
     });
   };
+
+  // Signed in, no employer account, and signup is closed. Say so plainly and
+  // point at the one route in: the brief on /employers. Matches the "no account"
+  // sign-in email, which sends firms to the same place.
+  if (!account && !EMPLOYER_SIGNUP_OPEN) {
+    return (
+      <div className="rounded-card border border-line bg-white p-7">
+        <h1 className="font-display text-[1.5rem] font-medium text-navy">
+          Employer accounts aren&rsquo;t open yet
+        </h1>
+        <p className="mt-2 text-small text-muted">
+          We&rsquo;re matching firms to candidates by hand for now. Tell us who you&rsquo;re hiring
+          and we&rsquo;ll come back with a shortlist, usually within 72 hours.
+        </p>
+        <a
+          href="/employers"
+          className="mt-5 inline-block rounded-card bg-navy px-5 py-3 text-small font-semibold text-paper transition hover:bg-navy-deep active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
+        >
+          Tell us who you need
+        </a>
+      </div>
+    );
+  }
 
   if (!account) {
     return (
