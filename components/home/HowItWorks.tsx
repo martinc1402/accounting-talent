@@ -15,8 +15,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
   piece of structure this section was missing: it is where a sceptical reader
   decides the thing is real, and it used to be three paragraphs and two rules.
 
-  The sticky column carries the search a firm runs, shown next to the steps that
-  describe it. It used to also carry an Apply button, but that made four apply
+  The sticky column carries the match we run for a firm, shown next to the steps
+  that describe it. It used to also carry an Apply button, but that made four apply
   CTAs on the page; the hero, the money section and the closing band are enough,
   so the button was removed here rather than repeated a fourth time.
 */
@@ -38,7 +38,7 @@ export function HowItWorks() {
               {howItWorks.sub}
             </p>
 
-            {/* The search a firm runs, shown next to the steps that describe it. */}
+            {/* The match we run, shown next to the steps that describe it. */}
             <div className="mt-10 hidden lg:block">
               <FirmView />
             </div>
@@ -79,7 +79,7 @@ export function HowItWorks() {
           ))}
         </ol>
 
-        {/* Below lg the sticky column collapses, so the search view comes after
+        {/* Below lg the sticky column collapses, so the match view comes after
             the steps instead: on a phone the reader wants the three steps first. */}
         <div className="lg:hidden">
           <FirmView />

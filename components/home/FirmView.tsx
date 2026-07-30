@@ -3,20 +3,24 @@ import { firmView } from "@/content/home";
 import { Card } from "@/components/ui/Card";
 
 /*
-  What a US firm sees when it searches the database.
+  What we put in front of a US firm.
 
-  The hero shows one profile. This shows the search that profile turns up in,
+  The hero shows one profile. This shows the shortlist that profile goes into,
   which is the literal answer to the question step three is asking: we put your
   verified profile in front of the firms that match, and they interview and
-  employ you directly. Showing the search is more persuasive than describing it,
+  employ you directly. Showing the match is more persuasive than describing it,
   and it is honest, because it is the product rather than a claim about traction.
 
-  Same visual language as the hero's ProfileCard, at search-result scale: the
+  The chips are the criteria we match on, which is what the heading now says.
+  They are deliberately NOT a search box: the firm does not work the database
+  itself. The magnifying glass is the last thing here still implying it does.
+
+  Same visual language as the hero's ProfileCard, at shortlist-row scale: the
   anonymous avatar, the sealed Verified check, the name-then-credentials
   hierarchy. A reader who saw the hero card recognises these as the same object.
 
   The panel itself stays white. Two navy cards in one viewport would fight, and
-  this is a search result, not the thing being sold.
+  this is a shortlist, not the thing being sold.
 
   Sample data, and it says so. The names are realistic Indian names rather than
   placeholders, because "Jane Doe" in a product shot reads as a mock-up of

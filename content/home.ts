@@ -93,14 +93,18 @@ export const software = {
 } as const;
 
 /*
-  What a US firm sees when it searches the database. The hero shows one profile;
-  this shows the search it appears in, which is the literal answer to "how does a
-  firm find me". Sample data, labelled as such, with realistic Indian names.
+  What we put in front of a US firm. The hero shows one profile; this shows the
+  shortlist it appears in, which is the literal answer to "how does a firm find
+  me". Sample data, labelled as such, with realistic Indian names.
+
+  The chips are the match criteria, not a search box the firm types into: the
+  heading names them as what WE match on, because under concierge matching the
+  firm does not work the database itself.
 */
 export const firmView = {
-  heading: "What US\u00A0firms search",
+  heading: "What we match you on",
   filters: ["QuickBooks", "Drake", "Form 1040"],
-  // The same shape as the hero card, at search-result scale: the row and the
+  // The same shape as the hero card, at shortlist-row scale: the row and the
   // card describe one object, so a reader who saw the hero recognises it here.
   results: [
     {
@@ -120,7 +124,7 @@ export const firmView = {
     },
   ],
   verified: "Verified",
-  caption: "Sample results. Verified profiles rank first.",
+  caption: "Sample profiles. Verified ones go first.",
 } as const;
 
 /*
