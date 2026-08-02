@@ -36,7 +36,7 @@ export default function CandidateNotFound() {
             longer valid.
           </p>
           <Link
-            href="/employers"
+            href="/"
             className="mt-6 inline-flex items-center justify-center rounded-card bg-navy px-5 py-3 text-small font-semibold text-white transition hover:bg-navy-deep active:translate-y-px"
           >
             Back to candidate results

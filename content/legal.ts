@@ -87,7 +87,7 @@ export const terms: LegalSection[] = [
   {
     heading: "It is free for professionals",
     body: [
-      "Listing yourself on AccountingTalent.in is free, and will remain free. Our revenue comes from firms paying for access to the database.",
+      "Listing yourself on AccountingTalent.in is free, and will remain free. US\u00A0firms pay us for access to the database, plus a one-time fee when they hire someone.",
       "We will never charge you a fee, a commission, a deposit, or a cut of your salary. If anyone contacts you claiming to represent us and asks you for money, it is not us. Please tell us about it.",
     ],
   },

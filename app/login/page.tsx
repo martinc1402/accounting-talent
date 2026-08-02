@@ -57,7 +57,7 @@ export default async function LoginPage({
         </p>
         <p className="mt-5 text-center text-caption text-subtle">
           <Link
-            href="/employers"
+            href="/"
             className="whitespace-nowrap text-navy no-underline underline-offset-2 hover:underline focus-visible:underline"
           >
             Hiring? Learn about employer access

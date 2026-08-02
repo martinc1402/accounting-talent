@@ -261,6 +261,12 @@ export function ProfileDetail({
           <p className="mt-5 max-w-[62ch] text-caption text-subtle">
             {p.captionTeaser}
           </p>
+          {/* Its own line at the same size. Both variants render it from the one
+              `imageNote` field, so the teaser and the full card cannot end up
+              disclosing the portrait differently. */}
+          <p className="mt-2 max-w-[62ch] text-caption text-subtle">
+            {p.imageNote}
+          </p>
         </Container>
       </section>
     );
@@ -438,6 +444,9 @@ export function ProfileDetail({
         </div>
 
         <p className="mt-5 max-w-[80ch] text-caption text-subtle">{p.caption}</p>
+        <p className="mt-2 max-w-[80ch] text-caption text-subtle">
+          {p.imageNote}
+        </p>
       </Container>
     </section>
   );

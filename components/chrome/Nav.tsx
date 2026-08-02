@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { List } from "@phosphor-icons/react/dist/ssr";
-import { nav, primaryCta, employerCta } from "@/content/site";
+import { nav, workerNav, primaryCta, employerCta } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Cta } from "@/components/firms/Cta";
@@ -23,25 +23,35 @@ import { Cta } from "@/components/firms/Cta";
   `active` is a prop rather than usePathname() because that hook would make this
   a client component and pull the nav's JavaScript back in. Every page already
   renders <Nav /> itself, so the caller knows the route.
-*/
-export function Nav({ active }: { active?: string }) {
-  // The one place the CTA changes by route: a firm reading /employers is sold the
-  // founding-firm offer, not the worker application. Driven by the existing
-  // `active` prop, so this needs no client-side routing and the header stays
-  // zero-JS.
-  const cta = active === "/employers" ? employerCta : primaryCta;
 
-  // On /employers the "How it works" item must point at this page's own section
-  // (#how-it-works, the employer pitch). Its default href is the homepage anchor
-  // (/#how-it-works), which would send a firm to the accountant-facing steps.
-  const items =
-    active === "/employers"
-      ? nav.map((item) =>
-          item.href === "/#how-it-works"
-            ? { ...item, href: "#how-it-works" }
-            : item,
-        )
-      : nav;
+  `audience` is separate from `active` on purpose. `active` says which item gets
+  the ledger rule; `audience` says which list and which CTA to show at all. They
+  are not the same question: /legal is firm-facing chrome but highlights nothing,
+  and /faq is the worker FAQ, so it takes the worker nav while its own item is
+  the active one.
+
+  This used to infer everything from `active === "/employers"` and rebuild hrefs
+  by string-matching "/#how-it-works". The rewrite broke the moment content/site
+  changed. Picking a list is the same amount of code and cannot go stale.
+
+  The two lists in content/site.ts are deliberately the same length and the same
+  shape (two section anchors, FAQ, then the other audience's page). That is what
+  makes the two homepages read as one product rather than as two sites sharing a
+  wordmark. The CTA is the only thing that differs by design: an accountant shown
+  "Reserve founding access" has been handed an employer's action. Consistency in
+  structure, not in call to action. Do not equalise the CTAs, and do not let the
+  lists drift to different lengths.
+*/
+export function Nav({
+  active,
+  audience = "firm",
+}: {
+  active?: string;
+  audience?: "firm" | "worker";
+}) {
+  const isWorker = audience === "worker";
+  const items = isWorker ? workerNav : nav;
+  const cta = isWorker ? primaryCta : employerCta;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white">
@@ -49,7 +59,9 @@ export function Nav({ active }: { active?: string }) {
           have to share 328px of usable width, which is why the logo drops to the
           mark alone below sm. */}
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-2 px-4 sm:gap-4 sm:px-5 lg:h-[72px] lg:px-8">
-        <Logo compact />
+        {/* The wordmark follows the audience for the same reason the nav items
+            do: on /accountants it must not bounce the reader to the firm pitch. */}
+        <Logo compact href={isWorker ? "/accountants" : "/"} />
 
         <nav className="hidden items-center gap-8 lg:flex">
           {items.map((item) => {
@@ -76,13 +88,13 @@ export function Nav({ active }: { active?: string }) {
         </nav>
 
         <div className="flex items-center gap-1">
-          {/* On /employers the nav CTA is the top-of-page ("hero") founding CTA,
-              so it fires cta_click{position:hero}; elsewhere it's the plain worker
-              CTA. Same button styling either way. */}
-          {active === "/employers" ? (
-            <Cta position="hero" />
-          ) : (
+          {/* On firm pages the nav CTA is the top-of-page ("hero") founding CTA,
+              so it fires cta_click{position:hero}; on worker pages it's the plain
+              application CTA. Same button styling either way. */}
+          {isWorker ? (
             <Button href={cta.href}>{cta.label}</Button>
+          ) : (
+            <Cta position="hero" />
           )}
 
           <details className="relative lg:hidden">

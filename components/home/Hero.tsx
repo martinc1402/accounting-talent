@@ -75,6 +75,13 @@ export function Hero() {
           <ProfileCard />
 
           <p className="mt-4 text-caption text-subtle">{p.caption}</p>
+          {/* Its own line at the same size, not folded into the caption above.
+              The card shows a face over a Verified badge, so what that face is
+              has to be findable without parsing a clause. Matches the employer
+              page, which discloses the same thing the same way. */}
+          <p className="mt-2 max-w-[52ch] text-caption text-subtle">
+            {p.imageNote}
+          </p>
         </div>
       </Container>
 

@@ -96,11 +96,18 @@ export function PillGroup({
 }
 
 /*
-  A head-and-shoulders silhouette for the sample profiles. Not a face: putting an
-  invented face on a fictional person is exactly the overstatement this site
-  avoids, so the sample cards carry a neutral placeholder and the caption says
-  "sample". A muted navy glyph on the cream panel reads as "photo goes here"
-  rather than as a real photograph.
+  The no-photo fallback. A muted navy glyph on the cream panel that reads as
+  "photo goes here" rather than as a real photograph.
+
+  This is NOT the treatment for sample cards. It used to be, and this comment
+  used to say so, which is how a later rewrite ended up reinstating silhouettes
+  across the firm homepage on the strength of a stale comment. The decision was
+  already made and reversed in c615c59 ("Use real portraits for the pool sample
+  cards"): sample profiles carry real stock portraits, gender-matched to the
+  name, with a visible "sample" caption doing the honesty work instead. A grid of
+  grey silhouettes reads as an unfinished page, not as a scrupulous one.
+
+  So: this renders only when a profile genuinely has no photo yet.
 */
 function Silhouette() {
   return (
@@ -198,7 +205,18 @@ export function ProfileCard({
           <PillGroup label={p.returnsLabel} items={p.returns} />
         </div>
 
-        <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-paper/25 pt-5">
+        {/*
+          flex-wrap, not a plain justify-between row. The figure is nowrap (a
+          range must never break across two lines), so in a narrow column it has
+          nowhere to go and gets clipped by the card's overflow-hidden: a
+          four-digit range like "$1,600-2,100/mo" overflows the 3-up grid cards
+          even though it fits the wider hero card. Wrapping lets the label take
+          its own line and hands the figure the full width instead.
+
+          gap-y-1 keeps the wrapped state tight, so it reads as one block rather
+          than two stacked rows.
+        */}
+        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-paper/25 pt-5">
           <Label>{p.salaryLabel}</Label>
 
           {/* The suffix is smaller and muted so the figure still reads as the

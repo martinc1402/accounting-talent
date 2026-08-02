@@ -23,7 +23,7 @@ export const hero = {
   h1: heroH1Lines.join(" "),
   sub: "US\u00A0CPA firms find your profile and hire you themselves. No agency, no commission, no cut of your salary, ever.",
   cta: "Apply free, takes 3\u00A0minutes",
-  microcopy: `Free for accounting professionals. Always. US\u00A0firms begin hiring in ${LAUNCH_WORKER}.`,
+  microcopy: `Free for accounting professionals. Always. US\u00A0firms begin hiring in ${LAUNCH_WORKER_SHORT}.`,
   /*
     A sample of the actual product. The page is arguing that a US firm will see
     your profile and hire you, so showing the profile is the most literal way to
@@ -34,20 +34,25 @@ export const hero = {
     software, tax forms, salary. That is what keeps this honest. It is not a
     designer's impression of a product, it is the product.
 
-    It is labelled a sample in the caption, and it needs to stay labelled. The
-    card carries a real face and a real-looking credential set, so the one thing
-    standing between it and a claim we cannot make is the word "sample".
+    The caption below it carries one short line saying it is illustrative, and
+    that line needs to stay. The card carries a face, a name and a Verified badge,
+    and that sentence is the only thing between an illustration and a claim we
+    cannot make. It is one sentence, said once. It used to be said four times.
   */
   sampleProfile: {
-    // The name follows the face. This headshot is of a man, so the name is a
-    // man's: a mismatched name over a photograph is the single most obvious
-    // "this is fabricated" signal you could put on a card whose whole job is to
-    // look credible. (The detail card further down the page is a different
-    // person, Priya, with her own photograph. Same rule, applied twice.)
+    // The name follows the portrait: the image shows a man, so the name is a
+    // man's. A mismatched name over a face is the single most obvious "this is
+    // fabricated" signal you could put on a card whose whole job is to look
+    // credible. (The detail card further down the page is a different person,
+    // Priya, with her own portrait. Same rule, applied twice.)
+    //
+    // Neither the person nor the portrait is real. `imageNote` says so on the
+    // page, and the alt text carries it too so a screen-reader user is told what
+    // a sighted reader is.
     name: "Arjun S.",
     photo: {
       src: "/images/headshot-1.jpg",
-      alt: "The accountant in the sample profile.",
+      alt: "Illustrative profile portrait",
     },
     // The two things a firm cannot check for itself, so we check them for it.
     verified: "Verified · English + US\u00A0tax assessment",
@@ -65,7 +70,12 @@ export const hero = {
     // working out whether this doubles their income, that is the whole card.
     salary: "$900\u20111,200",
     salarySuffix: "/mo",
-    caption: "A sample verified profile. This is what US\u00A0firms will see.",
+    caption: "This is what US\u00A0firms will see.",
+    // The one line, matching the employer page's wording exactly. Rendered at
+    // small-print size under the caption. Kept as its own sentence rather than
+    // folded into the caption: a reader working out whether this is a real person
+    // should not have to parse a clause to find out.
+    imageNote: "Illustrative. Not a real candidate or a real photograph.",
   },
 } as const;
 
@@ -93,14 +103,18 @@ export const software = {
 } as const;
 
 /*
-  What a US firm sees when it searches the database. The hero shows one profile;
-  this shows the search it appears in, which is the literal answer to "how does a
-  firm find me". Sample data, labelled as such, with realistic Indian names.
+  What we put in front of a US firm. The hero shows one profile; this shows the
+  shortlist it appears in, which is the literal answer to "how does a firm find
+  me". Sample data, labelled as such, with realistic Indian names.
+
+  The chips are the match criteria, not a search box the firm types into: the
+  heading names them as what WE match on, because under concierge matching the
+  firm does not work the database itself.
 */
 export const firmView = {
-  heading: "What US\u00A0firms search",
+  heading: "What we match you on",
   filters: ["QuickBooks", "Drake", "Form 1040"],
-  // The same shape as the hero card, at search-result scale: the row and the
+  // The same shape as the hero card, at shortlist-row scale: the row and the
   // card describe one object, so a reader who saw the hero recognises it here.
   results: [
     {
@@ -120,7 +134,7 @@ export const firmView = {
     },
   ],
   verified: "Verified",
-  caption: "Sample results. Verified profiles rank first.",
+  caption: "Illustrative. Verified profiles go first.",
 } as const;
 
 /*
@@ -136,13 +150,12 @@ export const firmView = {
   asks what a firm sees when it opens YOUR profile. So her fields are her own
   below, not references to his.
 
-  This card is a sample, and unlike the hero card it is not only a sample of
+  This card is illustrative, and unlike the hero card it does not only illustrate
   fields the form collects. The application asks 21 questions and does not ask for
   employment history, university, languages, or per-form volumes, all of which are
   below. That is a deliberate, recorded decision: the card is the target the form
-  grows toward. Which is exactly why the heading and the caption both say sample,
-  and why neither is optional. Take them off and the page is claiming a candidate
-  it does not have.
+  grows toward. Which is exactly why `imageNote` runs under it and is not
+  optional. Take it off and the page is claiming a candidate it does not have.
 */
 export const profileDetail = {
   heading: "What a US\u00A0firm sees when it opens your profile",
@@ -150,8 +163,10 @@ export const profileDetail = {
 
   name: "Priya M.",
   photo: {
+    // Not a real person, like the hero card's. Said in the alt text as well as in
+    // `imageNote` below, so a screen-reader user is told what a sighted reader is.
     src: "/images/headshot-2.jpg",
-    alt: "The accountant in the sample detail profile.",
+    alt: "Illustrative profile portrait",
   },
 
   /*
@@ -283,14 +298,18 @@ export const profileDetail = {
   footnote: "Profile ATL\u20110017 · you hire and pay directly",
 
   caption:
-    "A sample profile, shown at full size. Sample details, including the work history and bookkeeping scope. What is real is the format: this is the record a US\u00A0firm reads, and the assessment writing is the applicant's own.",
+    "Shown at full size, including the work history and bookkeeping scope. What is real is the format: this is the record a US\u00A0firm reads, and the assessment writing is the applicant's own.",
 
-  // The teaser variant shows only the top of the card and none of the fabricated
-  // history, so it gets its own one-line caption. "Sample profile." leads it on
-  // purpose: the teaser still shows a real face, a name and a Verified badge, and
-  // dropping the word "sample" is exactly the overstatement this site avoids.
+  // The teaser variant shows only the top of the card and none of the invented
+  // history, so it gets its own one-line caption. The teaser still shows a face,
+  // a name and a Verified badge, so `imageNote` below runs under it too.
   captionTeaser:
-    "Sample profile. A structured, verified record, not a resume in an inbox.",
+    "A structured, verified record, not a resume in an inbox.",
+
+  // Rendered under whichever caption is showing, at the same small-print size,
+  // matching the employer page. One field for both variants: the full card and
+  // the teaser show the same portrait, so they cannot say different things.
+  imageNote: "Illustrative. Not a real candidate or a real photograph.",
 } as const;
 
 export const math = {
@@ -371,7 +390,7 @@ export const howItWorks = {
     },
     {
       title: "Get hired, directly",
-      body: `When US\u00A0firms join in ${LAUNCH_WORKER_SHORT}, they search the database, contact you directly, interview you, and hire you. You negotiate your own salary. They pay you, not us.`,
+      body: `When the database opens to US\u00A0firms in ${LAUNCH_WORKER_SHORT}, they search it by software, US\u00A0tax\u00A0experience, and working hours. A firm that wants to talk to you asks us first, and we only pass on your details if you say yes. You interview directly, negotiate your own salary, and they employ you. They pay you, not us.`,
     },
   ],
 } as const;
@@ -424,7 +443,7 @@ export const honest = {
   h2: "Where we are right now",
   lede: "We'll be straight with you, because you've seen enough websites that aren't.",
   body: [
-    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. We open it to US\u00A0accounting firms in ${LAUNCH_WORKER}.`,
+    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. US\u00A0firms get access to it in ${LAUNCH_WORKER}.`,
   ],
   // Pulled out of `body` and given its own field because it is the sentence the
   // whole brand rests on. Same words, its own weight on the page.
@@ -433,11 +452,22 @@ export const honest = {
   promises: [
     {
       title: "Founding-member placement",
-      body: "Verified early profiles appear first when firms start searching.",
+      body: "Verified early profiles are the ones firms see first when the database opens.",
     },
     {
       title: "A free, permanent profile",
-      body: "We will never charge accountants. Our revenue comes from firms paying for database access, the same model that has worked for over 15 years in the Philippines (OnlineJobs.ph), where more than 500,000 employers hire this way.",
+      // The actual numbers, not "a fee". An accountant who has been burned by
+      // agencies is doing arithmetic on who pays whom, and a hedge reads as the
+      // thing being hidden. Stated plainly the figures are the argument: a firm
+      // pays them once, and none of it is deducted from anyone's salary.
+      //
+      // These MUST match firms.pricing, the employerFaq "cost" answer, and the
+      // lead confirmation email in lib/assessment/emails.ts. Four places now.
+      body: "We will never charge accountants, at any stage. US\u00A0firms pay us $1,440 a year for access to the database ($720 for founding firms), plus a one-time $2,400 when they hire someone. A firm pays that once. You keep every dollar of your salary, every month, for as long as you work there. Over 500,000\u00A0US\u00A0employers already hire offshore staff directly this way, and we are bringing that model to accounting.",
+    },
+    {
+      title: "A monthly update, either way",
+      body: "We email every profile once a month with where things stand: how many firms are in conversation and what they are looking for, even in months when there is no news.",
     },
     {
       title: "No exclusivity, no lock-in",
@@ -447,7 +477,7 @@ export const honest = {
 } as const;
 
 export const finalCta = {
-  h2: `The database opens to US\u00A0firms in ${LAUNCH_WORKER_SHORT}. Be in it on day one.`,
+  h2: `US\u00A0firms start hiring in ${LAUNCH_WORKER_SHORT}. Be in the database on day one.`,
   // Same label as the hero. One intent, one label, everywhere on the page.
   cta: "Apply free, takes 3\u00A0minutes",
   referral:

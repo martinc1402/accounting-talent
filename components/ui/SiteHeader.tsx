@@ -69,7 +69,11 @@ export function SiteHeader({ nav }: { nav: SiteHeaderNav }) {
   return (
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex h-16 max-w-[1160px] items-center justify-between gap-4 px-5 lg:h-[72px] lg:px-8">
-        <Logo />
+        {/* Candidates get the accountant homepage, everyone else gets "/". Since
+            the homepage became the firm pitch, a signed-in accountant clicking
+            the wordmark would otherwise land on a page selling their own labor
+            to somebody else. */}
+        <Logo href={nav.role === "candidate" ? "/accountants" : "/"} />
         {nav.preview ? (
           <PreviewHeader nav={nav} />
         ) : nav.authenticated ? (
@@ -95,7 +99,7 @@ export function SiteHeader({ nav }: { nav: SiteHeaderNav }) {
           </nav>
         ) : (
           <nav className="flex items-center gap-4" aria-label="Account">
-            <Link href="/employers" className={`hidden sm:inline-block ${LINK}`}>
+            <Link href="/" className={`hidden sm:inline-block ${LINK}`}>
               For employers
             </Link>
             <Link

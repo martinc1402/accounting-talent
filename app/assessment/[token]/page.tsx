@@ -21,7 +21,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <>
       <header className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-[820px] items-center px-5 lg:h-[72px] lg:px-8">
-          <Logo />
+          <Logo href="/accountants" />
         </div>
       </header>
       <main className="flex-1 bg-paper py-12 lg:py-20">

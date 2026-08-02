@@ -25,23 +25,44 @@ const geist = Geist({
   display: "swap",
 });
 
+/*
+  Site-wide defaults, now firm-facing. These used to sell the accountant side
+  because "/" was the accountant page; that page is /accountants and carries its
+  own worker metadata, so the defaults follow the homepage.
+
+  This matters more than it looks. The old /employers route documented the exact
+  failure in reverse: a firm owner sharing the employer page previewed the
+  accountant pitch, because the root OG sold the worker side. Any route that does
+  not override these now inherits the firm framing, which is the right default
+  when the firm page is the front door.
+
+  locale is en_US to match: US accounting firms are the audience for "/", and
+  /accountants sets en_IN back for its own readers.
+
+  [TODO: OG IMAGE]. There is no opengraph-image anywhere in the repo, so shares
+  render as a text card. Generating one via ImageResponse means committing a
+  Newsreader font binary (satori needs real font data and cannot read a CSS font
+  stack), which is a call to make deliberately rather than in passing.
+*/
 export const metadata: Metadata = {
   metadataBase: new URL("https://accountingtalent.in"),
   title: {
-    default: "Work Directly for US Accounting Firms | AccountingTalent.in",
+    default:
+      "Hire Vetted Indian Accountants for Your US Firm | AccountingTalent.in",
     template: "%s | AccountingTalent.in",
   },
   description:
-    "A direct-hire platform where US CPA firms find and hire India-based accounting professionals. Free for accountants, permanently. No agency, no commission, no cut of your salary.",
+    "A verified database of India-based accounting professionals for US CPA firms. Search, request an introduction, and hire directly. No staffing agency and no monthly per-seat markup.",
   openGraph: {
-    title: "Work Directly for US Accounting Firms",
+    title: "Hire Vetted Indian Accountants for Your US Firm",
     description:
-      "US CPA firms hire you directly. No agency takes a cut. Free for accounting professionals, permanently.",
+      "Search a verified database of Indian bookkeepers, tax preparers and accountants. Interview and hire them directly, with no agency markup and no exclusivity.",
     url: "https://accountingtalent.in",
     siteName: "AccountingTalent.in",
-    locale: "en_IN",
+    locale: "en_US",
     type: "website",
   },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
