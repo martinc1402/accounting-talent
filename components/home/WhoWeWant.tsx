@@ -19,7 +19,13 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 */
 export function WhoWeWant() {
   return (
-    <section className="bg-paper py-16 lg:py-28">
+    // id + scroll-mt-24: this is the worker nav's second slot, matching the way
+    // Vetting and Pricing anchor the firm nav. scroll-mt clears the sticky header
+    // so the heading does not land underneath it.
+    <section
+      id="who-we-want"
+      className="scroll-mt-24 bg-paper py-16 lg:py-28"
+    >
       <Container>
         <div className="reveal max-w-[64ch]">
           <SectionHeading kicker="Who it's for">{whoWeWant.h2}</SectionHeading>

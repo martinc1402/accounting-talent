@@ -40,9 +40,6 @@ export function SampleProfiles() {
           {database.profiles.map((profile) => (
             <li key={profile.name} className="reveal">
               <ProfileCard profile={profile} sample />
-              <p className="mt-3 text-caption text-subtle">
-                {database.sampleLabel}
-              </p>
             </li>
           ))}
         </ul>

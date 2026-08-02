@@ -57,8 +57,10 @@ Free for accounting professionals. Always.`,
 // move to the database model. A firm reading the founding-access confirmation
 // on the page and then this in their inbox was being told two different things.
 //
-// The $720 figure appears in three places: here, firms.pricing, and the
-// employerFaq "cost" answer. Move one, move all three.
+// The $720 figure appears in four places: here, firms.pricing, the employerFaq
+// "cost" answer, and the "A free, permanent profile" promise in content/home.ts
+// (the accountant-facing page states the firm's fees too, on purpose). Move one,
+// move all four.
 export function emailEmployerLeadReceived(vars: { firm_name: string }): Composed {
   return {
     subject: "Your founding place is reserved, AccountingTalent",

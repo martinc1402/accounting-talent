@@ -36,18 +36,28 @@ export const CONTACT_EMAIL = "contact@accountingtalent.in";
 export const OPERATOR = "Kaya Virtual (Australia)";
 
 /*
-  Two navs, because the site now sells to two audiences from two homepages and a
+  Two navs, because the site sells to two audiences from two homepages and a
   single list cannot serve both. "/" is the firm pitch, /accountants is the worker
-  pitch, and an item like "How we vet" is meaningless to an accountant reading
-  their own page.
+  pitch, and an item like "Pricing" is an employer concern that would send an
+  accountant to the wrong page mid-visit.
+
+  KEEP THE TWO LISTS THE SAME LENGTH AND THE SAME SHAPE: two section anchors, then
+  FAQ, then the link to the other audience's page. Same rhythm, same slot order,
+  labels suited to the reader. The site has to look like one product across both
+  pages, and a four-item bar next to a three-item bar is the tell that it is not.
+  If you add or drop an item here, do it to both.
+
+  The lists cannot be identical, only shape-matched: "/" has four anchored
+  sections while /accountants has two (#how-it-works, #who-we-want) and keeps its
+  FAQ on a separate route.
+
+  Four items plus a CTA is the ceiling before labels start colliding at lg
+  (1024px), which is also where the header must still render on one line.
 
   This replaced a string-rewrite in Nav.tsx that rebuilt hrefs by matching on
   "/#how-it-works". That hack broke silently the moment this file changed, which
   is exactly what it did when the homepage moved. Nav now picks a list by
   audience instead of patching one.
-
-  Both lists stay short: the header must render on a single line at lg (1024px),
-  and four items plus a CTA is the ceiling before labels start colliding.
 */
 export const nav = [
   { label: "How we vet", href: "/#vetting" },
@@ -58,6 +68,7 @@ export const nav = [
 
 export const workerNav = [
   { label: "How it works", href: "/accountants#how-it-works" },
+  { label: "Who we want", href: "/accountants#who-we-want" },
   { label: "FAQ", href: "/faq" },
   { label: "For Firms", href: "/" },
 ] as const;

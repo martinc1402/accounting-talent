@@ -25,7 +25,7 @@ import { CONTACT_EMAIL, LAUNCH_EMPLOYER, LAUNCH_EMPLOYER_SHORT } from "./site";
   Order matters and is argued, not arbitrary. Risk comes before price, because a
   firm's first objection to an overseas hire is "who is this person", not "what
   does it cost". Vetting is the longest section on the page for the same reason.
-  The sample profiles sit directly after it as the evidence for the claim.
+  The illustrative profiles sit directly after it as the evidence for the claim.
 
   American English throughout (this audience is US\u00A0accounting firms).
 
@@ -56,19 +56,22 @@ export const firms = {
     // subhead carries it at 19 words, under the 20-word ceiling a hero subhead
     // gets before it stops being read.
     sub: "No staffing agency, no monthly markup. Search a verified database, request an introduction, and hire on your own terms.",
-    // Caption under the sample card in the right column. The card is the product,
-    // so it is shown rather than described, but it must never read as a real
-    // person who is available today.
+    // Caption under the card in the right column. The card is the product, so it
+    // is shown rather than described, but it must never read as a real person a
+    // firm could contact today.
     //
-    // It says "illustrative" because the salary is a real range now rather than a
-    // visible placeholder. A figure that looks quotable has to be marked, or the
-    // card stops being a sample and starts being an offer.
-    sampleCaption: `Sample profile: illustrative figures, AI-generated portrait. The database opens to US\u00A0firms in ${LAUNCH_EMPLOYER_SHORT}.`,
+    // One short line, once. This used to say "sample" here and again on every
+    // card and again under the grid, which read as apology rather than candour.
+    // It is down to a single sentence per card location. Do not delete the
+    // sentence: the card carries a name, a face and a Verified badge, and without
+    // it the page is showing invented inventory to someone deciding whether to
+    // pay for access to that inventory.
+    sampleCaption: `Illustrative. Not a real candidate or a real photograph. The database opens to US\u00A0firms in ${LAUNCH_EMPLOYER_SHORT}.`,
     profile: {
       name: "Arjun M.",
       photo: {
         src: "/images/portrait-m-1.jpg",
-        alt: "AI-generated portrait, sample profile",
+        alt: "Illustrative profile portrait",
       },
       verified: "Verified 14 Jun 2026",
       role: "US\u00A0tax preparer, 6 years",
@@ -162,29 +165,28 @@ export const firms = {
     Section 4: what is in the database. Evidence, not a promise, and the strongest
     thing on the page.
 
-    The profiles are samples and are said to be samples four times over: in the
-    section intro, on a caption under every card, in `imageNote` below the grid,
-    and in each portrait's alt text. Names are first-name-plus-initial, which is
-    also how a gated profile reads to a firm before an introduction is approved.
+    These are invented people. Names are first-name-plus-initial, which is also
+    how a gated profile reads to a firm before an introduction is approved.
 
-    `imageNote` says the portraits are AI-generated, in those words. It is not
-    softened to "illustrative imagery" and it is not folded into the software
-    trademark line, because a firm looking at three faces on a page selling
-    verified people has to be able to tell at a glance that the faces are not
-    the people. It renders at the same small-print size as the software note; the
-    point is that it is present and plain, not that it is loud.
+    `imageNote` is the one place the page says so, in one sentence, under the
+    grid. It previously said it four times over (section intro, a caption under
+    every card, here, and every alt text) which was clutter and read as hedging.
+
+    What must not happen is it going to zero. A firm is looking at three faces,
+    three Verified badges and three salary expectations under a heading that says
+    what is in the database, while being asked to pay for access to that database.
+    One quiet sentence is the difference between an illustration and a claim.
   */
   database: {
     heading: "What is in the database",
     intro:
-      "Verified profiles, built from the checks above. The three below are samples rather than real candidates, shown the way a gated profile reads before you request an introduction. Compensation figures are illustrative of the bands we see, not quotes.",
-    sampleLabel: "Sample profile",
+      "Verified profiles, built from the checks above. This is how a gated profile reads before you request an introduction.",
     profiles: [
       {
         name: "Meera R.",
         photo: {
           src: "/images/portrait-f-1.jpg",
-          alt: "AI-generated portrait, sample profile",
+          alt: "Illustrative profile portrait",
         },
         verified: "Verified 02 Jul 2026",
         role: "Senior tax preparer, 8 years",
@@ -202,7 +204,7 @@ export const firms = {
         name: "Nikhil D.",
         photo: {
           src: "/images/portrait-m-2.jpg",
-          alt: "AI-generated portrait, sample profile",
+          alt: "Illustrative profile portrait",
         },
         verified: "Verified 19 Jun 2026",
         role: "Bookkeeper and monthly close, 5 years",
@@ -220,7 +222,7 @@ export const firms = {
         name: "Fatima Q.",
         photo: {
           src: "/images/portrait-f-2.jpg",
-          alt: "AI-generated portrait, sample profile",
+          alt: "Illustrative profile portrait",
         },
         verified: "Verified 28 Jun 2026",
         role: "Staff accountant, 4 years",
@@ -236,7 +238,7 @@ export const firms = {
       },
     ],
     imageNote:
-      "The three profiles above are illustrative samples, not real candidates, and the portraits are AI-generated images rather than photographs of any real person.",
+      "Illustrative. Not real candidates or real photographs. Compensation figures are typical of the bands we see, not quotes.",
     note: "Software names are the property of their owners. We are not affiliated with any of them.",
   },
 

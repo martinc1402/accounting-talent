@@ -33,6 +33,14 @@ import { Cta } from "@/components/firms/Cta";
   This used to infer everything from `active === "/employers"` and rebuild hrefs
   by string-matching "/#how-it-works". The rewrite broke the moment content/site
   changed. Picking a list is the same amount of code and cannot go stale.
+
+  The two lists in content/site.ts are deliberately the same length and the same
+  shape (two section anchors, FAQ, then the other audience's page). That is what
+  makes the two homepages read as one product rather than as two sites sharing a
+  wordmark. The CTA is the only thing that differs by design: an accountant shown
+  "Reserve founding access" has been handed an employer's action. Consistency in
+  structure, not in call to action. Do not equalise the CTAs, and do not let the
+  lists drift to different lengths.
 */
 export function Nav({
   active,
