@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CaretDown, List } from "@phosphor-icons/react/dist/ssr";
+import { List } from "@phosphor-icons/react/dist/ssr";
 import { navGroups, primaryCta, employerCta } from "@/content/site";
+import { NavGroup } from "@/components/chrome/NavGroup";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Cta } from "@/components/firms/Cta";
@@ -10,31 +11,26 @@ import { Cta } from "@/components/firms/Cta";
   a link to that audience's page whose dropdown holds that page's sections. The
   bar is identical on every route; only the CTA changes.
 
-  NO JAVASCRIPT IN THE MENU. The desktop dropdowns open on group-hover and on
-  group-focus-within, both pure CSS. The mobile menu is a native <details>
-  disclosure. The only client code in this header is <Cta>, which exists to fire
-  a cta_click analytics event and predates this.
+  THIS FILE STAYS A SERVER COMPONENT. The desktop dropdowns needed real
+  disclosure semantics (aria-expanded, Escape restoring focus, arrow keys), which
+  needs state, so that work lives in the <NavGroup> client leaf rather than here.
+  The header shell, the logo, the CTA and the whole mobile menu render on the
+  server. Same isolation as <Cta>, which was already the only client code here.
 
-  Why focus-within works even though the panel starts at visibility:hidden: the
-  trigger link lives inside the same .group wrapper, so tabbing to it satisfies
-  group-focus-within, which reveals the panel, which makes the panel's own links
-  focusable for the tabs that follow. Keyboard users get the menu in tab order.
+  That replaced a pure-CSS hover menu. It looked cheaper than it was: the panel
+  sat at visibility:hidden until :hover or :focus-within, which meant a screen
+  reader browsing by links list never saw the section anchors, and there was no
+  honest way to express open/closed to assistive tech. See NavGroup.tsx for why
+  the trigger is a button and not a link.
 
-  Known limit, accepted: because the panel is visibility:hidden until hover or
-  focus, a screen-reader user browsing by links list will not see the section
-  anchors at desktop width. They are reachable by tabbing, and the mobile
-  <details> panel below carries every link in the DOM unconditionally. Fixing it
-  properly means a disclosure button with aria-expanded, which means state, which
-  means a client component for the whole header.
-
-  The hover bridge matters. The panel wrapper carries the top padding rather than
-  the panel itself, so the gap between the trigger and the card is inside the
-  hovered element. Without it the menu closes as the pointer crosses the gap.
+  The mobile menu is still a native <details> disclosure and still ships no
+  JavaScript.
 
   `active` is a prop rather than usePathname() because that hook would make this
-  a client component and pull the header's JavaScript back in. It now marks the
-  GROUP whose page you are on, not an individual item: "/" lights Employers,
-  "/accountants" lights Accountants.
+  file a client component and pull the header's JavaScript back in for real. It
+  marks the GROUP whose page you are on: "/" lights Employers, "/accountants"
+  lights Accountants, /faq lights Accountants (the worker FAQ lives there), and
+  /legal lights neither because it belongs to no audience.
 
   `audience` drives the CTA only. An accountant shown "Reserve founding access"
   has been handed an employer's action, so this stays split. Consistency in
@@ -66,53 +62,18 @@ export function Nav({
             accountant to the firm pitch. */}
         <Logo compact href={isWorker ? "/accountants" : "/"} />
 
-        <nav className="hidden items-center gap-8 lg:flex" aria-label="Main">
-          {navGroups.map((group) => {
-            const isActive = group.href === active;
-            return (
-              <div key={group.label} className="group relative">
-                <Link
-                  href={group.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`relative flex items-center gap-1 py-2 text-[16px] transition-colors ${
-                    isActive ? "text-navy" : "text-muted hover:text-navy"
-                  }`}
-                >
-                  {group.label}
-                  <CaretDown
-                    size={12}
-                    weight="bold"
-                    aria-hidden
-                    className="mt-px transition-transform duration-200 group-hover:rotate-180"
-                  />
-                  {/* The same 1px ledger rule the wordmark carries under
-                      "Talent". It is the site's one recurring mark, so it is
-                      what marks the current section of the site too. */}
-                  {isActive && (
-                    <span className="absolute -bottom-0.5 left-0 h-px w-full bg-navy/30" />
-                  )}
-                </Link>
-
-                {/* pt-3 on the wrapper, not the card: the gap between trigger
-                    and panel has to be inside the hovered element or the menu
-                    closes as the pointer crosses it. */}
-                <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                  <ul className="w-60 rounded-card border border-line bg-white p-2 shadow-[0_16px_40px_-12px_rgba(19,31,91,0.18)]">
-                    {group.items.map((item) => (
-                      <li key={item.href + item.label}>
-                        <Link
-                          href={item.href}
-                          className="block rounded-card px-4 py-2.5 text-[15px] text-muted transition-colors hover:bg-mist hover:text-navy"
-                        >
-                          {item.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            );
-          })}
+        {/* gap-6, not gap-8: the triggers now carry their own horizontal
+            padding for the open-state tint, so the visual gap between words is
+            unchanged while the hit targets sit closer together. */}
+        <nav className="hidden items-center gap-6 lg:flex" aria-label="Main">
+          {navGroups.map((group) => (
+            <NavGroup
+              key={group.label}
+              label={group.label}
+              items={group.items}
+              isActive={group.href === active}
+            />
+          ))}
         </nav>
 
         <div className="flex items-center gap-1">
@@ -135,7 +96,7 @@ export function Nav({
             {/* Flat, with a heading per group. No nested disclosure: two levels
                 of tapping to reach a section is worse than a slightly longer
                 panel, and every link stays in the DOM for screen readers. */}
-            <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-card border border-line bg-white p-2 shadow-[0_16px_40px_-12px_rgba(19,31,91,0.18)]">
+            <div className="absolute right-0 top-full z-50 mt-2 w-64 border border-navy/15 bg-paper p-1">
               {navGroups.map((group) => (
                 <div key={group.label} className="py-1">
                   <p className="px-4 pt-2 pb-1 text-caption font-medium tracking-wide text-subtle uppercase">
@@ -146,7 +107,7 @@ export function Nav({
                       <Link
                         key={item.href + item.label}
                         href={item.href}
-                        className="block rounded-card px-4 py-3 text-[16px] text-muted transition-colors hover:bg-mist hover:text-navy"
+                        className="block px-4 py-3 text-[16px] text-muted transition-colors hover:bg-navy/5 hover:text-navy"
                       >
                         {item.label}
                       </Link>
