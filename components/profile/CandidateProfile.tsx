@@ -721,7 +721,7 @@ export function CandidateProfile({
           className="mb-5 flex items-center gap-2 text-caption text-subtle"
         >
           <Link
-            href="/employers"
+            href="/"
             className="inline-flex items-center gap-1.5 font-semibold text-muted hover:text-navy"
           >
             <ArrowLeft size={15} weight="bold" aria-hidden />

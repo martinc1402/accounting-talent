@@ -7,11 +7,11 @@ import { trackCta, type CtaPosition } from "@/lib/analytics";
 
 /*
   The repeated primary CTA. One mechanism everywhere: a hash link to the
-  #get-matched brief (which carries scroll-mt to clear the sticky header), with an
+  #reserve brief (which carries scroll-mt to clear the sticky header), with an
   onClick that fires cta_click so the smoke test can see which position converts.
   `variant="button"` for section CTAs (tone switches to white-on-navy on the final
   band); `variant="link"` for a quiet inline CTA. Label and target come from
-  firms.getMatched.
+  firms.reserve.
 */
 export function Cta({
   position,
@@ -24,7 +24,7 @@ export function Cta({
   tone?: "primary" | "inverse";
   className?: string;
 }) {
-  const { label, href } = firms.getMatched;
+  const { label, href } = firms.reserve;
   const onClick = () => trackCta(position);
 
   if (variant === "link") {

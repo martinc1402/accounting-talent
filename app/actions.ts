@@ -9,6 +9,7 @@ import { validateAll, visibleQuestions } from "@/lib/validate";
 import { scoreApplication } from "@/lib/scoring";
 import { isLikelyBot } from "@/lib/antispam";
 import { isRateLimited } from "@/lib/ratelimit";
+import { isFreeEmailProvider } from "@/lib/email/freeProviders";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { firms } from "@/content/firms";
 import {
@@ -201,23 +202,26 @@ const firmEmail = z.email();
 const websiteUrl = z.url();
 
 /*
-  The employer role brief (Section "Tell us who you need" on /employers). The
-  page's primary conversion: a firm tells us the role, software, experience,
-  schedule and budget, and we come back with a matched shortlist. Same shape and
-  discipline as submitApplication (guards -> rate limit -> validate -> insert ->
-  best-effort confirmation), writing to employer_leads. Reachable by direct POST
-  like every Server Function, so it re-validates and never trusts the client.
+  The firm intake form ("Reserve founding access", #reserve on the homepage). The
+  page's primary conversion and the only thing the smoke test measures: a firm
+  tells us its size, the roles it would hire, how many, when, and at what budget,
+  and reserves a founding rate. Same shape and discipline as submitApplication
+  (guards -> rate limit -> validate -> insert -> best-effort confirmation),
+  writing to employer_leads. Reachable by direct POST like every Server Function,
+  so it re-validates and never trusts the client.
+
+  `roles` is plural now (see 0020). `role` is still written with the first
+  selection so existing rows and any query built against the old column keep
+  working; nothing new should read it.
 */
 export type EmployerLeadInput = {
   full_name: string;
   work_email: string;
   firm_name: string;
   firm_website?: string;
-  role: string;
-  experience_required?: string;
-  software?: string[];
-  tax_forms?: string[];
-  hours_overlap?: string;
+  firm_size: string;
+  roles?: string[];
+  hires_12mo?: string;
   budget?: string;
   start_timeframe?: string;
   details?: string;
@@ -251,15 +255,26 @@ export async function submitEmployerLead(
   const work_email = clean(raw.work_email).toLowerCase();
   const firm_name = clean(raw.firm_name);
   const firm_website = clean(raw.firm_website);
-  const role = clean(raw.role);
+  const firm_size = clean(raw.firm_size);
+  const roles = (raw.roles ?? []).map(clean).filter(Boolean);
 
   const errors: Record<string, string> = {};
   if (!full_name) errors.full_name = "Please tell us your name.";
   if (!firmEmail.safeParse(work_email).success) {
     errors.work_email = "Please enter a valid work email address.";
+  } else if (isFreeEmailProvider(work_email)) {
+    // Checked only after the address parses, so a malformed entry gets the
+    // "that isn't an address" message rather than this one. The wording names
+    // the fix rather than the rule: this reads to a two-person practice on a
+    // Gmail address as an instruction, not an accusation.
+    errors.work_email =
+      "Please use your firm's email address. It's how we confirm the practice before we open access.";
   }
   if (!firm_name) errors.firm_name = "Please tell us your firm's name.";
-  if (!role) errors.role = "Please tell us which role you're hiring for.";
+  if (!firm_size) errors.firm_size = "Please tell us how big your firm is.";
+  if (roles.length === 0) {
+    errors.roles = "Please pick at least one role you would hire.";
+  }
   // Website is optional, but if given it must look like a URL. Accept a bare
   // domain by prepending https:// before validating.
   const normalizedWebsite = firm_website
@@ -284,11 +299,13 @@ export async function submitEmployerLead(
     work_email,
     firm_name,
     firm_website: normalizedWebsite || null,
-    role,
-    experience_required: clean(raw.experience_required) || null,
-    software: raw.software ?? [],
-    tax_forms: raw.tax_forms ?? [],
-    hours_overlap: clean(raw.hours_overlap) || null,
+    firm_size,
+    roles,
+    // Back-compat: `role` was the not-null single-select column before 0020.
+    // Writing the first selection keeps older exports and any ad-hoc query
+    // against it meaningful. Nothing new should read this.
+    role: roles[0] ?? null,
+    hires_12mo: clean(raw.hires_12mo) || null,
     budget: clean(raw.budget) || null,
     start_timeframe: clean(raw.start_timeframe) || null,
     details: clean(raw.details) || null,
@@ -545,7 +562,7 @@ export async function createEmployerAccount(name: string): Promise<IntroState> {
     return {
       status: "error",
       message:
-        "Employer accounts aren't open yet. Tell us who you're hiring at /employers and we'll be in touch.",
+        "Employer accounts aren't open yet. Reserve founding access on the homepage and we'll be in touch.",
     };
   }
   if (!supabase) return { status: "error", message: "Unavailable." };

@@ -47,7 +47,7 @@ Sign-in is limited while we're still building out the platform, so it isn't open
 
 If you're an accounting professional and haven't applied yet: accountingtalent.in/apply. It's free, and it takes about five minutes.
 
-If you're hiring: accountingtalent.in/employers — tell us who you need and we'll come back with a shortlist.
+If you're hiring: accountingtalent.in — reserve founding access and we'll be in touch before the database opens.
 
 If this wasn't you, you can ignore this email. Nothing was created and nobody gained access to anything.
 

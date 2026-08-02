@@ -375,7 +375,7 @@ export const howItWorks = {
     },
     {
       title: "Get hired, directly",
-      body: `When US\u00A0firms hire in ${LAUNCH_WORKER_SHORT}, we put your verified profile in front of the firms that match your software, US\u00A0tax\u00A0experience, and working hours. You interview with the firm directly, negotiate your own salary, and they employ you. They pay you, not us.`,
+      body: `When the database opens to US\u00A0firms in ${LAUNCH_WORKER_SHORT}, they search it by software, US\u00A0tax\u00A0experience, and working hours. A firm that wants to talk to you asks us first, and we only pass on your details if you say yes. You interview directly, negotiate your own salary, and they employ you. They pay you, not us.`,
     },
   ],
 } as const;
@@ -428,7 +428,7 @@ export const honest = {
   h2: "Where we are right now",
   lede: "We'll be straight with you, because you've seen enough websites that aren't.",
   body: [
-    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. US\u00A0firms start hiring from it in ${LAUNCH_WORKER}.`,
+    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. US\u00A0firms get access to it in ${LAUNCH_WORKER}.`,
   ],
   // Pulled out of `body` and given its own field because it is the sentence the
   // whole brand rests on. Same words, its own weight on the page.
@@ -437,15 +437,15 @@ export const honest = {
   promises: [
     {
       title: "Founding-member placement",
-      body: "Verified early profiles are the first ones we put in front of firms.",
+      body: "Verified early profiles are the ones firms see first when the database opens.",
     },
     {
       title: "A free, permanent profile",
-      body: "We will never charge accountants, at any stage. US\u00A0firms pay us a one-time fee only when they hire someone. Over 500,000\u00A0US\u00A0employers already hire offshore staff directly this way — we are bringing that model to accounting.",
+      body: "We will never charge accountants, at any stage. US\u00A0firms pay us for access to the database, plus a one-time fee when they hire someone. Over 500,000\u00A0US\u00A0employers already hire offshore staff directly this way, and we are bringing that model to accounting.",
     },
     {
       title: "A monthly update, either way",
-      body: "We email every profile once a month with where things stand — how many firms are in conversation, what they are looking for — even in months when there is no news.",
+      body: "We email every profile once a month with where things stand: how many firms are in conversation and what they are looking for, even in months when there is no news.",
     },
     {
       title: "No exclusivity, no lock-in",

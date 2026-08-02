@@ -38,7 +38,7 @@ export default function FaqPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Nav active="/faq" />
+      <Nav active="/faq" audience="worker" />
 
       <main className="flex-1">
         <section className="mx-auto max-w-[820px] px-5 pt-14 pb-20 lg:px-8 lg:pt-20 lg:pb-28">
@@ -65,10 +65,11 @@ export default function FaqPage() {
           <FaqDeepLinks />
 
           {/* One quiet cross-link to the employer FAQ, for the wrong-audience
-              reader. Points at /employers (there is no /for-firms route). */}
+              reader. The employer FAQ lives on the homepage now, so this is the
+              #faq anchor on "/" rather than the retired /employers route. */}
           <p className="mt-10 text-small text-subtle">
             <a
-              href="/employers#faq"
+              href="/#faq"
               className="text-navy underline underline-offset-4"
             >
               Hiring for a US firm? See the questions firms ask us →

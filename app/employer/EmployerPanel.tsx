@@ -43,7 +43,7 @@ export function EmployerPanel({ account }: Props) {
           and we&rsquo;ll come back with a shortlist, usually within 72 hours.
         </p>
         <a
-          href="/employers"
+          href="/"
           className="mt-5 inline-block rounded-card bg-navy px-5 py-3 text-small font-semibold text-paper transition hover:bg-navy-deep active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:ring-offset-2"
         >
           Tell us who you need

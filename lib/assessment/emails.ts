@@ -43,20 +43,34 @@ Free for accounting professionals. Always.`,
   };
 }
 
-// ---- Employer lead: role brief received ----------------------------------
-// Sent best-effort the moment an employer submits the "Tell us who you need"
-// brief on /employers (see app/actions.ts submitEmployerLead). Sets the 72-hour
-// expectation the page promises, without overselling.
+// ---- Employer lead: founding access reserved -----------------------------
+// Sent best-effort the moment a firm submits the "Reserve founding access" form
+// on the homepage (see app/actions.ts submitEmployerLead).
+//
+// This must say the same thing as the on-page confirmation state
+// (firms.brief.success): place reserved, founding rate held, opens late 2026,
+// nothing to pay, and a reply address that a person reads. The page tells them
+// this email is coming and invites a reply to it, so the two cannot drift.
+//
+// It previously promised a shortlist of matched candidates within 72 hours and
+// "you only pay when you hire", which was the concierge offer and survived the
+// move to the database model. A firm reading the founding-access confirmation
+// on the page and then this in their inbox was being told two different things.
+//
+// The $720 figure appears in three places: here, firms.pricing, and the
+// employerFaq "cost" answer. Move one, move all three.
 export function emailEmployerLeadReceived(vars: { firm_name: string }): Composed {
   return {
-    subject: "We've got your brief, AccountingTalent",
+    subject: "Your founding place is reserved, AccountingTalent",
     text: `Hi there,
 
-Thanks for sending your hiring brief for ${vars.firm_name}. It's in, and we're on it.
+Thanks for reserving founding access for ${vars.firm_name}. Your place is held, and so is your founding rate of $720 a year for as long as you stay subscribed.
 
-What happens next: we review your requirements and put together a shortlist of matched accounting professionals for your firm. You'll hear back from us within 72 hours (usually sooner) with candidates to review. You interview them directly, and you only pay when you hire.
+What happens next: the database opens to US firms in late 2026 (October to December). You will hear from us then, and once a month until then with where the candidate pool stands, including the months when there is nothing new to report.
 
-If anything changes in the meantime, or you want to add detail to the role, just reply to this email and a person will answer.
+There is nothing to pay now and no obligation to subscribe when we open.
+
+If you have questions, or anything about your firm's hiring plans changes, just reply to this email. It comes straight to a person.
 
 Talk soon,
 AccountingTalent`,
@@ -113,13 +127,13 @@ export function emailPass(vars: {
     subject: `You're verified ✓ — founding member #${vars.profile_number}`,
     text: `Hi ${vars.first_name},
 
-You passed. Your profile is now Verified — English writing assessment and US tax & accounting exam (${vars.score}/10) — and marked as a founding member, which means it's shown first when US firms begin hiring in late 2026 (October–December).
+You passed. Your profile is now Verified — English writing assessment and US tax & accounting exam (${vars.score}/10) — and marked as a founding member, which means it's shown first when US firms begin searching the database in late 2026 (October–December).
 
 What happens now: honestly, mostly waiting — and we'd rather say that than invent activity. We're recruiting more verified professionals and signing up founding US firms. You'll get an email from us at launch, and one before it. That's it — no spam in between.
 
 Two things you can do meanwhile:
 1. Keep your profile fresh. If your salary expectation, availability, or software skills change, reply to this email and we'll update it. Fresh profiles rank above stale ones.
-2. Refer another accountant. Know a CA or accountant doing US work for agency pay? Send them accountingtalent.in — if they mention your name in the application, you'll both get featured placement at launch.
+2. Refer another accountant. Know a CA or accountant doing US work for agency pay? Send them accountingtalent.in/accountants — if they mention your name in the application, you'll both get featured placement at launch.
 
 Your written answer now appears on your profile exactly as you wrote it. US firms will read it. We think they'll be impressed.
 

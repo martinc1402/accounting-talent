@@ -36,7 +36,7 @@ export default async function ApplyPage({
     <>
       <header className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-[820px] items-center px-5 lg:h-[72px] lg:px-8">
-          <Logo />
+          <Logo href="/accountants" />
         </div>
       </header>
 
