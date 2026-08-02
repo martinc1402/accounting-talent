@@ -38,7 +38,7 @@ export default function FaqPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Nav active="/faq" audience="worker" />
+      <Nav active="/accountants" audience="worker" />
 
       <main className="flex-1">
         <section className="mx-auto max-w-[820px] px-5 pt-14 pb-20 lg:px-8 lg:pt-20 lg:pb-28">

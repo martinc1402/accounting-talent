@@ -69,7 +69,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Nav />
+      <Nav active="/" />
       <main className="flex-1">
         {/*
           Hero. 7/5 split, four text elements at most: eyebrow, headline, subhead,

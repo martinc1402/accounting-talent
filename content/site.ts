@@ -36,41 +36,52 @@ export const CONTACT_EMAIL = "contact@accountingtalent.in";
 export const OPERATOR = "Kaya Virtual (Australia)";
 
 /*
-  Two navs, because the site sells to two audiences from two homepages and a
-  single list cannot serve both. "/" is the firm pitch, /accountants is the worker
-  pitch, and an item like "Pricing" is an employer concern that would send an
-  accountant to the wrong page mid-visit.
+  One nav, two groups, identical on every page. Each top-level item is the name of
+  an audience and links to that audience's page; its dropdown holds that page's
+  sections.
 
-  KEEP THE TWO LISTS THE SAME LENGTH AND THE SAME SHAPE: two section anchors, then
-  FAQ, then the link to the other audience's page. Same rhythm, same slot order,
-  labels suited to the reader. The site has to look like one product across both
-  pages, and a four-item bar next to a three-item bar is the tell that it is not.
-  If you add or drop an item here, do it to both.
+  This replaced two flat audience-specific lists that were swapped by prop. Those
+  made the header change shape as you moved between the two homepages, which read
+  as two sites sharing a wordmark. Grouping means the header is now byte-identical
+  everywhere and both sides are discoverable without leaving the page you are on.
 
-  The lists cannot be identical, only shape-matched: "/" has four anchored
-  sections while /accountants has two (#how-it-works, #who-we-want) and keeps its
-  FAQ on a separate route.
+  Each group leads with a link to its own page before its section anchors. That is
+  not redundant with the group label: the label is also a link, but on a touch
+  device at desktop width the first tap opens the hover panel instead of
+  navigating, so the explicit row is the reliable way in.
 
-  Four items plus a CTA is the ceiling before labels start colliding at lg
-  (1024px), which is also where the header must still render on one line.
+  The section anchors are absolute ("/#pricing", not "#pricing") because this nav
+  renders on /legal and /faq too, where a page-local anchor would silently do
+  nothing. An absolute anchor still scrolls correctly when you are already there.
 
-  This replaced a string-rewrite in Nav.tsx that rebuilt hrefs by matching on
-  "/#how-it-works". That hack broke silently the moment this file changed, which
-  is exactly what it did when the homepage moved. Nav now picks a list by
-  audience instead of patching one.
+  KEEP THE TWO GROUPS SYMMETRICAL: page link, two section anchors, FAQ. If one
+  side gains an item, give the other side one or accept that the panels look
+  lopsided. The whole point of this shape is that neither audience looks like the
+  afterthought.
+
+  The CTA is NOT part of this and stays context-aware (see employerCta below).
 */
-export const nav = [
-  { label: "How we vet", href: "/#vetting" },
-  { label: "Pricing", href: "/#pricing" },
-  { label: "FAQ", href: "/#faq" },
-  { label: "For Accountants", href: "/accountants" },
-] as const;
-
-export const workerNav = [
-  { label: "How it works", href: "/accountants#how-it-works" },
-  { label: "Who we want", href: "/accountants#who-we-want" },
-  { label: "FAQ", href: "/faq" },
-  { label: "For Firms", href: "/" },
+export const navGroups = [
+  {
+    label: "Employers",
+    href: "/",
+    items: [
+      { label: "For firms", href: "/" },
+      { label: "How we vet", href: "/#vetting" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "FAQ", href: "/#faq" },
+    ],
+  },
+  {
+    label: "Accountants",
+    href: "/accountants",
+    items: [
+      { label: "For accountants", href: "/accountants" },
+      { label: "How it works", href: "/accountants#how-it-works" },
+      { label: "Who we want", href: "/accountants#who-we-want" },
+      { label: "FAQ", href: "/faq" },
+    ],
+  },
 ] as const;
 
 export const primaryCta = {
