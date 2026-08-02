@@ -9,7 +9,6 @@ import { validateAll, visibleQuestions } from "@/lib/validate";
 import { scoreApplication } from "@/lib/scoring";
 import { isLikelyBot } from "@/lib/antispam";
 import { isRateLimited } from "@/lib/ratelimit";
-import { isFreeEmailProvider } from "@/lib/email/freeProviders";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { firms } from "@/content/firms";
 import {
@@ -260,15 +259,13 @@ export async function submitEmployerLead(
 
   const errors: Record<string, string> = {};
   if (!full_name) errors.full_name = "Please tell us your name.";
+  // Validity only. There is deliberately no free-provider rule here: plenty of
+  // real one- and two-person CPA practices run on Gmail, and this form's whole
+  // job is to capture employer intent, so turning those firms away costs more
+  // than the qualification signal was worth. A personal address still lands in
+  // work_email, so it can be segmented on later without blocking anyone now.
   if (!firmEmail.safeParse(work_email).success) {
     errors.work_email = "Please enter a valid work email address.";
-  } else if (isFreeEmailProvider(work_email)) {
-    // Checked only after the address parses, so a malformed entry gets the
-    // "that isn't an address" message rather than this one. The wording names
-    // the fix rather than the rule: this reads to a two-person practice on a
-    // Gmail address as an instruction, not an accusation.
-    errors.work_email =
-      "Please use your firm's email address. It's how we confirm the practice before we open access.";
   }
   if (!firm_name) errors.firm_name = "Please tell us your firm's name.";
   if (!firm_size) errors.firm_size = "Please tell us how big your firm is.";

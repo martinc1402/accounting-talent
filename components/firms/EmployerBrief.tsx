@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { submitEmployerLead, type EmployerLeadInput } from "@/app/actions";
 import { firms } from "@/content/firms";
-import { isFreeEmailProvider } from "@/lib/email/freeProviders";
 import { ButtonAction } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -117,18 +116,19 @@ export function EmployerBrief() {
   };
 
   /*
-    The one client-side check. It mirrors the server rule in submitEmployerLead
-    so a firm owner who types a personal address finds out before the round trip
-    rather than after it. The server still decides; if these two ever disagree,
-    the server's answer is the one that lands in the field error.
+    Validity only, and it mirrors the server rule in submitEmployerLead so a typo
+    is caught before the round trip rather than after it. The server still
+    decides; if these two ever disagree, the server's answer is the one that
+    lands in the field error.
+
+    No free-provider rule. A real two-person practice on Gmail is exactly the
+    firm this smoke test wants to hear from, and blocking it destroyed the only
+    thing the page measures.
   */
   const localEmailError = (): string | null => {
     const value = form.work_email.trim().toLowerCase();
     if (!value) return "Please enter your work email address.";
     if (!EMAIL_RE.test(value)) return "Please enter a valid email address.";
-    if (isFreeEmailProvider(value)) {
-      return "Please use your firm's email address. It's how we confirm the practice before we open access.";
-    }
     return null;
   };
 
