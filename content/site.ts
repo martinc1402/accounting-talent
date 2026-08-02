@@ -45,10 +45,10 @@ export const OPERATOR = "Kaya Virtual (Australia)";
   as two sites sharing a wordmark. Grouping means the header is now byte-identical
   everywhere and both sides are discoverable without leaving the page you are on.
 
-  Each group leads with a link to its own page before its section anchors. That is
-  not redundant with the group label: the label is also a link, but on a touch
-  device at desktop width the first tap opens the hover panel instead of
-  navigating, so the explicit row is the reliable way in.
+  Each group leads with an "Overview" row linking to its own page. The group label
+  is a disclosure button, not a link, so this row is the ONLY way into the landing
+  page from the desktop nav. Do not remove it as a duplicate of the label: the
+  label does not navigate.
 
   The section anchors are absolute ("/#pricing", not "#pricing") because this nav
   renders on /legal and /faq too, where a page-local anchor would silently do
@@ -66,7 +66,7 @@ export const navGroups = [
     label: "Employers",
     href: "/",
     items: [
-      { label: "For firms", href: "/" },
+      { label: "Overview", href: "/" },
       { label: "How we vet", href: "/#vetting" },
       { label: "Pricing", href: "/#pricing" },
       { label: "FAQ", href: "/#faq" },
@@ -76,7 +76,7 @@ export const navGroups = [
     label: "Accountants",
     href: "/accountants",
     items: [
-      { label: "For accountants", href: "/accountants" },
+      { label: "Overview", href: "/accountants" },
       { label: "How it works", href: "/accountants#how-it-works" },
       { label: "Who we want", href: "/accountants#who-we-want" },
       { label: "FAQ", href: "/faq" },
