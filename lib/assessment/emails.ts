@@ -57,20 +57,42 @@ Free for accounting professionals. Always.`,
 // move to the database model. A firm reading the founding-access confirmation
 // on the page and then this in their inbox was being told two different things.
 //
-// The $720 figure appears in four places: here, firms.pricing, the employerFaq
-// "cost" answer, and the "A free, permanent profile" promise in content/home.ts
-// (the accountant-facing page states the firm's fees too, on purpose). Move one,
-// move all four.
-export function emailEmployerLeadReceived(vars: { firm_name: string }): Composed {
+// THE PRICING IS GONE FROM THIS EMAIL, and it should stay gone.
+//
+// It used to promise "your founding rate of $720 a year" and a database opening
+// "in late 2026 (October to December)". Both belonged to the annual-access-plus-
+// success-fee model, which the site no longer sells: pricing is now the three
+// plans in content/passport.ts and there is no launch gate. A firm reading the
+// new page and then this in their inbox was being quoted a fee that exists
+// nowhere, which is the second time this email has drifted behind the model (it
+// previously survived the move off the concierge offer, promising a shortlist in
+// 72 hours).
+//
+// THIS FILE IS THE DANGEROUS ONE. Nothing here is type-checked against the
+// content files and no build error will tell you it has gone stale, so it is the
+// last place a retired price survives. It now quotes NO figure and NO date at
+// all, which is what makes it safe: what the firm asked for varies by lead, and
+// the page they just submitted from is the authority on what it costs.
+//
+// `service` is what they picked in the intake form (preferred_service, migration
+// 0021), echoed back so the email confirms what they actually asked for.
+export function emailEmployerLeadReceived(vars: {
+  firm_name: string;
+  service?: string;
+}): Composed {
+  const asked = vars.service
+    ? `You asked about: ${vars.service}.\n\n`
+    : "";
+
   return {
-    subject: "Your founding place is reserved, AccountingTalent",
+    subject: "We have your details, AccountingTalent",
     text: `Hi there,
 
-Thanks for reserving founding access for ${vars.firm_name}. Your place is held, and so is your founding rate of $720 a year for as long as you stay subscribed.
+Thanks for getting in touch about hiring for ${vars.firm_name}. Your place in the founding group is held.
 
-What happens next: the database opens to US firms in late 2026 (October to December). You will hear from us then, and once a month until then with where the candidate pool stands, including the months when there is nothing new to report.
+${asked}What happens next: we read every one of these ourselves and will reply within two working days. After that you will hear from us once a month with where the network stands, including the months when there is nothing new to report.
 
-There is nothing to pay now and no obligation to subscribe when we open.
+There is nothing to pay now, no card involved, and no obligation to hire anyone or to take a paid plan later.
 
 If you have questions, or anything about your firm's hiring plans changes, just reply to this email. It comes straight to a person.
 

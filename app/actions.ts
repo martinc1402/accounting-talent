@@ -353,7 +353,7 @@ export async function submitEmployerLead(
     try {
       const result = await sendEmail(
         work_email,
-        emailEmployerLeadReceived({ firm_name }),
+        emailEmployerLeadReceived({ firm_name, service: preferred_service }),
       );
       if (!result.ok) {
         console.error(
