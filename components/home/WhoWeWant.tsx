@@ -4,17 +4,24 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
 /*
-  Five candidate profiles, one card style. This used to be five different
-  treatments (cream, navy, photo-background, grey, coral), which made the grid
-  read as decoration and told the reader nothing: the colours did not encode
-  anything, so the eye had to work out that all five cells were equal.
+  Who the network is for. One card style throughout. This used to be five
+  different treatments (cream, navy, photo-background, grey, coral), which made
+  the grid read as decoration and told the reader nothing: the colours did not
+  encode anything, so the eye had to work out that all cells were equal.
 
-  Exactly one card is navy now, and it says why. "Offshore firm staff on US
-  clients" are the people the business most wants, so they get the one
-  highlighted card and a "Priority profile" badge to name the highlight.
+  Exactly one card is navy, and it says why. Accountants already working US
+  client files are the closest fit the network has today, so they get the one
+  highlighted card and a badge naming the highlight.
+
+  REFRAMED FROM A FILTER TO A QUESTION OF RELEVANCE. The old version led with
+  "Chartered Accountants, CA Inter and Finalists", which implied a qualification
+  hierarchy the product does not apply: the application does not require any
+  specific qualification, and lib/scoring.ts does not rank on one. Do not
+  reintroduce a mandatory-credential reading here unless the application actually
+  starts requiring one.
 
   Two columns on desktop, one on mobile. The cards stretch to equal heights per
-  row, which is what stops five different body lengths from producing five
+  row, which is what stops eight different body lengths from producing eight
   different card heights.
 */
 export function WhoWeWant() {
@@ -39,11 +46,11 @@ export function WhoWeWant() {
 
         <div className="reveal-group mt-12 grid items-stretch gap-4 md:grid-cols-2">
           {whoWeWant.profiles.map((profile) => {
-            const tone = profile.priority ? "feature" : "default";
+            const tone = profile.feature ? "feature" : "default";
             return (
               <div key={profile.title} className="reveal h-full">
                 <Card tone={tone}>
-                  {profile.priority && (
+                  {profile.feature && (
                     <p className="mb-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-caption font-medium tracking-wide text-white">
                       {whoWeWant.priorityBadge}
                     </p>
@@ -54,6 +61,27 @@ export function WhoWeWant() {
               </div>
             );
           })}
+        </div>
+
+        {/*
+          The signals that stand out. A wrapped pill list, not an eighth and
+          ninth card: these are attributes cutting across the categories above,
+          and giving them card treatment would read as more categories.
+        */}
+        <div className="reveal mt-12">
+          <p className="text-body font-medium text-ink">
+            {whoWeWant.signalsIntro}
+          </p>
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {whoWeWant.signals.map((signal) => (
+              <li
+                key={signal}
+                className="rounded-full border border-line bg-white px-3.5 py-1.5 text-caption text-muted"
+              >
+                {signal}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Rate card. A strip, not a spec table: three figures and a caveat. */}

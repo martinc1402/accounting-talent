@@ -1,48 +1,55 @@
 import { firms } from "@/content/firms";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { FeatureGrid } from "@/components/marketing/FeatureGrid";
 
 /*
-  Section 2. The objection, stated before the offer: short, full-width, directly
-  under the hero. Three beats set in the display serif with generous space between
-  them so each lands on its own, then a pivot line that is larger and navy-italic
-  so it reads as the turn into the answer. Its own pale (mist) band, distinct from
-  the white hero above and the white vetting section below.
+  Section 2. The objection, stated before the offer: full-width, directly under
+  the hero, in its own pale (mist) band, distinct from the white hero above.
 
-  This was PainMirror, which opened on the staffing shortage and the agency
-  margin. It leads on risk now. A firm owner's first question about an overseas
-  hire is who this person is, not what they cost, and a page that answers the
-  cheaper question first reads as though it misheard the expensive one.
+  The argument has moved twice now, and both moves were narrowing. It was
+  PainMirror, opening on the staffing shortage and the agency margin. It became
+  risk ("who is this person"), because a firm owner's first question about an
+  overseas hire is not what they cost. It is now evidence: a US firm is not short
+  of offshore accountants approaching it, so the scarce thing is not access, it is
+  knowing which of them can do the work. Same job, sharper target.
 
-  pb-1 on the pivot reserves space for the italic descender in "problem"; at
-  leading-[1.3] with no reserve it clips against the section padding.
+  WHAT MUST NOT COME BACK: price is not argued here. Cost is the accountant's
+  argument and it is the pitch on /accountants. A firm page that opens on cost
+  reads as though it misheard the question.
+
+  The three frustrations are a plain FeatureGrid with no icons. Icons here would
+  be decorating a list of problems, and the Passport and principles sections below
+  use them for the things we actually do, which is where the variation belongs.
+  This also keeps the section from being the first of four consecutive icon grids.
+
+  The three display-serif beats and the navy italic pivot are gone with the old
+  argument. The pivot line survives as `problem.close`, still display type,
+  because it is the sentence the next four sections exist to support. It is set
+  roman rather than italic now: there is no descender-clipping reserve to
+  remember, and the italic was carrying the old copy's rhetorical turn rather than
+  this one's plain statement.
 */
 export function Risk() {
-  const { risk } = firms;
+  const { problem } = firms;
 
   return (
-    <section className="bg-mist py-16 lg:py-24">
+    <section className="bg-mist py-16 lg:py-28">
       <Container>
-        <div className="max-w-[820px]">
-          <SectionHeading>{risk.heading}</SectionHeading>
-
-          {/* Beats: display serif, ~22px mobile / ~28px desktop, line-height 1.3,
-              ~32-36px apart. */}
-          <ul className="mt-10 space-y-8 lg:space-y-9">
-            {risk.beats.map((beat) => (
-              <li
-                key={beat}
-                className="display max-w-[38ch] text-[1.4rem] leading-[1.3] text-muted lg:text-[1.75rem]"
-              >
-                {beat}
-              </li>
-            ))}
-          </ul>
-
-          <p className="display mt-12 max-w-[40ch] pb-1 text-[1.5rem] leading-[1.3] text-navy italic lg:text-[1.9rem]">
-            {risk.pivot}
+        <div className="max-w-[900px]">
+          <SectionHeading className="reveal">{problem.heading}</SectionHeading>
+          <p className="reveal mt-6 max-w-[64ch] text-lede text-ink">
+            {problem.body}
           </p>
         </div>
+
+        <div className="mt-12">
+          <FeatureGrid items={problem.frustrations} columns={3} />
+        </div>
+
+        <p className="reveal display display-step mt-14 max-w-[28ch] text-navy">
+          {problem.close}
+        </p>
       </Container>
     </section>
   );

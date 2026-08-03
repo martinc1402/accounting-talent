@@ -8,6 +8,10 @@ import {
 import type { ReactNode } from "react";
 import { hero } from "@/content/home";
 import { LogoMark } from "@/components/ui/LogoMark";
+import {
+  EvidenceBadge,
+  type EvidenceKind,
+} from "@/components/marketing/EvidenceBadge";
 
 /*
   The sample verified profile. This is the product, so it gets built like the
@@ -45,6 +49,10 @@ export type ProfileCardData = {
   salaryLabel: string;
   salary: string;
   salarySuffix: string;
+  // Passport evidence beyond the verification line: Work Proof, vouch counts.
+  // Optional because not every card carries any, and because most of what these
+  // describe is not built yet (see content/passport.ts for status).
+  badges?: readonly { kind: EvidenceKind; label: string }[];
 };
 
 /*
@@ -131,9 +139,37 @@ function Silhouette() {
 export function ProfileCard({
   profile = hero.sampleProfile,
   sample = false,
+  example,
 }: {
   profile?: ProfileCardData;
   sample?: boolean;
+  /*
+    REQUIRED, deliberately.
+
+    Every marketing card here carries a name, a face, a verification line and a
+    salary expectation. The disclosure is the only thing standing between an
+    illustration and a claim we cannot make, and until now it was the CALLER's job:
+    app/page.tsx rendered its own caption, SampleProfiles rendered a different one,
+    Hero rendered a third, and nothing stopped a new section rendering this card
+    with no disclosure at all. Two more card locations just got added, so that risk
+    went up rather than down.
+
+    Making it a required prop moves the guarantee into the type system. An
+    undisclosed card is now a build error instead of something a reviewer has to
+    notice.
+
+    `sample` is a DIFFERENT THING and stays different: it only tunes image framing
+    and lazy-loading. It has never been the honesty mechanism and must not be
+    mistaken for one.
+
+    This is also what replaces the silhouette's old job. See the Silhouette
+    comment below: grey silhouettes were tried as the honesty signal, read as an
+    unfinished page, and were reversed in c615c59. Real portraits plus an explicit
+    "Example" chip and a sentence is the treatment that survived. Do not
+    reintroduce silhouettes for sample cards on the strength of a stale comment;
+    that exact mistake has already happened here once.
+  */
+  example: { chip: string; note?: string };
 }) {
   const p = profile;
 
@@ -170,6 +206,17 @@ export function ProfileCard({
         )}
 
         {/*
+          The example chip, over the photo's top-right. It sits on the image
+          rather than under the card because that is where the eye lands first,
+          and the whole point is that nobody reads this card as a real person by
+          accident. Navy on paper, not the verified green: green means one thing
+          on this site and this is not it.
+        */}
+        <span className="absolute top-3 right-3 rounded-full bg-paper/95 px-2.5 py-1 text-fine font-medium tracking-wide text-navy uppercase ring-1 ring-navy/10">
+          {example.chip}
+        </span>
+
+        {/*
           Cream tile, navy glyph. LogoMark strokes currentColor, so the glyph
           just follows text-navy. It reads against both halves of the seam.
         */}
@@ -189,6 +236,19 @@ export function ProfileCard({
           <SealCheck size={17} weight="fill" className="shrink-0" aria-hidden />
           {p.verified}
         </p>
+
+        {/* Passport evidence beyond the verification line. Wraps, because two
+            badges plus a long label overflows the 3-up grid cards even though it
+            fits the wider hero card. */}
+        {p.badges && p.badges.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+            {p.badges.map((badge) => (
+              <li key={badge.label}>
+                <EvidenceBadge kind={badge.kind} label={badge.label} />
+              </li>
+            ))}
+          </ul>
+        )}
 
         <ul className="mt-5 space-y-2.5">
           <Row icon={<Briefcase size={16} weight="light" />}>{p.role}</Row>

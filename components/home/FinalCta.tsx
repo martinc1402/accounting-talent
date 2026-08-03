@@ -1,6 +1,7 @@
 import { finalCta } from "@/content/home";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { JoinCtas } from "@/components/home/JoinCtas";
 
 /*
   The one deliberate color block on the page. It runs straight into the navy
@@ -23,8 +24,9 @@ export type FinalCtaContent = {
 
 const homeContent: FinalCtaContent = {
   heading: finalCta.h2,
+  sub: finalCta.sub,
   referral: finalCta.referral,
-  // Same label as the hero. One intent, one label, everywhere on the page.
+  // Same labels as the hero. One intent, one label, everywhere on the page.
   button: { label: finalCta.cta, href: "/apply" },
 };
 
@@ -46,14 +48,26 @@ export function FinalCta({
           </p>
         )}
 
+        {/*
+          Two doors on the accountant page: join, or look at what you would be
+          joining. JoinCtas carries both plus their analytics, and matches the
+          hero exactly so the page closes on the same offer it opened with.
+
+          A caller passing its own `content` still gets the single-button
+          treatment, which is what the employer-side reuse of this band wants.
+        */}
         <div className="reveal mt-10 flex justify-center">
-          <Button
-            href={content.button.href}
-            variant="inverse"
-            className="w-full sm:w-auto"
-          >
-            {content.button.label}
-          </Button>
+          {content === homeContent ? (
+            <JoinCtas surface="final" tone="onNavy" />
+          ) : (
+            <Button
+              href={content.button.href}
+              variant="inverse"
+              className="w-full sm:w-auto"
+            >
+              {content.button.label}
+            </Button>
+          )}
         </div>
 
         {content.referral && (

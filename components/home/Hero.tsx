@@ -1,8 +1,8 @@
 import { Fragment } from "react";
 import { hero, software } from "@/content/home";
-import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { ProfileCard } from "@/components/home/ProfileCard";
+import { JoinCtas } from "@/components/home/JoinCtas";
 
 /*
   Asymmetric split, never centered.
@@ -16,9 +16,18 @@ import { ProfileCard } from "@/components/home/ProfileCard";
   supposed to sit on). The page keeps its photography in the mid-page band; the
   hero keeps the argument.
 
-  Four text elements maximum in the copy column: headline, subhead, one CTA, one
-  microcopy line. On a 360px viewport the CTA sits above the fold and the card
-  follows below it.
+  Five text elements in the copy column now: eyebrow, headline, subhead, CTAs,
+  microcopy. The eyebrow ("Build your AccountingTalent Passport") is what names
+  the thing the rest of the page is about, and it is the only eyebrow rendered on
+  either page (SectionHeading's kickers are dark-launched off), so the page is
+  nowhere near the point where these stop being read.
+
+  Two CTAs now, not one. "See what employers see" goes to the real preview
+  profile, and it exists because the primary ask (build a profile) is easier to
+  say yes to once you have seen the thing you would be building.
+
+  On a 360px viewport the primary CTA sits above the fold and the card follows
+  below it.
 */
 export function Hero() {
   const p = hero.sampleProfile;
@@ -29,7 +38,16 @@ export function Hero() {
     // its own. Bands are adjacent (padding, not margins), so the cream money
     // band that follows starts flush against this one.
     <section className="relative overflow-hidden pb-16 lg:pb-24">
-      <Container className="grid grid-cols-1 items-center gap-12 pt-14 lg:grid-cols-12 lg:gap-12 lg:pt-24">
+      {/*
+        lg:items-start, not items-center. The credential card is around 800px
+        tall against a ~470px copy column, so centering pushed the eyebrow to
+        y=398 on a 900px viewport: the headline sat below the vertical midpoint
+        under a screen-height band of nothing, which reads as a layout bug rather
+        than as whitespace. Top-aligned, the headline sits near the top of the
+        viewport and the card runs past the fold, which also invites the scroll.
+        The employer hero was corrected the same way at the same time.
+      */}
+      <Container className="grid grid-cols-1 items-center gap-12 pt-14 lg:grid-cols-12 lg:items-start lg:gap-12 lg:pt-20">
         {/*
           7/5. Widening this to 8/4 was tried, to buy room for the hand-broken
           headline, and reverted: at 1024px it left the image column only 283px,
@@ -44,6 +62,9 @@ export function Hero() {
             on mobile, where the <br> is display:none, it is the only thing left
             keeping the words apart.
           */}
+          <p className="mb-3 text-caption font-medium tracking-wide text-subtle uppercase">
+            {hero.eyebrow}
+          </p>
           <h1 className="display display-hero-home hero-manual-breaks text-ink">
             {hero.h1Lines.map((line, i) => (
               <Fragment key={line}>
@@ -61,9 +82,7 @@ export function Hero() {
           <p className="mt-6 max-w-[42ch] text-lede text-muted">{hero.sub}</p>
 
           <div className="mt-8">
-            <Button href="/apply" className="w-full sm:w-auto">
-              {hero.cta}
-            </Button>
+            <JoinCtas surface="hero" />
           </div>
 
           <p className="mt-4 max-w-[46ch] text-caption text-subtle">
@@ -72,7 +91,7 @@ export function Hero() {
         </div>
 
         <div className="lg:col-span-5">
-          <ProfileCard />
+          <ProfileCard example={{ chip: p.exampleChip }} />
 
           <p className="mt-4 text-caption text-subtle">{p.caption}</p>
           {/* Its own line at the same size, not folded into the caption above.

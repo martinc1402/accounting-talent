@@ -1,30 +1,43 @@
 import { firms } from "@/content/firms";
+import { employerPlans, ongoingHiring, pricingNote } from "@/content/passport";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { MathBars } from "@/components/home/MathBars";
+import { PricingCard } from "@/components/marketing/PricingCard";
+import { PlanCta } from "@/components/marketing/PlanCta";
 
 /*
-  Section 5: pricing. It sits after the vetting and the sample profiles on
-  purpose. The money argument is only persuasive once the quality claim has been
-  shown, and a firm that does not believe the pool is real does not care what
-  access to it costs.
+  Section 8: pricing.
 
-  Layout is 2 + 1, not three equal cards: the two numbers a firm actually pays sit
-  side by side, and the founding rate runs full width beneath them because it is a
-  condition on both rather than a third product. Three equal columns would have
-  read as a pricing table for three plans, which is the wrong idea entirely.
+  THIS REVERSES A RECORDED DECISION and the old reasoning deserves stating rather
+  than quietly deleting. This section used to lay out 2 + 1 (two fees side by
+  side, the founding rate full width beneath) and its comment argued: "Three equal
+  columns would have read as a pricing table for three plans, which is the wrong
+  idea entirely." That was correct for the old model, which was one annual access
+  fee plus one per-hire success fee. Two numbers a firm pays are not three
+  products to choose between, and columning them would have invented a choice
+  that did not exist.
 
-  MathBars is reused verbatim from the worker page. Its header comment has claimed
-  since it was extracted that it exists "so it can be reused on /employers", and
-  nothing ever imported it until this section. The data is reframed for a firm
-  (content/firms.ts, pricing.comparison): the point being made is that of the
-  $2,000 a month a firm pays an agency, about $600 reaches the person doing the
-  work. That is a quality argument as much as a price one, which is why it lives
-  under the fees rather than in the hero.
+  The model is now genuinely three products at three prices, and a firm picking
+  its first step needs them side by side. The old objection does not apply to the
+  new offer.
+
+  MathBars is gone from this page with the fee model. It compared what a firm pays
+  an agency against what reaches the accountant, which was an argument about
+  agency margin and belonged to a pricing model built around undercutting one. It
+  still runs on /accountants, where the direct-hiring economics are the
+  accountant's argument and the comparison is the point of the section.
+
+  NO CHECKOUT EXISTS. There is no payment dependency anywhere in this repo. Every
+  CTA below lands on the intake form with its plan preselected, and the paid ones
+  say "Reserve", not "Get". content/passport.ts enforces the rest: a plan feature
+  that is not built cannot be given a working link.
+
+  The ongoing-hiring block is deliberately NOT a fourth card. It is a hairline
+  block underneath, because a firm choosing its first step should be choosing
+  between three things and not six.
 */
 export function Pricing() {
   const { pricing } = firms;
-  const [access, success, founding] = pricing.plans;
 
   return (
     <section id="pricing" className="scroll-mt-24 py-16 lg:py-28">
@@ -36,76 +49,42 @@ export function Pricing() {
           </p>
         </div>
 
-        {/* The two fees. */}
-        <div className="reveal-group mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2">
-          {[access, success].map((plan) => (
-            <div key={plan.title} className="reveal border-t border-line pt-6">
-              <h3 className="text-body font-medium text-navy">{plan.title}</h3>
-              <p className="display display-figure mt-3 text-ink">
-                {plan.price}
-              </p>
-              <p className="mt-1 text-caption text-subtle">{plan.unit}</p>
-              <p className="mt-4 max-w-[44ch] text-body text-muted">
-                {plan.body}
-              </p>
-            </div>
+        {/* 3 items, 3 cells. items-stretch so the flagged card does not stand
+            taller than its neighbours; PricingCard pins its own CTA to the
+            bottom with mt-auto so the three buttons share a baseline. */}
+        <ul className="reveal-group mt-12 grid items-stretch gap-6 lg:grid-cols-3">
+          {employerPlans.map((plan) => (
+            <li key={plan.id} className="h-full">
+              <PricingCard plan={plan} />
+            </li>
           ))}
-        </div>
+        </ul>
 
-        {/* The founding rate: a condition on both fees above, so it runs the full
-            width rather than sitting as a third column. */}
-        <div className="reveal mt-10 rounded-card border border-line bg-mist p-6 lg:p-8">
-          <h3 className="text-body font-medium text-navy">{founding.title}</h3>
-          <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <p className="display display-figure text-ink">{founding.price}</p>
-            <p className="text-caption text-subtle">{founding.unit}</p>
-          </div>
-          <p className="mt-4 max-w-[62ch] text-body text-muted">
-            {founding.body}
-          </p>
-        </div>
+        <p className="reveal mt-10 max-w-[72ch] text-small text-subtle">
+          {pricingNote}
+        </p>
 
-        {/*
-          The arithmetic, immediately after the three prices, because that is the
-          order a partner reads them in: what it costs, then what it costs against.
-
-          Set at reading size on a hairline rather than in a tinted callout. A box
-          would make it look like the pitch; it is meant to look like a footnote
-          somebody checked. The caption under it marks the staffing range as
-          illustrative, which is the part that would otherwise read as a quote.
-        */}
-        <div className="reveal mt-12 max-w-[820px] border-t border-line pt-6">
-          <p className="max-w-[62ch] text-body text-ink">
-            {pricing.arithmetic.body}
-          </p>
-          <p className="mt-3 max-w-[62ch] text-caption text-subtle">
-            {pricing.arithmetic.caption}
-          </p>
-        </div>
-
-        {/* What the fees are not. The three sentences a firm burned by an agency
-            is actually scanning for. */}
-        <div className="reveal mt-14 max-w-[820px]">
+        {/* The secondary tier. Hairline, no card, no price display type: it must
+            not compete with the three offers above it. */}
+        <div className="reveal mt-14 max-w-[820px] border-t border-line pt-8">
           <h3 className="text-body font-medium text-ink">
-            {pricing.termsLabel}
+            {ongoingHiring.heading}
           </h3>
-          <ul className="mt-4">
-            {pricing.terms.map((term) => (
-              <li
-                key={term}
-                className="border-t border-line py-4 text-body text-muted"
-              >
-                {term}
+          <ul className="mt-4 space-y-2">
+            {ongoingHiring.options.map((option) => (
+              <li key={option} className="max-w-[62ch] text-body text-muted">
+                {option}
               </li>
             ))}
           </ul>
-        </div>
-
-        <div className="mt-16">
-          <MathBars comparison={pricing.comparison} />
-          <p className="reveal mt-6 max-w-[64ch] text-caption text-subtle">
-            {pricing.comparison.caption}
-          </p>
+          <div className="mt-6">
+            <PlanCta
+              plan="ongoing"
+              label={ongoingHiring.action.label}
+              href={ongoingHiring.action.href}
+              variant="outline"
+            />
+          </div>
         </div>
       </Container>
     </section>

@@ -2,62 +2,73 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/chrome/Nav";
 import { Footer } from "@/components/chrome/Footer";
 import { Hero } from "@/components/home/Hero";
-import { TheMath } from "@/components/home/TheMath";
+import { WhyReputation } from "@/components/home/WhyReputation";
 import { HowItWorks } from "@/components/home/HowItWorks";
+import { WorkNotPopularity } from "@/components/home/WorkNotPopularity";
+import { TheMath } from "@/components/home/TheMath";
 import { WhoWeWant } from "@/components/home/WhoWeWant";
+import { AccountantPricing } from "@/components/home/AccountantPricing";
+import { Verification } from "@/components/home/Verification";
 import { ProfileDetail } from "@/components/home/ProfileDetail";
 import { TheHonestPart } from "@/components/home/TheHonestPart";
-import { ShortFaq } from "@/components/home/ShortFaq";
 import { FinalCta } from "@/components/home/FinalCta";
+import { Passport } from "@/components/marketing/Passport";
+import { FaqSection } from "@/components/marketing/FaqSection";
+import { pageMetadata } from "@/lib/seo";
+import { passport, faqHeading } from "@/content/home";
+import { faq } from "@/content/faq";
 
 /*
-  Worker-facing homepage. This page WAS "/" until the homepage was repointed at
-  US firms; the composition below is unchanged from that version, and every
-  section still reads from content/home.ts.
+  Worker-facing page. Every section reads from content/home.ts, and the parts both
+  audiences see (the Passport pillars) read from content/passport.ts so the two
+  pages cannot describe the same thing differently.
 
-  It carries its own metadata because the root layout's defaults moved to the
-  employer pitch with the homepage. Without this, an accountant sharing this URL
-  previewed the firm-side copy, which is the exact mistake /employers used to
-  document about the root OG. Locale stays en_IN: this audience is in India, and
-  the page says "late 2026" rather than "Q4 2026" because the Indian financial
-  year runs April to March, so "Q4" reads as Jan-Mar 2027 to many applicants.
+  THE PROMISE CHANGED. This page used to lead on pay: "Work directly for US
+  accounting firms. Keep 100% of your salary." That argument is still here and it
+  is still good, but it is section six now rather than the headline. The lead is
+  professional reputation, because "keep 100%" is only worth anything to someone a
+  firm has already decided to talk to, and the thing this audience actually lacks
+  is a way to be found and believed.
 
-  Bands from the top: white (hero, with the software strip folded into its foot)
-  / paper (the money section) / white (how it works) / paper (who we're looking
-  for) / white (the profile record + the honest part) / mist (faq) / navy (final
-  cta + footer). The alternation is deliberate rhythm; ProfileDetail takes no
-  background of its own, so it does not cost a band.
+  The pay argument was also softened where it overstated. TheMath used to close on
+  "Twice the pay for you", which is exactly true of the illustrative bars and not
+  true of every accountant. See content/home.ts for what replaced it.
 
-  ProfileDetail replaced a full-bleed photograph in this slot. The photo broke the
-  scroll but made no argument; the card breaks the scroll AND makes the argument,
-  because it is the product rather than atmosphere.
+  It carries its own metadata because the root layout's defaults are the employer
+  pitch. Without this, an accountant sharing this URL previews firm-side copy.
+  Locale stays en_IN: this audience is in India.
+
+  Bands from the top: white (hero, with the software strip folded into its foot) /
+  paper (why reputation) / white (passport) / white (how it works) / white (work
+  not popularity) / paper (the money section) / paper (who it is for) / white
+  (profile detail) / paper (pricing) / white (verification) / mist (honest) /
+  white (faq) / navy (final cta + footer). Padding, never margins, so the bands
+  sit flush. ProfileDetail takes no background of its own, so it does not cost a
+  band.
 
   Two sample people, deliberately. Arjun carries the hero card and the search
   results in HowItWorks (one profile, summarised, then found). Priya carries the
   detail card: the record a firm actually opens. A page recruiting men and women
   should show both, and the detail heading asks what a firm sees when it opens
   YOUR profile, so it was never his to begin with.
+
+  THE APPLICATION FORM IS NOT ON THIS PAGE and should not be moved onto it. It
+  lives at /apply as a 19-question wizard on a deliberately stripped, nav-less,
+  noindex landing page. Embedding it here would fork the funnel, create a second
+  submitApplication entry point, and (because ApplyForm takes utm as a server prop
+  from searchParams) make this route dynamic, which it is not today.
 */
 
-const PAGE_TITLE = "Work Directly for US Accounting Firms | AccountingTalent.in";
-const DESCRIPTION =
-  "US CPA firms hire India-based accounting professionals directly through AccountingTalent.in. Free for accountants, permanently. No agency, no commission, no cut of your salary.";
-
-export const metadata: Metadata = {
-  // `absolute` so the root template does not append the site name twice.
-  title: { absolute: PAGE_TITLE },
-  description: DESCRIPTION,
-  alternates: { canonical: "/accountants" },
-  openGraph: {
-    title: "Work Directly for US Accounting Firms",
-    description:
-      "US CPA firms hire you directly. No agency takes a cut. Free for accounting professionals, permanently.",
-    url: "https://accountingtalent.in/accountants",
-    siteName: "AccountingTalent.in",
-    locale: "en_IN",
-    type: "website",
-  },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Build Your Accounting Profile | AccountingTalent",
+  description:
+    "Create a free professional profile, demonstrate your accounting skills and get discovered by US firms. No application fees, salary commission or pay-to-rank.",
+  path: "/accountants",
+  ogTitle: "Prove what you can do. Get discovered by US accounting firms.",
+  ogDescription:
+    "A free professional profile built around your skills, software experience, work evidence and vouches. No application fees, no salary commission, no pay-to-rank.",
+  locale: "en_IN",
+});
 
 export default function AccountantsPage() {
   return (
@@ -65,12 +76,25 @@ export default function AccountantsPage() {
       <Nav active="/accountants" audience="worker" />
       <main className="flex-1">
         <Hero />
-        <TheMath />
-        <HowItWorks />
-        <WhoWeWant />
+        <WhyReputation />
+
+        <Passport
+          heading={passport.heading}
+          intro={passport.intro}
+          audience="accountant"
+        />
+
         <ProfileDetail variant="teaser" />
+        <HowItWorks />
+        <WorkNotPopularity />
+        <TheMath />
+        <WhoWeWant />
+        <AccountantPricing />
+        <Verification />
         <TheHonestPart />
-        <ShortFaq />
+
+        <FaqSection heading={faqHeading} items={faq} trackOpens />
+
         <FinalCta />
       </main>
       <Footer />

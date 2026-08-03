@@ -20,96 +20,104 @@
   knowing. The escapes weld a number to its unit so a line never ends on a
   dangling "late".
 
-  LAUNCH_EMPLOYER is back. It was removed when the employer page briefly sold
-  concierge matching with no launch gate; the database model has a date again, so
-  the firm-facing pages need their own constant. Same value as the worker pair
-  today, deliberately kept separate: the two sides can slip independently, and
-  the employer copy says "Q4" nowhere for the same financial-year reason.
+  LAUNCH_EMPLOYER IS GONE, for the second time and for a better reason than the
+  first. It was removed once when the employer page briefly sold concierge
+  matching, then reinstated when the database model got a date back.
+
+  The employer page no longer has a launch gate at all. It describes a network in
+  early access: some things work today, some are labelled "Launching soon" on
+  their face, and a single site-wide date cannot express that. A firm reading
+  "opens late 2026" beside a working introduction request learns the wrong thing
+  in both directions. Per-capability status now lives in content/passport.ts,
+  which is also the only place that can be checked by the type system.
+
+  The worker pair stays for now: /accountants still tells applicants when firms
+  begin hiring, which is a real thing they are waiting on rather than a gate on
+  what they can do today (they can build a profile now).
 */
 export const LAUNCH_WORKER = "late\u00A02026 (October\u00A0to\u00A0December)";
 export const LAUNCH_WORKER_SHORT = "late\u00A02026";
-
-export const LAUNCH_EMPLOYER = "late\u00A02026 (October\u00A0to\u00A0December)";
-export const LAUNCH_EMPLOYER_SHORT = "late\u00A02026";
 
 export const CONTACT_EMAIL = "contact@accountingtalent.in";
 export const OPERATOR = "Kaya Virtual (Australia)";
 
 /*
-  One nav, two groups, identical on every page. Each top-level item is the name of
-  an audience and links to that audience's page; its dropdown holds that page's
-  sections.
+  One flat nav, four items, identical on every page.
 
-  This replaced two flat audience-specific lists that were swapped by prop. Those
-  made the header change shape as you moved between the two homepages, which read
-  as two sites sharing a wordmark. Grouping means the header is now byte-identical
-  everywhere and both sides are discoverable without leaving the page you are on.
+  THIS REVERSES THE AUDIENCE-GROUPED DROPDOWNS, deliberately, and the reasoning
+  they were built on is worth keeping because most of it was right.
 
-  Each group leads with an "Overview" row linking to its own page. The group label
-  is a disclosure button, not a link, so this row is the ONLY way into the landing
-  page from the desktop nav. Do not remove it as a duplicate of the label: the
-  label does not navigate.
+  The groups replaced two flat audience-specific lists that were swapped by prop,
+  which made the header change shape between the two homepages and read as two
+  sites sharing a wordmark. Grouping fixed that, and the panels were a careful
+  piece of work: real disclosure semantics, arrow-key roving, Escape restoring
+  focus, an "Overview" row because the group label was a button and did not
+  navigate. The instruction at the time was to KEEP THE TWO GROUPS SYMMETRICAL so
+  neither audience read as the afterthought.
 
-  The section anchors are absolute ("/#pricing", not "#pricing") because this nav
+  What changed is the product, not the craft. The site is now one network with two
+  sides rather than two pitches sharing a domain, and the employer page grew the
+  sections a firm actually navigates between (the network, how hiring works,
+  pricing). Naming those directly beats hiding them one hover deep behind an
+  audience label, and "For Accountants" as a peer item keeps the other side
+  discoverable without a panel. The header also goes back to shipping zero
+  JavaScript, since the disclosure state was the only thing that needed it.
+
+  If dropdowns come back, components/chrome/NavGroup.tsx is in the git history at
+  4727da7 and is worth restoring rather than rewriting: the keyboard handling in
+  it was correct and is easy to get wrong.
+
+  The section anchors stay absolute ("/#pricing", not "#pricing") because this nav
   renders on /legal and /faq too, where a page-local anchor would silently do
   nothing. An absolute anchor still scrolls correctly when you are already there.
+  This is the one rule from the old comment that must not be relaxed.
 
-  KEEP THE TWO GROUPS SYMMETRICAL: page link, two section anchors, FAQ. If one
-  side gains an item, give the other side one or accept that the panels look
-  lopsided. The whole point of this shape is that neither audience looks like the
-  afterthought.
-
-  The CTA is NOT part of this and stays context-aware (see employerCta below).
+  The CTA is NOT part of this list and stays context-aware (see employerCta and
+  primaryCta below).
 */
-export const navGroups = [
-  {
-    label: "Employers",
-    href: "/",
-    items: [
-      { label: "Overview", href: "/" },
-      { label: "How we vet", href: "/#vetting" },
-      { label: "Pricing", href: "/#pricing" },
-      { label: "FAQ", href: "/#faq" },
-    ],
-  },
-  {
-    label: "Accountants",
-    href: "/accountants",
-    items: [
-      { label: "Overview", href: "/accountants" },
-      { label: "How it works", href: "/accountants#how-it-works" },
-      { label: "Who we want", href: "/accountants#who-we-want" },
-      { label: "FAQ", href: "/faq" },
-    ],
-  },
+export const navItems = [
+  { label: "Find Talent", href: "/#network" },
+  { label: "How It Works", href: "/#how-hiring-works" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "For Accountants", href: "/accountants" },
 ] as const;
 
+/*
+  The nav CTA on worker pages. "Join free" rather than "Apply free": the page now
+  sells a professional profile you build and keep, and "apply" describes a single
+  job application, which is the older and smaller promise.
+*/
 export const primaryCta = {
-  label: "Apply free",
+  label: "Join free",
   href: "/apply",
 } as const;
 
 /*
-  The nav CTA on firm-facing pages. On worker pages the nav sells the application
-  ("Apply free"); on "/" the reader runs a firm, so it points at the intake form
-  on the same page rather than the worker funnel. Nav swaps on audience, so it
-  stays a zero-JS server component.
+  The nav CTA on firm-facing pages. On worker pages the nav sells the profile
+  ("Join free"); on "/" the reader runs a firm, so it points at the intake form on
+  the same page rather than the worker funnel.
 
-  Target is the founding-access intake form, the page's one conversion. The href
-  is absolute ("/#reserve") rather than a bare "#reserve" because this nav also
-  renders on /legal, where a page-local anchor would silently do nothing. An
-  absolute anchor still scrolls correctly when you are already on "/".
+  Target is the intake form, the page's one conversion. The href is absolute
+  ("/#reserve") rather than a bare "#reserve" because this nav also renders on
+  /legal, where a page-local anchor would silently do nothing. An absolute anchor
+  still scrolls correctly when you are already on "/".
 
-  One label per intent: this exact string is also the hero button, the sticky bar
-  and the closing CTA, so a firm never sees two differently-worded doors to the
-  same form.
+  "Post a role free" rather than the old "Reserve founding access". Posting a role
+  is not built, and the label would be a lie if it went anywhere that claimed
+  otherwise; it goes to the intake form, where the first thing a firm picks is
+  which service it wants and the honest-stage section says plainly what is live.
+  The founding programme is now a section on the page rather than the name of
+  every button on it.
+
+  One label per intent: this exact string is also the hero secondary button and
+  the sticky bar, so a firm never sees two differently-worded doors to one form.
 
   Note: the Nav renders <Cta position="hero"> on "/", which sources its own label
   and href from firms.reserve, so this constant is the fallback and its label and
   href are kept in sync with that.
 */
 export const employerCta = {
-  label: "Reserve founding access",
+  label: "Post a role free",
   href: "/#reserve",
 } as const;
 

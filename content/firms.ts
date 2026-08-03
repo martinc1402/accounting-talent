@@ -1,453 +1,466 @@
-import { CONTACT_EMAIL, LAUNCH_EMPLOYER, LAUNCH_EMPLOYER_SHORT } from "./site";
+import { CONTACT_EMAIL } from "./site";
 
 /*
-  The homepage, top to bottom. Every string the "/" route renders resolves from
-  here, the same content-driven discipline /accountants uses, so a copy edit is a
-  data change rather than a JSX rewrite.
+  The employer homepage, top to bottom. Every string the "/" route renders
+  resolves from here, so a copy edit is a data change rather than a JSX rewrite.
 
-  The model this page sells is a verified candidate database, opening to US\u00A0firms
-  in late 2026: a firm subscribes for annual access, searches verified profiles,
-  requests an introduction, and hires the accountant directly. Revenue is the
-  access fee plus a per-hire success fee, waived if the hire does not last 90
-  days. There is no per-seat markup and no exclusivity.
+  WHAT THIS PAGE NOW SELLS. AccountingTalent is a professional network: an
+  accountant builds a record from verified credentials, practical work evidence,
+  software proof and vouches, and firms discover people through those signals.
+  Browsing is free, the first role post is free, and a firm pays when it wants
+  broader contact access or hands-on help with a search.
 
-  This reverses the concierge copy that briefly lived at /employers ("no database,
-  no subscription, no launch gate"). The candidate-side and legal copy were
-  reconciled to match in the same pass; if you are changing the revenue model
-  again, content/faq.ts, content/home.ts, content/legal.ts and
-  lib/assessment/emails.ts all state it too and all have to move together.
+  THIS REPLACES the "verified database, opens late 2026" model: an annual access
+  fee plus a per-hire success fee, gated behind a launch date. Two things changed.
+  The gate is gone, because the page now describes what a firm can do today and
+  labels what it cannot; and the fees are gone, replaced by the three plans in
+  content/passport.ts. If you are changing the revenue model AGAIN, content/faq.ts,
+  content/home.ts, content/legal.ts and lib/assessment/emails.ts all state it too
+  and all have to move together. lib/assessment/emails.ts is the one that will not
+  produce a build error when you miss it.
+
+  HONESTY IS THE CONSTRAINT ON THIS FILE. Most of what the Passport describes is
+  not built: no candidate search, no messaging, no work samples, no vouches, no
+  job posting, no payments. Nothing here may imply otherwise. Capability status
+  lives in content/passport.ts, where the type system enforces that an unbuilt
+  feature cannot be given a working button. Read that file before adding a claim.
 
   Search and candidate privacy are not in tension, and the copy must not imply
-  they are. Firms search GATED profiles: what a candidate has chosen to expose is
-  what a firm sees, and contact requires an introduction request the candidate
-  approves. That is what lib/authz/* actually implements, so it is what we say.
+  they are. Firms see GATED profiles: what a candidate has chosen to expose is
+  what a firm sees, and contact requires an introduction the candidate approves.
+  That is what lib/authz/* actually implements, so it is what we say.
 
-  Order matters and is argued, not arbitrary. Risk comes before price, because a
-  firm's first objection to an overseas hire is "who is this person", not "what
-  does it cost". Vetting is the longest section on the page for the same reason.
-  The illustrative profiles sit directly after it as the evidence for the claim.
+  Order matters and is argued. The problem is reframed before the product is
+  described, the Passport is explained before the pool is shown, and price comes
+  after all of it, because a firm that does not believe the evidence is real does
+  not care what access to it costs.
 
-  American English throughout (this audience is US\u00A0accounting firms).
+  American English throughout (this audience is US accounting firms).
 
   Dash convention, held to throughout: no em dashes and no en-dash separators.
   Ranges use "to" or a hyphen; a pause that an em dash would carry becomes a
   period, comma, colon, or parentheses. The   (non-breaking space) escapes
   weld a number or a compound to its neighbor so a line never ends on a dangling
-  "US" or "90".
+  "US" or "30".
 
-  Dollar figures, the pass rate, the software mix and the availability share are
-  deliberately unresolved and marked [TODO: ...] so they are greppable. Nothing on
-  this page should state a number the business cannot back.
-
-  `founding` is kept intact at the bottom: it still backs the dormant FoundingForm
-  and the saveFirmConcierge option lists in app/actions.ts.
+  `founding` at the bottom is dormant and stays. app/actions.ts:1333 still reads
+  firms.founding.concierge for the saveFirmConcierge option lists. The Founding
+  Employer SECTION on this page is `foundingProgramme`, which is a different
+  thing; do not merge them without removing that dependency first.
 */
 export const firms = {
-  // Section 1: hero. Four text elements at most (eyebrow, headline, subhead,
-  // CTAs). The old hero carried a fifth (a trust line under the buttons); it
-  // moved into TrustRow further down the page, where it is not competing with
-  // the one thing the hero is for.
+  /*
+    Section 1: hero.
+
+    Five text elements, which is one more than the four this hero was cut down to,
+    and the fifth is deliberate. The element that was removed was a trust line
+    arguing the product ("no monthly markup, no exclusivity"); the one added back
+    is `microcopy`, which states the price. Those are not the same thing. A firm
+    landing here has exactly one question before it will click anything, and it is
+    "what does this cost me to look", so the answer belongs above the fold rather
+    than eight sections down. If it ever goes back to arguing rather than
+    answering, cut it again.
+  */
   hero: {
-    eyebrow: "For US\u00A0accounting firms",
-    h1: "Hire vetted Indian accountants directly.",
-    // The differentiator moved out of the headline and into here. In the headline
-    // it pushed the h1 to three lines at 1440px, left a two-word orphan on the
-    // last one, and shoved the CTA to the bottom edge of a 900px viewport. The
-    // subhead carries it at 19 words, under the 20-word ceiling a hero subhead
-    // gets before it stops being read.
-    sub: "No staffing agency, no monthly markup. Search a verified database, request an introduction, and hire on your own terms.",
-    // Caption under the card in the right column. The card is the product, so it
-    // is shown rather than described, but it must never read as a real person a
-    // firm could contact today.
-    //
-    // One short line, once. This used to say "sample" here and again on every
-    // card and again under the grid, which read as apology rather than candour.
-    // It is down to a single sentence per card location. Do not delete the
-    // sentence: the card carries a name, a face and a Verified badge, and without
-    // it the page is showing invented inventory to someone deciding whether to
-    // pay for access to that inventory.
-    sampleCaption: `Illustrative. Not a real candidate or a real photograph. The database opens to US\u00A0firms in ${LAUNCH_EMPLOYER_SHORT}.`,
+    eyebrow: "The professional network for Indian accounting talent",
+    h1: "Hire Indian accountants based on proof, not promises.",
+    sub: "Verified profiles, practical work evidence, and vouches from people who have seen the work. Browse free, post your first role free.",
+    microcopy:
+      "Free to browse. First role post free. One introduction for verified firms.",
+    /*
+      Caption under the hero card. The card is the product, so it is shown rather
+      than described, but it must never read as a real person a firm could email
+      this afternoon.
+
+      One short line, once. This used to say "sample" here and again on every card
+      and again under the grid, which read as apology rather than candour. It is
+      down to a single sentence per card location. Do not delete the sentence: the
+      card carries a name, a face and a Verified badge, and without it the page is
+      showing invented inventory to someone deciding whether to pay for access to
+      that inventory. ProfileCard now REQUIRES this, so it cannot be forgotten.
+    */
+    exampleChip: "Example",
+    sampleCaption:
+      "An example profile, not a real person or a real photograph. It shows the shape of a complete Passport, including the parts that are still being built.",
     profile: {
       name: "Arjun M.",
       photo: {
         src: "/images/portrait-m-1.jpg",
-        alt: "Illustrative profile portrait",
+        alt: "Example profile portrait",
       },
-      verified: "Verified 14 Jun 2026",
-      role: "US\u00A0tax preparer, 6 years",
+      verified: "Identity and qualification verified",
+      role: "US tax preparer, 6 years",
       location: "Bengaluru, India",
-      availability: "Full US\u00A0business hours",
+      availability: "Full US business hours",
       softwareLabel: "Software",
       software: ["QuickBooks Online", "Drake", "Lacerte"],
-      returnsLabel: "US returns prepared",
-      returns: ["Form\u00A01040", "1120\u2011S", "1065"],
+      returnsLabel: "US returns prepared",
+      returns: ["Form 1040", "1120‑S", "1065"],
       salaryLabel: "Expected compensation",
-      salary: "$1,000\u20111,400",
+      salary: "$1,000‑1,400",
       salarySuffix: "/mo",
     },
   },
 
-  // Primary and secondary calls to action, reused across the page. One label per
-  // intent: "Reserve founding access" is the nav button, the hero button, the
-  // sticky bar and the closing CTA. A second wording for the same form would read
-  // as a second offer.
-  reserve: { label: "Reserve founding access", href: "/#reserve" },
-  seeVetting: { label: "How we vet", href: "/#vetting" },
-  // Rendered as a mailto in the components that use them (built from
-  // CONTACT_EMAIL); no scheduling tool is wired up yet.
-  bookCall: { label: "Book a hiring call" },
-  discuss: { label: "Discuss your hiring need" },
+  /*
+    Calls to action. EVERY button on this page goes to the intake form.
+
+    That is a deliberate narrowing. "Explore talent" used to be the hero's primary
+    button and scrolled to the example profiles at #network, on the reasoning that
+    there is no candidate directory to send it to (no /candidates index route
+    exists, and the card component built for one is imported by nothing). The
+    reasoning was sound and the outcome was not: it made the most prominent button
+    on the page a non-converting one that moved a reader down the page instead of
+    into the only thing here that captures intent.
+
+    So the secondary label no longer promises browsing. "See what we offer" is
+    honest about arriving at a form rather than at a search, and the page still
+    has plenty of browsing in it via the nav's "Find Talent" and the #network
+    section itself, both of which are navigation rather than calls to action.
+
+    When candidate search actually ships, a browse CTA earns its place back and
+    this is where it goes.
+  */
+  reserve: { label: "Post a role free", href: "/#reserve" },
+  secondary: { label: "See what we offer", href: "/#reserve" },
   contactEmail: CONTACT_EMAIL,
 
-  // Section 2: the objection, stated before the offer. Short, full-width,
-  // directly under the hero.
-  //
-  // This deliberately does NOT lead with the agency markup. "Cut out the
-  // middleman" is the accountant's argument (it is the pitch on /accountants);
-  // a firm owner's first thought about an overseas hire is risk, and a page that
-  // opens on price reads as though it has not understood the question. Price is
-  // section 5, after the vetting has earned it.
-  risk: {
-    heading: "The hard part was never the cost.",
-    beats: [
-      "Someone you have never met, vouched for by nobody, working inside your client files.",
-      "A résumé that claims Drake and UltraTax, with nothing behind the claim until a return comes back wrong in March.",
-      "Client data leaving your systems under a confidentiality arrangement you never actually read.",
+  /*
+    Section 2: the reframe. Stated before the offer, full width, directly under
+    the hero.
+
+    This deliberately does NOT lead with cost. Price is the accountant's argument
+    (it is the pitch on /accountants); a firm owner's first thought about an
+    overseas hire is whether the person can do the work, and a page that opens on
+    price reads as though it has not understood the question.
+  */
+  problem: {
+    heading:
+      "Finding accountants is easy. Knowing who can actually do the work is harder.",
+    body: "US firms are already approached by offshore accountants, recruiters and staffing companies. The problem is not access to more résumés. It is knowing which professionals are credible, relevant, and ready to work in a US accounting environment.",
+    frustrations: [
+      {
+        title: "Résumés are difficult to verify",
+        body: "A claim about six years of 1120‑S work looks identical on the page whether or not it happened.",
+      },
+      {
+        title: "Software proficiency is self-reported",
+        body: "Every résumé lists QuickBooks. Very few distinguish between having opened it and having run a month-end close in it.",
+      },
+      {
+        title: "Interviews show a narrow slice",
+        body: "An hour on a call tests how someone talks about their work. It does not show you the work.",
+      },
     ],
-    pivot:
-      "Every one of those is a vetting problem before it is a price problem. So that is where we start.",
+    close:
+      "AccountingTalent is being built to make professional capability visible before you hire.",
+  },
+
+  // Section 3: the Passport. Pillars live in content/passport.ts, shared with
+  // /accountants so the two sides cannot describe the same thing differently.
+  passport: {
+    heading: "More than a profile. A professional AccountingTalent Passport.",
+    intro:
+      "Every accountant can build a living professional record that becomes more useful as they verify credentials, demonstrate skills, complete work challenges, and receive vouches from people who have worked with them.",
   },
 
   /*
-    Section 3: how candidates are vetted. The most important section on the page,
-    and the longest, because "verified" is the entire product claim.
+    Section 4: the network effect. Four steps that close a loop.
 
-    Every item here describes a check that exists in the code today:
-    lib/assessment/questions.ts holds a real 10-question bank, content/assessment.ts
-    sets the 80-200 word writing prompt, and the confirmation dates come from
-    lib/candidate/confirmationEvents.ts.
-
-    No pass mark is published. The threshold enforced in lib/assessment/service.ts
-    is a bare literal in two places and has moved before; a number printed here
-    goes stale silently the next time it moves. "Candidates who fall short are not
-    marked Verified" is true regardless of where the line sits.
+    Rendered as the same dot-and-rail step list the rest of the site uses, plus a
+    closing sentence saying the fourth step feeds the first. A circular SVG
+    diagram was the obvious alternative and is the wrong one: this site has
+    repeatedly rejected decoration that makes no argument (see ProfileDetail,
+    which replaced a full-bleed photograph for exactly that reason).
   */
-  vetting: {
-    heading: "What Verified actually means here",
-    intro:
-      "Verified is not a label we put on a résumé. It is a set of checks a candidate has to pass, and every profile shows you the date each one was last confirmed.",
+  loop: {
+    heading:
+      "A talent network that becomes more useful with every credible contribution.",
     steps: [
       {
-        title: "An English writing assessment",
-        body: "Candidates write 80 to 200 words about a real accounting problem they solved: the numbers, the software, the steps they took. It is their own writing, and it appears on the profile word for word, so you can read how someone explains their work before you spend an hour on a call.",
+        title: "Accountants build evidence-rich profiles",
+        body: "Credentials, software depth, industry exposure and availability, each confirmed and dated rather than asserted once and left to age.",
       },
       {
-        title: "A 10\u2011question exam on US\u00A0tax and accounting",
-        body: "1120\u2011S and 1065 filing rules, Form 941, Form 1099\u2011NEC, bank reconciliations, accrual recognition, and how US sales tax differs from GST. A person reviews every submission. Candidates who fall short are not marked Verified.",
+        title: "Colleagues verify specific capabilities",
+        body: "Not a general endorsement. A named person confirms one particular thing they saw this accountant do.",
       },
       {
-        title: "Software verification",
-        body: "QuickBooks, Drake, Lacerte, CCH, UltraTax. We record which tools a candidate has actually worked in and at what depth, rather than assuming everyone knows every platform.",
+        title: "Firms discover people through stronger signals",
+        body: "You filter on evidence rather than on keywords, which is the difference between a shortlist and a pile.",
       },
       {
-        title: "Returns-prepared history",
-        body: "Which US returns they have prepared and in what volume: Form 1040, Form 1120\u2011S, Form 1065. Claims get tested in your interview, and candidates are told that before they make them.",
-      },
-      {
-        title: "Confirmed availability, with a date",
-        body: "Working hours, US overlap, and notice period, each carrying the date the candidate last confirmed it. A profile nobody has reconfirmed in months says so on its face.",
+        title: "Hiring outcomes strengthen the record",
+        body: "What happened after the hire becomes the most valuable signal on the profile, and it feeds straight back into the first step.",
       },
     ],
-    note: "Not every check is complete for every candidate. Each profile shows exactly what has been verified and when, so you can interview with the full picture rather than a badge.",
+    close:
+      "The goal is not to collect the largest number of résumés. It is to build the most useful professional reputation network for Indian accounting talent.",
+  },
+
+  // Section 5: what kind of network this is, and what it deliberately is not.
+  // Items live in content/passport.ts as networkPrinciples.
+  principles: {
+    heading: "Built around work, not empty engagement.",
+    intro:
+      "AccountingTalent will not be a professional feed. There are no follower counts, no posting streaks, and no engagement to farm. The thing you are looking at on a profile is the work.",
   },
 
   /*
-    Section 4: what is in the database. Evidence, not a promise, and the strongest
-    thing on the page.
+    Section 6: how hiring works. Four steps, each carrying its own capability
+    status, because two of the four are not built.
+
+    A step marked "Launching soon" is not a smaller claim about a working feature.
+    It means the step does not exist yet, and the reader is entitled to know that
+    before they plan around it.
+  */
+  hiring: {
+    heading: "Explore first. Pay when you are ready to hire.",
+    intro:
+      "Nothing on this page asks for a card. Here is the order things happen in, and where we actually are on each.",
+    steps: [
+      {
+        title: "Browse the network",
+        body: "Review profiles, skills, experience and selected work evidence without paying. Today that means full example profiles and the people we introduce you to directly. Open search and filters are being built.",
+        status: "early-access" as const,
+      },
+      {
+        title: "Post your first role free",
+        body: "Describe the role, working hours, software, compensation and the experience you need. Right now we set this up with you from your brief rather than from a self-serve form.",
+        status: "planned" as const,
+      },
+      {
+        title: "Build a shortlist",
+        body: "Save and compare accountants, and request an introduction. Verified firms get one introduction at no cost. This part works today.",
+        status: "live" as const,
+      },
+      {
+        title: "Unlock hiring access",
+        body: "Take a 30-day Hiring Pass for broader contact access, or ask us to prepare a curated shortlist for you.",
+        status: "early-access" as const,
+      },
+    ],
+  },
+
+  /*
+    Section 7: the pool, shown rather than described. The strongest thing on the
+    page and the one that most needs its disclosure.
 
     These are invented people. Names are first-name-plus-initial, which is also
     how a gated profile reads to a firm before an introduction is approved.
 
-    `imageNote` is the one place the page says so, in one sentence, under the
-    grid. It previously said it four times over (section intro, a caption under
-    every card, here, and every alt text) which was clutter and read as hedging.
-
-    What must not happen is it going to zero. A firm is looking at three faces,
-    three Verified badges and three salary expectations under a heading that says
-    what is in the database, while being asked to pay for access to that database.
-    One quiet sentence is the difference between an illustration and a claim.
+    `note` is doing real work and must not be trimmed to a single word. A firm is
+    looking at three faces, three verification lines and three salary
+    expectations, under a heading that says what is in the network. Some of the
+    evidence shown on these cards (vouch counts, Work Proof) describes parts of
+    the Passport that are NOT BUILT. Saying so here, next to the cards, is the
+    difference between showing a design and making a claim.
   */
-  database: {
-    heading: "What is in the database",
+  network: {
+    heading: "Inside the AccountingTalent network",
     intro:
-      "Verified profiles, built from the checks above. This is how a gated profile reads before you request an introduction.",
+      "This is how a profile reads before you request an introduction: enough to decide whether to talk, without exposing the person's identity or contact details.",
     profiles: [
       {
         name: "Meera R.",
         photo: {
           src: "/images/portrait-f-1.jpg",
-          alt: "Illustrative profile portrait",
+          alt: "Example profile portrait",
         },
-        verified: "Verified 02 Jul 2026",
-        role: "Senior tax preparer, 8 years",
+        verified: "Identity, qualification and English verified",
+        role: "Senior tax preparer, 8 years",
         location: "Chennai, India",
-        availability: "Full US\u00A0business hours",
+        availability: "Full US business hours",
         softwareLabel: "Software",
         software: ["QuickBooks Online", "Drake", "UltraTax"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form\u00A01040", "1120\u2011S"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1040", "1120‑S"],
         salaryLabel: "Expected compensation",
-        salary: "$1,600\u20112,100",
+        salary: "$1,600‑2,100",
         salarySuffix: "/mo",
+        badges: [
+          { kind: "work-proof" as const, label: "Work Proof" },
+          { kind: "vouch" as const, label: "3 vouches" },
+        ],
       },
       {
         name: "Nikhil D.",
         photo: {
           src: "/images/portrait-m-2.jpg",
-          alt: "Illustrative profile portrait",
+          alt: "Example profile portrait",
         },
-        verified: "Verified 19 Jun 2026",
-        role: "Bookkeeper and monthly close, 5 years",
+        verified: "Identity and qualification verified",
+        role: "Bookkeeper and monthly close, 5 years",
         location: "Pune, India",
         availability: "Partial morning overlap",
         softwareLabel: "Software",
         software: ["QuickBooks Online", "Xero"],
         returnsLabel: "Core responsibilities",
-        returns: ["Monthly close", "AP / AR", "Bank reconciliations"],
+        returns: ["Monthly close", "AP / AR", "Bank reconciliations"],
         salaryLabel: "Expected compensation",
-        salary: "$650\u2011800",
+        salary: "$650‑800",
         salarySuffix: "/mo",
+        badges: [{ kind: "vouch" as const, label: "1 vouch" }],
       },
       {
         name: "Fatima Q.",
         photo: {
           src: "/images/portrait-f-2.jpg",
-          alt: "Illustrative profile portrait",
+          alt: "Example profile portrait",
         },
-        verified: "Verified 28 Jun 2026",
-        role: "Staff accountant, 4 years",
+        verified: "Identity verified",
+        role: "Staff accountant, 4 years",
         location: "Hyderabad, India",
-        availability: "Full US\u00A0business hours",
+        availability: "Full US business hours",
         softwareLabel: "Software",
-        software: ["QuickBooks Online", "Lacerte", "CCH Axcess"],
-        returnsLabel: "US returns prepared",
-        returns: ["Form\u00A01065", "1120\u2011S"],
+        software: ["QuickBooks Online", "Lacerte", "CCH Axcess"],
+        returnsLabel: "US returns prepared",
+        returns: ["Form 1065", "1120‑S"],
         salaryLabel: "Expected compensation",
-        salary: "$850\u20111,150",
+        salary: "$850‑1,150",
         salarySuffix: "/mo",
+        badges: [{ kind: "work-proof" as const, label: "Work Proof" }],
       },
     ],
-    imageNote:
-      "Illustrative. Not real candidates or real photographs. Compensation figures are typical of the bands we see, not quotes.",
-    note: "Software names are the property of their owners. We are not affiliated with any of them.",
+    exampleChip: "Example",
+    note: "These are example profiles, not real people or real photographs, and they show the Passport as it is being built. Identity, qualification and English checks are live today. Work Proof results are not yet shown on profiles, and vouches are not built at all, so no profile carries either right now. Compensation figures are typical of the bands we see, not quotes.",
+    trademarks:
+      "Software names are the property of their owners. We are not affiliated with any of them.",
   },
 
-  /*
-    Section 5: pricing. Now that the vetting has been shown, the money argument
-    is allowed to be made.
-
-    Real numbers, not ranges: $1,440 a year for access, $2,400 once per hire,
-    $720 a year for the founding cohort. Billing is annual only. The $120/month
-    figure appears once, as arithmetic, and is explicitly not an option a firm can
-    choose; if a monthly plan ever exists it is a pricing decision, not a copy
-    decision, and it has to be added here deliberately.
-
-    `arithmetic` is the line a partner scanning the section needs: what the fees
-    cost against what the alternative costs. Deliberately flat. No percentage
-    saved, no exclamation, no "pays for itself" claim, because the comparison
-    depends entirely on numbers the firm controls and we do not.
-
-    The staffing-rate range is marked illustrative in `arithmetic.caption`. It is
-    what firms report paying, not a quote we can stand behind, and the difference
-    matters if a partner ever puts this next to an actual invoice.
-
-    The comparison below reuses MathBars from the worker page, reframed for a
-    firm: of the $2,000 a month a firm pays an offshore agency, roughly $600
-    reaches the person doing the work. That is a quality argument as much as a
-    price one. Its $2,000 and $1,200 both sit inside the ranges `arithmetic`
-    quotes, so the two do not contradict each other; move one and check the other.
-  */
+  // Section 8: pricing. Plans live in content/passport.ts, because the same four
+  // services are also the intake form's options and the analytics vocabulary.
   pricing: {
-    heading: "What it costs",
+    heading: "Pay when you are ready to hire",
     intro:
-      "Two numbers, and neither of them is a recurring cut of somebody's salary.",
-    plans: [
-      {
-        title: "Annual database access",
-        price: "$1,440",
-        unit: "per firm, per year",
-        body: "Search verified profiles, request introductions, and hire as many people as you need. The fee does not move with your headcount. Billed annually: there is no monthly plan, though it works out at $120 a month.",
-      },
-      {
-        title: "A success fee per hire",
-        price: "$2,400",
-        unit: "once, per hire",
-        body: "Payable when you hire someone. Waived in full if the hire does not reach 90\u00A0days.",
-      },
-      {
-        title: "Founding cohort",
-        price: "$720",
-        unit: "per year, locked at reservation",
-        body: "Half the published access fee, held for as long as you stay subscribed, whatever the price does later. Reserving now costs nothing and commits you to nothing.",
-      },
-    ],
-    arithmetic: {
-      body: "An offshore staffing seat runs about $2,000 to $2,500 a month. Hiring the same person directly runs about $1,000 to $1,400. Over a year that difference is roughly $7,000 to $18,000. A year of founding access plus one success fee comes to $3,120.",
-      caption:
-        "Staffing rates are illustrative of what firms report paying, not quotes. Your figures depend on the role, the experience, and what you and the accountant agree between you.",
-    },
-    termsLabel: "What that does not include",
-    terms: [
-      "No per-seat monthly markup. We never take a percentage of anyone's salary, at any point.",
-      "No exclusivity. Hire through us, hire elsewhere, or both.",
-      "You employ or contract the accountant directly. We are not the employer and not a party to your agreement.",
-    ],
-    comparison: {
-      agency: {
-        label: "Through an offshore staffing agency",
-        firmPays: "your firm pays $2,000/mo, every month",
-        you: { amount: "$600", label: "reaches the accountant", pct: 30 },
-        keeps: {
-          amount: "$1,400",
-          sub: "agency margin, for as long as they work for you",
-          pct: 70,
-        },
-      },
-      direct: {
-        label: "Hired directly",
-        firmPays: "your firm pays $1,200/mo",
-        you: {
-          amount: "$1,200",
-          label: "all of it reaches the accountant",
-          pct: 60,
-        },
-        saves: { amount: "$800/mo stays in your firm", pct: 40 },
-      },
-      caption:
-        "Illustrative, based on a $2,000 monthly agency placement. Your figures depend on the role, the experience, and what you and the accountant agree between you.",
-    },
+      "Three ways in. The first one is free and stays free, and none of them takes a percentage of anyone's salary.",
   },
 
   /*
-    Section 6: the paperwork around a cross-border hire.
+    Section 9: the Founding Employer programme.
 
-    [TODO: LEGAL REVIEW] REQUIRED BEFORE THIS SHIPS.
+    EVERYTHING IN THIS SECTION IS A COMMITMENT WE ARE MAKING, not a feature that
+    exists. "60 days of Hiring Pro access" describes a tier with no
+    implementation; "10 candidate introductions" is us doing them by hand. Framed
+    as what we will do for the first 25 firms, that is honest. Framed as a
+    product, it is not. Keep the future tense.
 
-    Every string in `edges` describes a document we say we supply, and touches
-    client-consent and cross-border payment. It needs sign-off from an actual
-    advisor before it goes live. content/legal.ts carries the same flag and is
-    still an unreviewed draft, and the `confidentiality` item in employerFaq
-    makes related claims that have to be reviewed alongside these.
-
-    The framing is deliberately narrow and must stay that way: these are
-    starting points a firm takes to its own advisors, never a representation
-    that using them satisfies anything. Language to keep out of this section:
-    "compliant", "meets", "satisfies", "covers you", "ensures", "protects you",
-    and anything else that implies legal sufficiency. Every item says what the
-    document is; none of them says what it achieves.
+    The ask is deliberately not a testimonial requirement. We ask for PERMISSION
+    to request one later, which is a different thing, and the difference matters
+    to the kind of firm we want.
   */
-  edges: {
-    heading: "What we hand you around the edges",
-    intro:
-      "Hiring someone in another country involves paperwork you should not have to draft from a blank page. These are starting points for your own advisors to review, not legal advice, and using them does not by itself satisfy any obligation your firm has.",
-    items: [
+  foundingProgramme: {
+    heading: "Become a Founding Employer",
+    sub: "We are working closely with the first 25 US firms to shape a better way to hire Indian accounting talent.",
+    offerIntro: "What we will do for you:",
+    offer: [
       {
-        title: "Contractor agreement template",
-        body: "A draft agreement for engaging an accountant in India: scope, payment terms, ownership of work product, and termination. A starting point to mark up, not a form to sign as-is.",
+        title: "60 days of full hiring access, free",
+        body: "Everything a paid plan will carry when it ships, at no cost, for your first two months.",
       },
       {
-        title: "Confidentiality and data-handling annexure",
-        body: "Draft clauses covering client data: access limits, device and password rules, retention, and what happens to everything at the end of the engagement.",
+        title: "Up to 10 introductions",
+        body: "Prepared by hand while the matching tools are being built, which for now means we do the searching.",
       },
       {
-        title: "Client-consent language",
-        body: "Draft wording for telling clients that a preparer outside the US may work on their file. Whether it meets your obligations under IRS\u00A0Section\u00A07216 or your professional standards is a question for your advisors, not for us.",
+        title: "A shortlist put together for you",
+        body: "One role, five people, availability confirmed before you see them.",
       },
       {
-        title: "Paying an individual in India",
-        body: "A written guide to how US\u00A0firms do this in practice: the payment rails firms actually use, the documentation worth keeping, and the questions to put to your own accountant.",
+        title: "Help writing the role",
+        body: "Most offshore hires go wrong at the job description. We will work through yours with you.",
+      },
+      {
+        title: "50% off for the following year",
+        body: "Half the published rate on paid hiring access for twelve months after your founding period ends.",
       },
     ],
-    disclaimer:
-      "Employment, contractor classification, taxpayer-data consent, and professional obligations vary by firm and jurisdiction. These templates are a starting point and are not legal or tax advice. We make no representation that they are sufficient for your circumstances, and your firm remains responsible for its own compliance. Have your own advisors review anything here before you rely on it.",
+    askIntro: "What we ask in return:",
+    ask: [
+      "A short conversation about how your firm hires today.",
+      "Your honest reaction to the candidates we recommend, including when the answer is no.",
+      "A few minutes after an interview to tell us what the profile missed.",
+      "Permission to ask you later about a testimonial or case study. Asking is not the same as owing us one, and a founding place does not depend on saying yes.",
+    ],
   },
 
   /*
-    Section 7: where we actually are. Mirrors the worker page's "Where we are
-    right now" in both structure and nerve.
+    Section 10: where we actually are.
 
-    A firm owner who is evaluating us will read /accountants too, and that page
-    tells accountants there is no job waiting for them today. Saying something
-    softer here than we say there would be the one thing that discredits both
-    pages at once.
+    A firm owner evaluating us will read /accountants within about two clicks, and
+    that page tells accountants there is no job waiting for them today. Saying
+    something softer here than we say there is the one move that would discredit
+    both pages at once. `admission` is the sentence that keeps this page honest;
+    it is set in display type for the same reason its worker-side counterpart is.
+
+    No countdown, no seat counter, no unverified user totals. If a number appears
+    here it has to be one the business can substantiate.
   */
   honest: {
-    h2: "Where we are right now",
+    heading: "We are building the network with our first employers.",
     lede: "The same straight answer we give accountants, on a page you can reach from ours in one click.",
     body: [
-      `AccountingTalent.in is new. We are building the verified candidate pool first, and that part is real: applications are open, assessments are being marked, and profiles are being built today. The database opens to US firms in ${LAUNCH_EMPLOYER}.`,
+      "AccountingTalent already has real interest from Indian accounting professionals, and profiles are being built and checked today. The next step is not simply adding more of them. It is working with US firms to find out which evidence, assessments and reputation signals actually improve a hiring decision, because we would rather build four things that change your mind than forty that do not.",
     ],
-    admission: "You cannot hire anyone through us today.",
-    promiseIntro: "What reserving founding access gets you:",
-    promises: [
+    admission: "The network is in early access, and not everything on this page is live yet.",
+    expectIntro: "What taking part gets you:",
+    expect: [
       {
-        title: "A locked founding rate",
-        body: "The rate you reserve at is the rate you keep for as long as you stay subscribed, whatever the published price does afterward.",
+        term: "A say in what gets built",
+        body: "You are early enough that telling us a signal is useless is enough to stop us building it.",
       },
       {
-        title: "First access at launch",
-        body: "Founding firms get into the database before it opens more widely, while the pool is still unpicked.",
+        term: "Candidates put in front of you by hand",
+        body: "Until search ships, matching is something we do rather than something you do.",
       },
       {
-        title: "A monthly update, either way",
-        body: "One short email a month on where the pool stands and what is being verified, including the months when there is nothing new to report.",
+        term: "Nothing to pay, and nothing to cancel",
+        body: "There is no card to enter. Taking part does not commit you to paying or to hiring anyone.",
       },
       {
-        title: "Nothing to pay now",
-        body: "Reserving is a form, not a contract. There is no card to enter, nothing to cancel, and no obligation to subscribe when we open.",
+        term: "A monthly note, either way",
+        body: "One short email a month on where the network stands, including the months when there is nothing new to report.",
       },
+    ],
+    notIntro: "What it does not get you:",
+    not: [
+      "A guaranteed hire. We do not control whether the right person is available when you need them.",
+      "A working candidate search today. It is being built, and this page says so wherever it comes up.",
+      "An employment or staffing relationship. You contract the accountant directly and we are not a party to it.",
     ],
   },
 
   /*
-    Section 8: the intake form (#reserve). The page's one conversion, and the only
-    thing on it that we are actually measuring.
+    Section 11: the intake form (#reserve). The page's one conversion, and the
+    only thing on it we are actually measuring.
 
-    Field config is data so the option lists tune without touching the component.
-    Keys match the EmployerLeadInput shape in app/actions.ts and the columns in
-    employer_leads (see supabase/migrations/0020_employer_leads_firm_intake.sql
-    for firm_size, hires_12mo and roles).
+    Field config is data so option lists tune without touching the component. Keys
+    match the EmployerLeadInput shape in app/actions.ts and the columns in
+    employer_leads.
 
-    Field ORDER is qualifying-questions-first, and it is deliberate: firm name,
-    work email, size, volume, timing, budget, and only then the personal and
-    open-ended fields. Someone who abandons halfway has still told us the things
-    the smoke test exists to learn. Asking their name first is politeness that
-    costs data.
+    Field ORDER is qualifying-questions-first and it is deliberate: service, firm,
+    email, size, volume, timing, budget, and only then the personal and open-ended
+    fields. Someone who abandons halfway has still told us the things this exists
+    to learn. Asking their name first is politeness that costs data.
 
-    `budget` runs full width rather than sharing a row. It is the single field
-    this test is really for, and a half-width select in the middle of a grid is
-    the one people skip.
-
-    `reassurance` renders under the submit button. It answers the three questions
-    a partner has with their cursor over it: when do I hear back, what does this
-    cost me now, and am I committing to anything.
+    `reassurance` renders under the submit button. It answers the three questions a
+    partner has with their cursor over it: when do I hear back, what does this cost
+    me now, and am I committing to anything.
   */
   brief: {
     heading: "Reserve founding access",
-    // Deliberately not "six questions" or any other count. The form has ten
-    // fields (five required), and a number the reader can disprove by looking at
-    // the thing directly underneath it costs more trust than the reassurance buys.
-    sub: "A few questions about your firm. They tell us what to build the pool toward, and they lock your founding rate.",
+    sub: "A few questions about your firm. They tell us what to build toward, and they hold your founding place.",
     submit: "Reserve founding access",
     submitting: "Sending...",
-    reassurance: `We will be in touch when the database opens to US\u00A0firms in ${LAUNCH_EMPLOYER_SHORT}. Nothing to pay to reserve a place, and no obligation to subscribe when we open.`,
+    reassurance:
+      "We read every one of these and reply within two working days. Nothing to pay, no card, and no obligation to hire or to subscribe later.",
     requiredNote: "A star marks a required field.",
     success: {
       heading: "You are on the founding list.",
-      lede: `Thank you. Your place is reserved and your founding rate of $720 a year is held for you.`,
+      lede: "Thank you. Your place is held, and so is the founding rate.",
       body: [
-        `The database opens to US\u00A0firms in ${LAUNCH_EMPLOYER}. You will hear from us then, and once a month until then with where the pool stands.`,
-        "There is nothing to pay now and no obligation to subscribe when we open.",
+        "We will be in touch within two working days, and once a month after that with where the network stands.",
+        "There is nothing to pay now and no obligation to subscribe or to hire.",
         "A confirmation email is on its way. Reply to it with any questions and it comes straight to me.",
       ],
     },
@@ -479,6 +492,18 @@ export const firms = {
         required: true,
         options: ["1 to 5", "6 to 20", "21 to 50", "50+"],
       },
+      /*
+        The option LIST is not here. It lives in content/passport.ts as
+        `serviceOptions`, because the same four values are the pricing cards, the
+        preferred_service column (migration 0021) and the `service` prop on the
+        lead_submit event. One array, so a firm's stated intent and its recorded
+        intent cannot disagree. Only the label and helper text live here.
+      */
+      preferred_service: {
+        label: "What are you interested in?",
+        required: true,
+        help: "Pick the closest. Nothing here is a commitment, and there is nothing to pay.",
+      },
       roles: {
         label: "Roles you would hire",
         required: true,
@@ -491,19 +516,19 @@ export const firms = {
         ],
       },
       hires_12mo: {
-        label: "Hires in the next 12 months",
+        label: "Hires in the next 12 months",
         required: false,
         options: ["1", "2 to 3", "4 to 6", "7+", "Not sure yet"],
       },
       start_timeframe: {
         label: "When would you want them",
         required: false,
-        options: ["Busy season 2027", "Mid\u20112027", "Just exploring"],
+        options: ["Busy season 2027", "Mid‑2027", "Just exploring"],
       },
       budget: {
         label: "Budget per hire",
         required: false,
-        help: "Annual, in US dollars. A range is fine.",
+        help: "Annual, in US dollars. A range is fine.",
         options: [
           "Under $12,000",
           "$12,000 to $18,000",
@@ -526,28 +551,33 @@ export const firms = {
 
   // Final CTA band (navy).
   finalCta: {
-    heading: `The database opens to US firms in ${LAUNCH_EMPLOYER_SHORT}. Reserve your place in it.`,
-    sub: "Founding firms lock their rate now and get in before the pool is picked over.",
+    heading: "Find your next accountant through evidence, not guesswork.",
+    sub: "Browse the founding network free, post your first role, or ask us to prepare a shortlist.",
   },
 
   // FAQ heading (items live in content/faq.ts as employerFaq).
   faqHeading: "Questions firms ask us",
 
   // Shown under primary button CTAs.
-  trustRow: "No monthly markup. No exclusivity. You hire directly.",
+  trustRow: "Free to browse. No card. You contract the accountant directly.",
 
   // Mobile-only sticky CTA bar. The label is short because the bar is one flex
   // row on a 375px screen: at "Hiring for busy season 2027?" the label took the
   // width the button needed and "Reserve access" wrapped to two lines.
   stickyBar: {
     label: "Hiring for 2027?",
-    cta: "Reserve access",
+    cta: "Post a role free",
   },
 
   // ---------------------------------------------------------------------------
-  // Dormant. Not rendered on this page. Kept because the FoundingForm component
-  // and the saveFirmConcierge option lists in app/actions.ts still reference these
-  // keys. Safe to delete once the firm_waitlist path is retired.
+  // Dormant. Not rendered on this page. Kept because app/actions.ts:1333 reads
+  // firms.founding.concierge for the saveFirmConcierge option lists, and because
+  // FoundingForm.tsx still references these keys. Retiring the firm_waitlist path
+  // is a separate decision from this rewrite; do this content and that code in one
+  // commit when it happens, code first or the build breaks.
+  //
+  // NOT to be confused with `foundingProgramme` above, which is the Founding
+  // Employer section this page actually renders.
   founding: {
     eyebrow: "Founding firms",
     headline: "Founding firms get first pick of the pool.",

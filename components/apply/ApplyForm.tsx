@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, WarningCircle } from "@phosphor-icons/react/dist
 import { confirmation, intro, type Answers } from "@/content/form";
 import { validateQuestion, visibleQuestions } from "@/lib/validate";
 import { trackMeta } from "@/lib/meta-pixel";
+import { trackAccountantApplication } from "@/lib/analytics";
 import { submitApplication } from "@/app/actions";
 import { ButtonAction } from "@/components/ui/Button";
 import {
@@ -55,9 +56,13 @@ export function ApplyForm({ utm }: { utm: Utm }) {
     }
   }, [index, phase]);
 
+  // Fired once, from the success render, never on the submit click, so a failed
+  // submit never counts. No payload: nothing about an application is safe to put
+  // in an analytics event.
   useEffect(() => {
     if (phase === "done" && !leadFired.current) {
       leadFired.current = true;
+      trackAccountantApplication();
       trackMeta("Lead");
     }
   }, [phase]);
