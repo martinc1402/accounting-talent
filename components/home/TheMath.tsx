@@ -60,6 +60,16 @@ export function TheMath() {
         <p className="mt-2 text-caption text-subtle">
           {math.comparison.caption}
         </p>
+
+        {/*
+          The closing statement, on a hairline. It is the sentence this whole
+          section exists to earn, and it is the one claim here that is not
+          illustrative: everything above it is a labelled example of typical
+          rates, and this is a flat statement about what we do and do not take.
+        */}
+        <p className="reveal mt-10 max-w-[62ch] border-t border-line pt-6 text-body text-ink">
+          {math.closing}
+        </p>
       </Container>
     </section>
   );

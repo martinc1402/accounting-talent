@@ -13,7 +13,13 @@ import type { FaqItem } from "@/content/faq";
 */
 export function Accordion({ items }: { items: readonly FaqItem[] }) {
   return (
-    <div>
+    /*
+      .faq-accordion is a hook, not a style. FaqDeepLinks scopes its listener
+      query to it so that adding a <details> anywhere else in a layout (Nav's
+      mobile menu is one) cannot start firing FAQ analytics or hijacking the URL
+      hash. It carries no CSS and must not be given any.
+    */
+    <div className="faq-accordion">
       {items.map((item) => (
         <details
           key={item.q}

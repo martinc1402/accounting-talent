@@ -1,5 +1,3 @@
-import { LAUNCH_WORKER, LAUNCH_WORKER_SHORT } from "./site";
-
 /*
   The headline's line breaks are set by hand rather than left to the browser, so
   it is stored as its lines. Left to wrap on its own it stranded "firms." from
@@ -11,9 +9,9 @@ import { LAUNCH_WORKER, LAUNCH_WORKER_SHORT } from "./site";
   line is a plain string with ordinary spaces.
 */
 const heroH1Lines = [
-  "Work directly for",
+  "Prove what you can do.",
+  "Get discovered by",
   "US accounting firms.",
-  "Keep 100% of your salary.",
 ] as const;
 
 export const hero = {
@@ -21,9 +19,12 @@ export const hero = {
   // The same words as one string, derived rather than duplicated, so the two
   // forms cannot drift apart.
   h1: heroH1Lines.join(" "),
-  sub: "US\u00A0CPA firms find your profile and hire you themselves. No agency, no commission, no cut of your salary, ever.",
-  cta: "Apply free, takes 3\u00A0minutes",
-  microcopy: `Free for accounting professionals. Always. US\u00A0firms begin hiring in ${LAUNCH_WORKER_SHORT}.`,
+  eyebrow: "Build your AccountingTalent Passport",
+  sub: "A free profile built around your skills, software experience, work evidence and vouches from people who have worked with you.",
+  cta: "Join the founding network",
+  secondaryCta: "See what employers see",
+  microcopy:
+    "Free to join. No application fees. No salary commission. No pay-to-rank.",
   /*
     A sample of the actual product. The page is arguing that a US firm will see
     your profile and hire you, so showing the profile is the most literal way to
@@ -54,8 +55,16 @@ export const hero = {
       src: "/images/headshot-1.jpg",
       alt: "Illustrative profile portrait",
     },
-    // The two things a firm cannot check for itself, so we check them for it.
-    verified: "Verified · English + US\u00A0tax assessment",
+    // Named checks, with nothing implied beyond them. This used to read
+    // "Verified + English + US tax assessment", which invited the reading that
+    // the profile as a whole had been verified. Three specific checks exist
+    // (identity, English, qualification) and the card now says which, matching
+    // lib/marketing/verificationLevels.ts.
+    verified: "Identity, qualification and English verified",
+    badges: [
+      { kind: "work-proof" as const, label: "Work Proof" },
+      { kind: "vouch" as const, label: "4 vouches" },
+    ],
     role: "Tax\u00A0preparer · CA\u00A0Inter · 4\u00A0yrs experience",
     location: "Ahmedabad, India · can work US\u2011overlap hours",
     availability: "Full\u2011time · available within 30\u00A0days",
@@ -71,11 +80,20 @@ export const hero = {
     salary: "$900\u20111,200",
     salarySuffix: "/mo",
     caption: "This is what US\u00A0firms will see.",
+    // The chip ProfileCard renders over the photo. Required by the component, so
+    // this card cannot go out undisclosed.
+    exampleChip: "Example",
     // The one line, matching the employer page's wording exactly. Rendered at
     // small-print size under the caption. Kept as its own sentence rather than
     // folded into the caption: a reader working out whether this is a real person
     // should not have to parse a clause to find out.
-    imageNote: "Illustrative. Not a real candidate or a real photograph.",
+    //
+    // It now covers the badges too. Work Proof results are not shown on profiles
+    // yet and vouches are not built at all, so a card displaying both is showing
+    // the shape of a finished Passport rather than a current one. Saying that
+    // here is what makes showing it acceptable.
+    imageNote:
+      "An example profile, not a real person or a real photograph. It shows a complete Passport, including Work Proof and vouches, which are still being built.",
   },
 } as const;
 
@@ -313,9 +331,17 @@ export const profileDetail = {
 } as const;
 
 export const math = {
-  h2: "Why direct hiring changes everything",
+  h2: "Direct hiring can create better economics for both sides.",
+  /*
+    Softened from "Why direct hiring changes everything" and from a lead-in that
+    asserted someone "keeps most of what your work is worth" as a flat fact. The
+    argument is the same and it is a good one, but it is a claim about a range of
+    arrangements we do not have data on, and this page now leads on reputation
+    rather than on pay. "Can create" is what we can support. Do not put the
+    absolute back.
+  */
   leadIn:
-    "Whether you're at an offshore firm or working domestically, someone between you and the client keeps most of what your work is worth.",
+    "When a firm hires through a traditional offshore agency, the accountant often receives only part of what the client pays. Hiring directly can mean the accountant earns more while the firm still spends less overall.",
   /*
     Both bars are drawn on one dollar scale: 100% of the track is $2,000, so
     every width below is (amount / 2000). The comparison only works because the
@@ -373,114 +399,325 @@ export const math = {
   },
   // The $800 itself now lives in the ghost segment of the direct bar, so this
   // line no longer repeats it. It states the shape of the trade, not the sum.
-  delta: "Twice the pay for you. A smaller bill for the firm.",
+  /*
+    Was "Twice the pay for you. A smaller bill for the firm." The 2x is exactly
+    true of the illustrative figures in the bars above, and it is NOT true of
+    every accountant, which is how a reader will take it as a standalone line
+    under a chart. What is defensible is the shape of the trade, not the multiple.
+  */
+  delta: "More reaches you. The firm still pays less than an agency seat.",
+  closing:
+    "No agency margin is deducted by AccountingTalent. You and the employer agree compensation directly, and all of it is yours.",
 } as const;
 
-export const howItWorks = {
-  h2: "How it works",
-  sub: "Three steps, and the first one takes three minutes.",
-  steps: [
+
+/*
+  Why a professional record beats a résumé. New section, sitting between the hero
+  and the Passport so the Passport arrives as an answer rather than as a feature
+  list.
+*/
+export const reputation = {
+  h2: "A résumé tells employers what you claim. Your Passport helps you show the evidence.",
+  sub: "Talented accountants are often reduced to a job title, a keyword list and a number of years. This is being built to give you a richer and more credible way to show what you can actually do.",
+  points: [
     {
-      title: "Apply",
-      body: "Tell us your qualifications, software skills, US\u00A0tax\u00A0experience, and salary expectations. Structured questions, no essay, no resume upload.",
+      title: "Show practical work, not responsibilities",
+      body: "The difference between “handled month-end close” and showing how you handled one.",
+      icon: "file" as const,
+      status: "planned" as const,
     },
     {
-      title: "Get verified",
-      body: "Shortlisted applicants complete a short English writing prompt and a 10\u2011question US\u00A0accounting quiz by email. Pass it and your profile earns a Verified badge, the thing US\u00A0firms filter for first.",
+      title: "Verify the things that matter",
+      body: "Identity, qualification and written English, each checked by a person and dated, so you stop re-arguing them with every employer.",
+      icon: "seal" as const,
+      status: "live" as const,
     },
     {
-      title: "Get hired, directly",
-      body: `When the database opens to US\u00A0firms in ${LAUNCH_WORKER_SHORT}, they search it by software, US\u00A0tax\u00A0experience, and working hours. A firm that wants to talk to you asks us first, and we only pass on your details if you say yes. You interview directly, negotiate your own salary, and they employ you. They pay you, not us.`,
+      title: "Get specific vouches",
+      body: "From the people who actually saw the work, about the particular thing they saw you do.",
+      icon: "users" as const,
+      status: "planned" as const,
+    },
+    {
+      title: "Carry it between opportunities",
+      body: "Your record belongs to you. It does not reset when a conversation with one firm ends.",
+      icon: "briefcase" as const,
+      status: "live" as const,
     },
   ],
 } as const;
 
+// The Passport, accountant framing. Pillars come from content/passport.ts, shared
+// with the employer page so neither side can describe them differently.
+export const passport = {
+  heading: "One profile that becomes stronger over time.",
+  intro:
+    "You build it once and keep improving it. Each part you add makes the profile more useful to an employer deciding whether to talk to you, and none of it expires the moment a conversation ends.",
+} as const;
+
+/*
+  How the network works, from the accountant's side. Four steps.
+
+  The privacy note is not optional and must not be moved into fine print. Step two
+  asks people to upload work, and the single worst outcome of this entire product
+  would be an accountant uploading a client's books. It sits directly under the
+  steps, at reading size.
+*/
+export const howItWorks = {
+  h2: "Build once. Keep improving it.",
+  sub: "Four steps, and the first one takes three minutes.",
+  steps: [
+    {
+      title: "Create your profile",
+      body: "Your experience, software, qualifications, the work you want and what you expect to be paid. Structured questions, no essay, no resume upload.",
+      status: "live" as const,
+    },
+    {
+      title: "Add credible evidence",
+      body: "Complete the written assessment and the US accounting exam, and verify your identity and qualification. Work samples and practical challenges are being built and are not open yet.",
+      status: "early-access" as const,
+    },
+    {
+      title: "Invite professional vouches",
+      body: "Ask former colleagues, managers or clients to verify one specific capability they saw. This is not built yet, and no profile carries a vouch today.",
+      status: "planned" as const,
+    },
+    {
+      title: "Get discovered",
+      body: "A firm that wants to talk to you asks us first, and nothing about you reaches them until you say yes. You interview directly, agree your own salary, and they pay you.",
+      status: "live" as const,
+    },
+  ],
+  privacyNote:
+    "You control which parts of your profile are public and which stay hidden. Never upload client-identifiable or confidential material: work evidence is designed around anonymised and synthetic data, and anything containing a real client’s information will be rejected.",
+} as const;
+
+/*
+  The anti-LinkedIn section. Short, and it earns its place by being a commitment
+  rather than a boast: it says what we will not do to rank people.
+*/
+export const workNotPopularity = {
+  h2: "You should not need to become an influencer to build professional credibility.",
+  sub: "Search relevance here comes from skills, experience, availability, evidence and reputation. Not from posting frequency, not from follower counts, and not from paying us.",
+  principles: [
+    {
+      title: "Evidence over engagement",
+      body: "What you can demonstrate, not how often you post about it.",
+      icon: "file" as const,
+    },
+    {
+      title: "Specific vouches over empty endorsements",
+      body: "A named colleague verifying one capability beats a hundred one-click endorsements from people who never worked with you.",
+      icon: "users" as const,
+    },
+    {
+      title: "Relevance over paid ranking",
+      body: "No accountant can buy a higher position in search results. There is no product that does this, and there is not going to be one.",
+      icon: "seal" as const,
+    },
+  ],
+} as const;
+
+/*
+  Who this is for. Rewritten from "Who we're looking for", which was a filter, to
+  a question of relevance.
+
+  DO NOT state that a qualification is mandatory. The application does not require
+  one, and the previous version's lead card (Chartered Accountants first) implied
+  a hierarchy the product does not apply.
+*/
 export const whoWeWant = {
-  h2: "Who we're looking for",
-  sub: "We are building India's best database of US\u2011ready accounting talent. You are a fit if you are any of the following.",
-  // One card is navy. It carries a badge saying why, so the colour means
-  // something instead of decorating.
-  priorityBadge: "Priority profile",
+  h2: "Who we are building the network for",
+  sub: "If you work in accounting for US or international clients, or you are ready to, this is being built for you.",
+  priorityBadge: "Strongest signal today",
   profiles: [
     {
-      title: "Chartered Accountants, CA\u00A0Inter and Finalists",
-      body: "Including those with zero US\u00A0experience. Your fundamentals are the hard part. US\u00A0tax\u00A0software is learnable.",
-      priority: false,
+      title: "Bookkeepers and staff accountants",
+      body: "Monthly close, AP and AR, reconciliations. One or more years of experience and strong written English.",
+      feature: false,
     },
     {
-      title: "Offshore firm staff on US\u00A0clients",
-      body: "QuickBooks, Drake, Lacerte, CCH, UltraTax. If you want to stop giving away most of your billing rate, you are exactly who we are looking for.",
-      priority: true,
-    },
-    {
-      title: "Bookkeepers and staff\u00A0accountants",
-      body: "With strong English and one or more years of experience.",
-      priority: false,
+      title: "US accounting and bookkeeping professionals",
+      body: "QuickBooks, Xero, Drake, Lacerte, CCH, UltraTax. If you already work US client files, you are the closest fit the network has.",
+      feature: true,
     },
     {
       title: "Tax preparers",
-      body: "Anyone who has prepared US\u00A0returns: 1040s, 1120\u2011S, 1065s.",
-      priority: false,
+      body: "Anyone who has prepared US returns: 1040s, 1120‑S, 1065s.",
+      feature: false,
     },
     {
-      title: "CMAs, ACCAs and M.Coms",
-      body: "With professional accounting experience.",
-      priority: false,
+      title: "Payroll, AP and AR specialists",
+      body: "Deep in one function rather than broad across several. That is a strength here, not a gap.",
+      feature: false,
+    },
+    {
+      title: "Management and financial reporting accountants",
+      body: "Budgeting, variance analysis, management packs and statutory reporting.",
+      feature: false,
+    },
+    {
+      title: "Audit, assurance and systems specialists",
+      body: "Including accountants who implement and run the software rather than only working in it.",
+      feature: false,
+    },
+    {
+      title: "CAs, CA Inter, CMAs, ACCAs and M.Coms",
+      body: "Including those with no US experience yet. Fundamentals are the hard part and US tax software is learnable.",
+      feature: false,
+    },
+    {
+      title: "Experienced graduates with evidence",
+      body: "If you can show the work, a short career is not a barrier. Showing it is the part that matters.",
+      feature: false,
     },
   ],
+  signalsIntro: "What stands out most to the firms we talk to",
+  signals: [
+    "QuickBooks or Xero experience",
+    "US GAAP or direct US client exposure",
+    "Strong written communication",
+    "A consistent work history",
+    "Client-facing experience",
+    "Reliable overlap with US working hours",
+  ],
   rates: {
-    intro: "What US\u00A0firms typically pay direct hires",
+    intro: "What US firms typically pay direct hires",
     bands: [
       { role: "Bookkeepers", range: "$500 to $800" },
-      { role: "Experienced accountants and tax\u00A0preparers", range: "$800 to $1,500" },
+      {
+        role: "Experienced accountants and tax preparers",
+        range: "$800 to $1,500",
+      },
       { role: "Senior and reviewer roles", range: "$1,500 to $2,500+" },
     ],
-    note: "Per month, full-time, long-term positions. Not gig work. Figures are typical, not guaranteed.",
+    note: "Per month, full-time, long-term positions. Not gig work. Figures are typical of what we see and are not guaranteed: what you earn depends on your experience, the role, the hours, the firm, and what you agree between you.",
   },
 } as const;
 
+/*
+  Accountant pricing. The free plan is the product; Pro is a de-emphasised
+  possibility with no payment button, because it is not being launched.
+
+  THE PAY-TO-RANK LINE IS NOT NEGOTIABLE. It is the single most load-bearing
+  promise on this page for an audience that has been charged by everyone else in
+  this market, and it has to survive any future pricing work. If Pro ever ships
+  and it does buy ranking, this page has lied.
+*/
+export const pricing = {
+  h2: "Free to build your professional reputation.",
+  sub: "The core product is free and is going to stay that way. Nothing about your profile, your applications or your ranking is behind a payment.",
+  free: {
+    name: "AccountingTalent Free",
+    price: "₹0",
+    unit: "the full core profile",
+    includes: [
+      { text: "A public professional profile", status: "live" as const },
+      { text: "Skills, software and experience", status: "live" as const },
+      { text: "Qualifications and verification", status: "live" as const },
+      { text: "Applications to roles", status: "live" as const },
+      { text: "Employer discovery", status: "live" as const },
+      { text: "A shareable profile URL", status: "live" as const },
+      { text: "Work Proof portfolio", status: "planned" as const },
+      { text: "Professional vouches", status: "planned" as const },
+      { text: "Standard work challenges", status: "planned" as const },
+      { text: "Profile analytics", status: "planned" as const },
+    ],
+    commitments: [
+      "No application fee, ever.",
+      "No commission on your salary, ever.",
+      "No charge to receive a message from an employer.",
+      "No payment required to rank fairly in search.",
+    ],
+  },
+  pro: {
+    name: "AccountingTalent Pro",
+    status: "Planned for later. Not available, and not being sold.",
+    price: "Possibly ₹299 a month",
+    body: "If it ever ships, it would be presentation and insight tools: deeper profile analytics, tailored résumé exports, a custom profile address, career benchmarking, portfolio tools.",
+    critical:
+      "Pro will not buy a higher position in search results. Ranking is not for sale here to anyone, at any price.",
+  },
+} as const;
+
+/*
+  Verification, accountant-facing. The copy for each check lives in
+  lib/marketing/verificationLevels.ts, which is unit-tested against the checks the
+  app can actually stamp, so this object holds only the framing.
+*/
+export const verification = {
+  h2: "Verification should build trust, not act as a paywall for work.",
+  sub: "During founding access, straightforward identity and qualification verification is free wherever we can operationally do it. Charging an accountant to prove who they are, before they have earned anything, is the wrong way round.",
+  statusIntro: "What a check can say on your profile",
+  gapsIntro: "What we deliberately do not check",
+} as const;
+
+/*
+  Where we actually are. Same shape as the employer page's honest section, and the
+  two must stay in step: a firm evaluating us reads this page within about two
+  clicks, and softening one while the other stands would discredit both.
+
+  `admission` is the sentence the whole brand rests on. It does not move and it
+  does not get gentler.
+
+  THE PRICING FIGURES THAT USED TO LIVE HERE ARE GONE. This section previously
+  quoted "$1,440 a year, $720 founding, $2,400 per hire" as the proof that
+  accountants are never charged. Those numbers no longer exist anywhere in the
+  product, and this file was one of the four places the old comments warned would
+  drift. The promise did not depend on the figures, so it is now made directly.
+*/
 export const honest = {
-  h2: "Where we are right now",
+  h2: "There is no guaranteed job waiting for you today.",
   lede: "We'll be straight with you, because you've seen enough websites that aren't.",
   body: [
-    `AccountingTalent.in is new. We are building the talent database first, and that is what this application is. US\u00A0firms get access to it in ${LAUNCH_WORKER}.`,
+    "AccountingTalent.in is building the employer side of the network. Joining now lets you create an early profile, help shape what gets built, and be visible as US firms begin taking part. It does not guarantee an interview, an employer message, or an offer.",
   ],
-  // Pulled out of `body` and given its own field because it is the sentence the
-  // whole brand rests on. Same words, its own weight on the page.
   admission: "There is no job waiting for you today.",
-  promiseIntro: "What you get by applying now:",
-  promises: [
+  expectIntro: "What you can expect:",
+  expect: [
     {
-      title: "Founding-member placement",
-      body: "Verified early profiles are the ones firms see first when the database opens.",
+      term: "A free, permanent profile",
+      body: "We will never charge accountants, at any stage. Firms pay us for hiring access. Not one rupee of what you agree with an employer comes to us, in any month, for as long as you work there.",
     },
     {
-      title: "A free, permanent profile",
-      // The actual numbers, not "a fee". An accountant who has been burned by
-      // agencies is doing arithmetic on who pays whom, and a hedge reads as the
-      // thing being hidden. Stated plainly the figures are the argument: a firm
-      // pays them once, and none of it is deducted from anyone's salary.
-      //
-      // These MUST match firms.pricing, the employerFaq "cost" answer, and the
-      // lead confirmation email in lib/assessment/emails.ts. Four places now.
-      body: "We will never charge accountants, at any stage. US\u00A0firms pay us $1,440 a year for access to the database ($720 for founding firms), plus a one-time $2,400 when they hire someone. A firm pays that once. You keep every dollar of your salary, every month, for as long as you work there. Over 500,000\u00A0US\u00A0employers already hire offshore staff directly this way, and we are bringing that model to accounting.",
+      term: "Your feedback actually changing things",
+      body: "You are early enough that telling us a question is useless is enough to get it removed.",
     },
     {
-      title: "A monthly update, either way",
-      body: "We email every profile once a month with where things stand: how many firms are in conversation and what they are looking for, even in months when there is no news.",
+      term: "A place in the Work Proof pilots",
+      body: "When the practical challenges open, early profiles go first.",
     },
     {
-      title: "No exclusivity, no lock-in",
-      body: "Your profile, your negotiation, your job. Delete anytime.",
+      term: "A monthly update, either way",
+      body: "One email a month on where things stand, including the months when there is no news.",
     },
+    {
+      term: "No exclusivity and no lock-in",
+      body: "Your profile, your negotiation, your job. Delete it whenever you want.",
+    },
+  ],
+  notIntro: "What you should not expect:",
+  not: [
+    "Guaranteed employment. We do not control whether a firm is hiring for what you do.",
+    "Any way to pay for a better position in search results. It does not exist and will not be built.",
+    "Job listings invented to make the network look busier than it is.",
+    "AccountingTalent taking a share of your salary. Not now, not later.",
   ],
 } as const;
 
 export const finalCta = {
-  h2: `US\u00A0firms start hiring in ${LAUNCH_WORKER_SHORT}. Be in the database on day one.`,
-  // Same label as the hero. One intent, one label, everywhere on the page.
-  cta: "Apply free, takes 3\u00A0minutes",
+  h2: "Build a professional profile that shows more than a résumé.",
+  sub: "Join the founding network free and help shape a better way for Indian accountants to be discovered internationally.",
+  cta: "Join the founding network",
+  secondaryCta: "See example profiles",
   referral:
-    "Know another accountant working US\u00A0hours for agency pay? Refer them and you will both get featured placement at launch.",
+    "Know another accountant working US hours for agency pay? Refer them and you will both get featured placement at launch.",
   referralLinkLabel: "Refer them",
 } as const;
+
+export const faqHeading = "Questions accountants ask us";
+
+// Where "See what employers see" and "See example profiles" go: the real preview
+// page, rendering the real profile component through the real authorization
+// projection. Not a mock.
+export const exampleProfile = { href: "/candidates/preview" } as const;

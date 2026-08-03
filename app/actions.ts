@@ -11,6 +11,7 @@ import { isLikelyBot } from "@/lib/antispam";
 import { isRateLimited } from "@/lib/ratelimit";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { firms } from "@/content/firms";
+import { serviceOptions } from "@/content/passport";
 import {
   emailApplicationReceived,
   emailEmployerLeadReceived,
@@ -21,6 +22,7 @@ import { getViewer } from "@/lib/authz/viewer";
 import { deriveVisibility, isApplicationOwner } from "@/lib/authz/visibility";
 import { isPublished, publicationRequirements, type ReadinessRow } from "@/lib/authz/readiness";
 import { isAtReviewed } from "@/lib/candidate/visibilityStatus";
+import { CHECK_COLUMNS, isCheckId } from "@/lib/candidate/checks";
 import { entitlementsFor } from "@/lib/authz/plans";
 import { EMPLOYER_SIGNUP_OPEN } from "@/lib/authz/employerSignup";
 import { canCreateIntroduction } from "@/lib/authz/introductions";
@@ -213,12 +215,22 @@ const websiteUrl = z.url();
   selection so existing rows and any query built against the old column keep
   working; nothing new should read it.
 */
+/* The accepted preferred_service values, derived from the one list the select
+   renders. Not exported: this file is "use server", so every export has to be an
+   async function. */
+const SERVICE_LABELS: readonly string[] = serviceOptions.map((o) => o.label);
+
 export type EmployerLeadInput = {
   full_name: string;
   work_email: string;
   firm_name: string;
   firm_website?: string;
   firm_size: string;
+  /* Which of the four services the firm wants. Free text, validated against the
+     serviceOptions list in content/passport.ts rather than an enum, matching the
+     convention 0006 set for this table. Required: it is the field that routes
+     the lead. See migration 0021. */
+  preferred_service: string;
   roles?: string[];
   hires_12mo?: string;
   budget?: string;
@@ -255,6 +267,7 @@ export async function submitEmployerLead(
   const firm_name = clean(raw.firm_name);
   const firm_website = clean(raw.firm_website);
   const firm_size = clean(raw.firm_size);
+  const preferred_service = clean(raw.preferred_service);
   const roles = (raw.roles ?? []).map(clean).filter(Boolean);
 
   const errors: Record<string, string> = {};
@@ -269,6 +282,13 @@ export async function submitEmployerLead(
   }
   if (!firm_name) errors.firm_name = "Please tell us your firm's name.";
   if (!firm_size) errors.firm_size = "Please tell us how big your firm is.";
+  /* Validated against the same list the select renders, so a hand-crafted POST
+     cannot write an arbitrary string into a column the funnel groups by. */
+  if (!preferred_service) {
+    errors.preferred_service = "Please tell us what you are interested in.";
+  } else if (!SERVICE_LABELS.includes(preferred_service)) {
+    errors.preferred_service = "Please choose one of the listed options.";
+  }
   if (roles.length === 0) {
     errors.roles = "Please pick at least one role you would hire.";
   }
@@ -297,6 +317,7 @@ export async function submitEmployerLead(
     firm_name,
     firm_website: normalizedWebsite || null,
     firm_size,
+    preferred_service,
     roles,
     // Back-compat: `role` was the not-null single-select column before 0020.
     // Writing the first selection keeps older exports and any ad-hoc query
@@ -744,11 +765,9 @@ const CONFIRM_COLUMNS: Record<string, string> = {
 };
 
 // An AccountingTalent check → the *_verified/assessed_at column it stamps.
-const CHECK_COLUMNS: Record<string, string> = {
-  identity: "identity_verified_at",
-  english: "english_assessed_at",
-  qualification: "qualification_verified_at",
-};
+// Moved to lib/candidate/checks.ts so the marketing pages that now name these
+// checks can be tested against the set the app can actually stamp. Same three
+// checks, same columns; only the location changed.
 
 async function requireAdmin(): Promise<
   { ok: true; email: string | null } | { ok: false; res: IntroState }
@@ -841,8 +860,8 @@ export async function adminVerifyCheck(
   const id = String(applicationId ?? "").trim();
   if (!applicationUuid.safeParse(id).success) return { status: "error", message: "Invalid candidate." };
   if (!supabase) return { status: "error", message: "Unavailable." };
+  if (!isCheckId(check)) return { status: "error", message: "Unknown check." };
   const column = CHECK_COLUMNS[check];
-  if (!column) return { status: "error", message: "Unknown check." };
   const gate = await requireAdmin();
   if (!gate.ok) return gate.res;
 

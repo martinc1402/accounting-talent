@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import { submitEmployerLead, type EmployerLeadInput } from "@/app/actions";
 import { firms } from "@/content/firms";
+import {
+  serviceOptions,
+  serviceLabelFor,
+  serviceIdFor,
+  type PlanId,
+} from "@/content/passport";
 import { ButtonAction } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Field } from "@/components/apply/Field";
 import {
   ChipMultiField,
   SelectMenu,
@@ -47,6 +54,7 @@ type FormState = {
   work_email: string;
   firm_website: string;
   firm_size: string;
+  preferred_service: string;
   roles: string[];
   hires_12mo: string;
   start_timeframe: string;
@@ -60,6 +68,7 @@ const EMPTY: FormState = {
   work_email: "",
   firm_website: "",
   firm_size: "",
+  preferred_service: "",
   roles: [],
   hires_12mo: "",
   start_timeframe: "",
@@ -94,16 +103,61 @@ export function EmployerBrief() {
     };
   }, []);
 
+  /*
+    A pricing CTA carries its plan down here rather than through the URL.
+
+    PlanCta dispatches at:plan-select on click and this preselects the matching
+    service, so a firm that clicked "Reserve a Hiring Pass" lands on the form with
+    Hiring Pass already chosen. Same mechanism CandidateActions uses to sync save
+    state across instances (at:candidate-save), and it is what lets "/" stay
+    statically rendered: reading a ?plan= param on the server would make the route
+    dynamic, and app/page.tsx records that its static-ness is load-bearing.
+
+    With JavaScript off the anchor still scrolls here and the reader picks the
+    service themselves. One field unfilled, nothing broken.
+  */
+  useEffect(() => {
+    const onPlanSelect = (event: Event) => {
+      const plan = (event as CustomEvent<{ plan?: PlanId }>).detail?.plan;
+      if (!plan) return;
+      const label = serviceLabelFor(plan);
+      if (!label) return;
+
+      /*
+        setForm/setErrors directly rather than the `set` helper below it. The
+        helper is declared after this effect and closing over it tripped
+        react-hooks/immutability ("accessed before it is declared"), which is a
+        fair complaint: an effect that captures a function defined later is
+        capturing whatever that binding held at mount.
+
+        Clearing any error on the field is the same behaviour `set` gives, and it
+        is the behaviour we want: if someone submitted without picking a service
+        and then clicked a pricing CTA, the error should go with the fix.
+      */
+      setForm((prev) => ({ ...prev, preferred_service: label }));
+      setErrors((prev) => {
+        if (!prev.preferred_service) return prev;
+        const next = { ...prev };
+        delete next.preferred_service;
+        return next;
+      });
+    };
+
+    window.addEventListener("at:plan-select", onPlanSelect);
+    return () => window.removeEventListener("at:plan-select", onPlanSelect);
+  }, []);
+
   // Fire conversion analytics once, from the success render, never on the click
-  // (so a failed submit never counts).
+  // (so a failed submit never counts). `service` mirrors the preferred_service
+  // column, so the funnel and the table cannot disagree about what was asked for.
   const leadFired = useRef(false);
   useEffect(() => {
     if (done && !leadFired.current) {
       leadFired.current = true;
-      trackLeadSubmit();
+      trackLeadSubmit(serviceIdFor(form.preferred_service) ?? "free-exploration");
       trackMeta("Lead");
     }
-  }, [done]);
+  }, [done, form.preferred_service]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -245,6 +299,35 @@ export function EmployerBrief() {
                   clears a 52px tap target, so the phone layout is this grid
                   collapsing rather than a separate treatment.
                 */}
+                {/*
+                  Preferred service runs full width above the grid, and it is
+                  first.
+
+                  It is the field that routes the lead, and it is the one a
+                  pricing CTA preselects: a firm that clicked "Reserve a Hiring
+                  Pass" has to see that choice reflected the moment it arrives,
+                  or the click appears to have done nothing. A half-width select
+                  in the middle of a grid is the one people skip, and this is now
+                  the most qualifying question on the form.
+                */}
+                <div className="mb-5">
+                  <Field
+                    id="preferred_service"
+                    label={b.fields.preferred_service.label}
+                    help={b.fields.preferred_service.help}
+                    required
+                    error={errors.preferred_service}
+                  >
+                    <SelectMenu
+                      id="preferred_service"
+                      value={form.preferred_service}
+                      options={serviceOptions.map((o) => o.label)}
+                      invalid={Boolean(errors.preferred_service)}
+                      onChange={(v) => set("preferred_service", v)}
+                    />
+                  </Field>
+                </div>
+
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field id="firm_name" label={b.fields.firm_name.label} required error={errors.firm_name}>
                     <TextField
@@ -386,8 +469,8 @@ export function EmployerBrief() {
                       costs now, and what they are committing to. It replaced
                       firms.trustRow here: that line ("no monthly markup, no
                       exclusivity") argues the product, which is the wrong job at
-                      the moment somebody's cursor is over Submit. TrustRow still
-                      carries it under the hero and closing CTAs. */}
+                      the moment somebody's cursor is over Submit. TrustLine
+                      (formerly TrustRow) still carries it on the closing CTA. */}
                   <p className="mt-4 max-w-[56ch] text-caption text-subtle">
                     {b.reassurance}
                   </p>
@@ -403,61 +486,6 @@ export function EmployerBrief() {
   );
 }
 
-/* Label + optional helper + error, shared by every field. `group` renders the
-   label as a span with the id the chip groups reference via aria-labelledby;
-   otherwise it is a real <label htmlFor>. */
-function Field({
-  id,
-  label,
-  required = false,
-  help,
-  error,
-  group = false,
-  children,
-}: {
-  id: string;
-  label: string;
-  required?: boolean;
-  help?: string;
-  error?: string;
-  group?: boolean;
-  children: ReactNode;
-}) {
-  const labelContent = (
-    <>
-      {label}
-      {required && (
-        <span className="text-navy" aria-hidden>
-          {" "}
-          *
-        </span>
-      )}
-    </>
-  );
-
-  return (
-    <div>
-      {group ? (
-        <span id={`${id}-label`} className="block text-caption font-medium text-ink">
-          {labelContent}
-        </span>
-      ) : (
-        <label htmlFor={id} className="block text-caption font-medium text-ink">
-          {labelContent}
-        </label>
-      )}
-      {help && <p className="mt-1 text-fine text-subtle">{help}</p>}
-      <div className="mt-2">{children}</div>
-      {error && (
-        <p
-          id={`${id}-error`}
-          role="alert"
-          className="mt-2 flex items-start gap-1.5 text-small text-red-800"
-        >
-          <WarningCircle size={16} weight="light" className="mt-0.5 shrink-0" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
+/* Field moved to components/apply/Field.tsx: this form gained a field and the
+   accountant-side forms want the same wrapper, so one copy beats three that
+   drift. Same markup, same props, same behaviour. */

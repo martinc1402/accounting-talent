@@ -21,7 +21,11 @@ export function Cta({
 }: {
   position: CtaPosition;
   variant?: "button" | "link";
-  tone?: "primary" | "inverse";
+  /* outlineInverse for the navy closing band, where this is now the SECONDARY
+     action beside "Explore talent". A second solid white button next to the
+     first would give two equal-weight doors on the one band where the page is
+     supposed to be pointing at one. */
+  tone?: "primary" | "inverse" | "outlineInverse";
   className?: string;
 }) {
   const { label, href } = firms.reserve;
