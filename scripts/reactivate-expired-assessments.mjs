@@ -77,6 +77,33 @@ Free for accounting professionals. Always.`,
   };
 }
 
+// Second-nudge copy, for anyone we ALREADY reactivated once who let the link
+// lapse a second time. The first-timer copy above re-explains the assessment and
+// opens with "the link quietly expired" — read twice, that pretends it's the
+// first ask. This variant names the repeat, drops the re-explanation, and
+// commits to stopping. Approved 2026-08-12.
+function composeSecondNudge(firstName, link) {
+  return {
+    subject: "One more go at your assessment — link's open again",
+    text: `Hi ${firstName},
+
+We reopened your AccountingTalent.in assessment link a couple of weeks back and it lapsed again — so this is our second nudge, and our last.
+
+It's open for another 7 days:
+
+${link}
+
+20–30 minutes: one written question about a real accounting problem you've solved, plus 10 multiple-choice on US accounting and tax. Passing earns the Verified badge, and your written answer goes on your profile word for word.
+
+If it's not for you, do nothing — we won't email you about this again.
+
+Questions? Reply and a person will answer.
+
+— AccountingTalent.in
+Free for accounting professionals. Always.`,
+  };
+}
+
 // ---- Build the target set --------------------------------------------------
 const { data: all, error } = await db
   .from("assessments")
@@ -106,17 +133,33 @@ for (const r of eligible) {
 }
 const targets = [...byEmail.values()].sort((a, b) => emailOf(a).localeCompare(emailOf(b)));
 
-console.log(`Mode: ${LIVE ? "LIVE" : "DRY RUN"}   Targets: ${targets.length}\n`);
+// Who has been reactivated before? admin_actions is the durable record (there is
+// no reactivated_at column), so it decides which copy each person gets.
+const { data: priorActs, error: actErr } = await db
+  .from("admin_actions")
+  .select("application_id")
+  .eq("action", "reactivate_expired_assessment")
+  .eq("outcome", "ok");
+if (actErr) { console.error(`admin_actions lookup failed: ${actErr.message}`); process.exit(1); }
+const reactivatedBefore = new Set(priorActs.map((a) => a.application_id));
+const copyFor = (r) => (reactivatedBefore.has(r.application_id) ? composeSecondNudge : composeEmail);
+
+const repeats = targets.filter((r) => reactivatedBefore.has(r.application_id)).length;
+console.log(`Mode: ${LIVE ? "LIVE" : "DRY RUN"}   Targets: ${targets.length}`);
+console.log(`  first-timers (original copy):  ${targets.length - repeats}`);
+console.log(`  repeats (second-nudge copy):   ${repeats}\n`);
 
 let ok = 0, failed = 0;
 for (const r of targets) {
   const email = emailOf(r);
   const link = `${BASE_URL}/assessment/${r.token}`;
-  const msg = composeEmail(firstNameOf(r.applications?.full_name), link);
+  const isRepeat = reactivatedBefore.has(r.application_id);
+  const msg = copyFor(r)(firstNameOf(r.applications?.full_name), link);
   const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   if (!LIVE) {
     console.log(`── ${email}  (status=${r.status}, appId=${r.application_id})`);
+    console.log(`   copy: ${isRepeat ? "second-nudge" : "first-timer"}`);
     console.log(`   link: ${link}`);
     console.log(`   new expires_at: ${newExpiry}`);
     console.log(`   subject: ${msg.subject}`);
@@ -143,12 +186,12 @@ for (const r of targets) {
       application_id: r.application_id,
       assessment_id: r.id,
       outcome: "ok",
-      detail: `reused token, new expires_at ${newExpiry}`,
+      detail: `reused token, new expires_at ${newExpiry}, copy=${isRepeat ? "second-nudge" : "first-timer"}`,
       actor: "reactivate-script",
     });
 
     ok++;
-    console.log(`✓ ${email}  (reactivated, emailed)`);
+    console.log(`✓ ${email}  (reactivated, emailed — ${isRepeat ? "second-nudge" : "first-timer"})`);
   } catch (e) {
     failed++;
     console.error(`✗ ${email}  ${e.message}`);
