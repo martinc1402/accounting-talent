@@ -12,7 +12,7 @@
 //   submitted_pending   an assessment was submitted, awaiting a reviewer decision
 //   live                has an active invite/started link (expires in the future)
 //     live_fresh          ...and NO expired attempt behind it
-//     live_after_expiry   ...WITH a prior expired-unsubmitted attempt (the "12" case)
+//     live_after_expiry   ...WITH a prior expired-unsubmitted attempt
 //   needs_reactivation  every attempt expired unsubmitted, and NO live link  ← true targets
 //   failed_or_other     failed, or an edge state with no live/expired-unsub row
 
@@ -58,16 +58,34 @@ function classify(p) {
 
 const buckets = {};
 const lists = {};
+const bucketOf = new Map();
 for (const p of people.values()) {
   const b = classify(p);
   buckets[b] = (buckets[b] ?? 0) + 1;
   (lists[b] ??= []).push(p);
+  bucketOf.set(p.email, b);
   // "live" umbrella count for convenience
   if (b === "live_fresh" || b === "live_after_expiry") buckets.live = (buckets.live ?? 0) + 1;
 }
 
 // Row-level contrast: raw expired-unsubmitted ROW count (what a naive metric shows).
-const rawExpiredRows = assess.filter((r) => !isTest(emailOf(r)) && !r.submitted_at && new Date(r.expires_at) < now).length;
+const expiredRows = assess.filter((r) => !isTest(emailOf(r)) && !r.submitted_at && new Date(r.expires_at) < now);
+const rawExpiredRows = expiredRows.length;
+
+// Decompose the rows-vs-people gap. `live_after_expiry` is only ONE of three
+// reasons a raw expired ROW has no matching reactivation target, so reporting it
+// as the whole difference understates the gap (2026-08-12: printed 0 for a gap
+// of 12, which was entirely repeat attempts by the same people). Attribute every
+// expired row to its person's bucket instead, so the parts sum to the whole.
+let rowsBehindLive = 0, rowsAlreadyResolved = 0, rowsInTargets = 0;
+for (const r of expiredRows) {
+  const b = bucketOf.get(emailOf(r));
+  if (b === "needs_reactivation") rowsInTargets++;
+  else if (b === "live_fresh" || b === "live_after_expiry") rowsBehindLive++;
+  else rowsAlreadyResolved++; // verified / submitted_pending / failed_or_other
+}
+const targets = buckets.needs_reactivation ?? 0;
+const repeatAttempts = rowsInTargets - targets; // 2+ expired tries by one person
 
 const order = ["verified","submitted_pending","live_fresh","live_after_expiry","needs_reactivation","failed_or_other"];
 console.log(`People (deduped by email): ${people.size}\n`);
@@ -75,8 +93,15 @@ for (const k of order) console.log(`  ${k.padEnd(20)} ${buckets[k] ?? 0}`);
 console.log(`  ${"live (subtotal)".padEnd(20)} ${buckets.live ?? 0}`);
 console.log(`\nContrast:`);
 console.log(`  Raw expired-unsubmitted ROWS:            ${rawExpiredRows}`);
-console.log(`  People who ACTUALLY have no live link:   ${buckets.needs_reactivation ?? 0}   ← real reactivation targets`);
-console.log(`  (difference = superseded attempts behind a live link: ${(buckets.live_after_expiry ?? 0)})`);
+console.log(`  People who ACTUALLY have no live link:   ${targets}   ← real reactivation targets`);
+console.log(`\n  Gap of ${rawExpiredRows - targets} row(s) breaks down as:`);
+console.log(`    repeat expired attempts by a target:   ${repeatAttempts}`);
+console.log(`    rows behind a now-live link:           ${rowsBehindLive}`);
+console.log(`    rows for people already resolved:      ${rowsAlreadyResolved}`);
+
+// Cheap invariant: if these ever stop summing, the bucketing has drifted.
+const sum = repeatAttempts + rowsBehindLive + rowsAlreadyResolved;
+if (sum !== rawExpiredRows - targets) console.log(`    !! gap decomposition does not sum (${sum})`);
 
 if (LIST && lists[LIST]) {
   console.log(`\n--- ${LIST} (${lists[LIST].length}) ---`);
