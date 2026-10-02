@@ -121,8 +121,8 @@ export const firms = {
     When candidate search actually ships, a browse CTA earns its place back and
     this is where it goes.
   */
-  reserve: { label: "Post a role free", href: "/#reserve" },
-  secondary: { label: "See what we offer", href: "/#reserve" },
+  reserve: { label: "Post a role free", href: "/employers#reserve" },
+  secondary: { label: "See what we offer", href: "/employers#reserve" },
   contactEmail: CONTACT_EMAIL,
 
   /*

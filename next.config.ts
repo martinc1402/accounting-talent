@@ -12,21 +12,11 @@ const nextConfig: NextConfig = {
   },
 
   /*
-    /employers was the firm-facing page until the homepage itself became one.
-    There is no second employer page to send people to, so the route redirects
-    rather than lingering as a duplicate pitch.
-
-    Permanent (308, not 301: Next uses 308 so the request method survives) because
-    the destination is not coming back, and the ad spend, inbound links and link
-    equity pointing at /employers should all follow. Redirects are checked before
-    the filesystem, so this wins even if the route is ever recreated by accident.
-
-    The fragment is not sent to the server, so /employers#faq lands on "/" and the
-    browser resolves #faq against the new page. That anchor still exists.
+    No redirects. /employers used to 308 to "/" while the homepage was the firm
+    pitch; it is a real route again now that "/" is the job-seeker membership
+    page. Browsers that cached the old permanent redirect will keep sending
+    /employers to "/" until their cache clears, which was accepted as a cost.
   */
-  async redirects() {
-    return [{ source: "/employers", destination: "/", permanent: true }];
-  },
 };
 
 export default nextConfig;

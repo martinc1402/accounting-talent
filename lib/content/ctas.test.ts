@@ -32,6 +32,8 @@ import { faq, employerFaq } from "@/content/faq";
 /** Every route that actually exists as a page in this app. */
 const REAL_ROUTES = [
   "/",
+  "/employers",
+  "/get-access",
   "/accountants",
   "/apply",
   "/faq",
@@ -42,7 +44,7 @@ const REAL_ROUTES = [
   "/employer",
 ];
 
-/** Section ids rendered on "/" that an anchor may target. */
+/** Section ids rendered on "/employers" that an anchor may target. */
 const EMPLOYER_ANCHORS = [
   "network",
   "passport",
@@ -69,10 +71,10 @@ function assertHrefResolves(href: string, where: string) {
     route,
   );
 
-  if (hash && route === "/") {
+  if (hash && route === "/employers") {
     expect(
       EMPLOYER_ANCHORS,
-      `${where}: "/" has no section with id "${hash}"`,
+      `${where}: "/employers" has no section with id "${hash}"`,
     ).toContain(hash);
   }
 }
@@ -122,7 +124,7 @@ describe("no dead CTAs", () => {
       ["firms.secondary", firms.secondary.href],
       ...employerPlans.map(
         (p) =>
-          [`plan "${p.id}"`, p.action.status === "planned" ? "/#reserve" : p.action.href] as [
+          [`plan "${p.id}"`, p.action.status === "planned" ? "/employers#reserve" : p.action.href] as [
             string,
             string,
           ],
@@ -132,7 +134,7 @@ describe("no dead CTAs", () => {
 
     for (const [where, href] of ctas) {
       expect(href, `${where}: every employer CTA must land on the form`).toBe(
-        "/#reserve",
+        "/employers#reserve",
       );
     }
   });

@@ -110,6 +110,17 @@ export function trackAccountantApplication(): void {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Job seeker (membership)                                                      */
+/* -------------------------------------------------------------------------- */
+
+/** A job seeker reserved a founding membership on /get-access. Fires from the
+ *  success render, never on the click, so a failed submit never counts. `plan`
+ *  mirrors membership_reservations.plan. */
+export function trackMembershipReserved(plan: string, currency: string): void {
+  track("membership_reserved", { plan, currency });
+}
+
+/* -------------------------------------------------------------------------- */
 /* Shared                                                                       */
 /* -------------------------------------------------------------------------- */
 

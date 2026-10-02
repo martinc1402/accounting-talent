@@ -65,11 +65,11 @@ export default function FaqPage() {
           <FaqDeepLinks />
 
           {/* One quiet cross-link to the employer FAQ, for the wrong-audience
-              reader. The employer FAQ lives on the homepage now, so this is the
-              #faq anchor on "/" rather than the retired /employers route. */}
+              reader. The employer FAQ lives on /employers (it moved off "/" when
+              the homepage became the job-seeker membership). */}
           <p className="mt-10 text-small text-subtle">
             <a
-              href="/#faq"
+              href="/employers#faq"
               className="text-navy underline underline-offset-4"
             >
               Hiring for a US firm? See the questions firms ask us →

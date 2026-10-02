@@ -13,8 +13,15 @@ import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { firms } from "@/content/firms";
 import { serviceOptions } from "@/content/passport";
 import {
+  targetOptions,
+  roleTypeOptions,
+  experienceOptions,
+  membershipPlans,
+} from "@/content/jobs";
+import {
   emailApplicationReceived,
   emailEmployerLeadReceived,
+  emailMembershipReserved,
   firstNameOf,
   sendEmail,
 } from "@/lib/assessment/emails";
@@ -365,6 +372,147 @@ export async function submitEmployerLead(
         `[employer-lead] confirmation send failed to=${work_email}`,
         e,
       );
+    }
+  });
+
+  return { status: "success" };
+}
+
+/*
+  A job seeker reserving a founding membership on /get-access. Same shape and
+  discipline as submitEmployerLead (guards -> rate limit -> validate -> insert ->
+  best-effort confirmation), writing to membership_reservations (migration 0022).
+
+  NO PAYMENT. Nothing here charges, tokenises or stores a card; `plan` and
+  `currency` record which plan the person says they would pick.
+  TODO(payments): Razorpay (INR: UPI + cards) / Stripe (USD) checkout replaces
+  this as the conversion once refund + cancellation terms are published.
+*/
+export type MembershipReservationInput = {
+  full_name: string;
+  email: string;
+  whatsapp?: string;
+  targets?: string[];
+  role_type: string;
+  experience: string;
+  /* A plan id from content/jobs.ts membershipPlans, or "unsure". */
+  plan: string;
+  currency: string;
+};
+
+const reservationEmail = z.email();
+
+export async function reserveMembership(
+  raw: MembershipReservationInput,
+  utm: Utm = {},
+  guard: Guard = {},
+): Promise<ApplyState> {
+  const ip = await clientIp();
+
+  if (isLikelyBot({ hp: guard.hp, startedAt: guard.startedAt, minMs: 3000 })) {
+    logDrop("membership", "honeypot-or-timing", ip);
+    return { status: "success" };
+  }
+
+  const rl = await isRateLimited("membership", ip, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rl.limited) {
+    logDrop("membership", "rate_limit", rl.ipHash);
+    return { status: "success" };
+  }
+
+  const clean = (v: string | undefined) => (v ?? "").trim();
+  const full_name = clean(raw.full_name);
+  const email = clean(raw.email).toLowerCase();
+  const role_type = clean(raw.role_type);
+  const experience = clean(raw.experience);
+  const plan = clean(raw.plan);
+  const currency = clean(raw.currency).toUpperCase();
+  const targets = Array.from(new Set((raw.targets ?? []).map(clean).filter(Boolean)));
+  // Keep a leading + and digits only; spaces, dashes and brackets are formatting.
+  const whatsappRaw = clean(raw.whatsapp);
+  const whatsapp = whatsappRaw.replace(/(?!^\+)[^\d]/g, "");
+
+  const errors: Record<string, string> = {};
+  if (!full_name) errors.full_name = "Please tell us your name.";
+  if (!reservationEmail.safeParse(email).success) {
+    errors.email = "Please enter a valid email address.";
+  }
+  if (whatsappRaw && !/^\+?\d{8,15}$/.test(whatsapp)) {
+    errors.whatsapp = "Please enter a valid phone number with country code, or leave it blank.";
+  }
+  if (targets.length === 0) {
+    errors.targets = "Please pick at least one place you want to work.";
+  } else if (!targets.every((t) => (targetOptions as readonly string[]).includes(t))) {
+    errors.targets = "Please choose from the listed options.";
+  }
+  if (!(roleTypeOptions as readonly string[]).includes(role_type)) {
+    errors.role_type = "Please choose your main role type.";
+  }
+  if (!(experienceOptions as readonly string[]).includes(experience)) {
+    errors.experience = "Please choose your experience.";
+  }
+  if (currency !== "INR" && currency !== "USD") {
+    errors.plan = "Please choose a plan.";
+  } else if (plan !== "unsure") {
+    const match = membershipPlans.find((p) => p.id === plan);
+    // A plan must exist AND be sold in the chosen currency (no quarterly in USD).
+    if (!match || match.price[currency] === undefined) {
+      errors.plan = "Please choose a plan.";
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      status: "error",
+      message: "A few details need fixing before we can save this.",
+      errors,
+    };
+  }
+
+  const row = {
+    full_name,
+    email,
+    whatsapp: whatsapp || null,
+    targets,
+    role_type,
+    experience,
+    plan,
+    currency,
+    utm_source: utm.source ?? null,
+    utm_medium: utm.medium ?? null,
+    utm_campaign: utm.campaign ?? null,
+  };
+
+  if (!supabaseConfigured || !supabase) {
+    console.info("[membership] Supabase not configured, reservation not persisted.");
+    console.info("[membership]", row);
+    return { status: "success" };
+  }
+
+  const { error } = await supabase.from("membership_reservations").insert(row);
+  if (error) {
+    console.error("[membership] insert failed", error);
+    return {
+      status: "error",
+      message:
+        "We couldn't save your reservation just now. Please try again in a moment, or email contact@accountingtalent.in.",
+    };
+  }
+
+  after(async () => {
+    try {
+      const result = await sendEmail(
+        email,
+        emailMembershipReserved({ first_name: firstNameOf(full_name) }),
+      );
+      if (!result.ok) {
+        console.error(`[membership] confirmation send failed to=${email}: ${result.error}`);
+      }
+    } catch (e) {
+      console.error(`[membership] confirmation send failed to=${email}`, e);
     }
   });
 

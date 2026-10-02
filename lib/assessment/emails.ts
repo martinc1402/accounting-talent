@@ -101,6 +101,24 @@ AccountingTalent`,
   };
 }
 
+// ---- Founding membership reserved (/get-access) ---------------------------
+export function emailMembershipReserved(vars: { first_name: string }): Composed {
+  return {
+    subject: "You're on the founding list, AccountingTalent",
+    text: `Hi ${vars.first_name},
+
+Thanks for reserving a founding membership. Your place is held.
+
+Nothing has been charged, and nothing will be until you choose to pay. When the jobs database opens we'll email you first, with your founding-member launch discount.
+
+One thing to know now: we only ever take payment through our own checkout on accountingtalent.in. Never by phone, WhatsApp or bank transfer. If anyone claiming to be us asks you for money any other way, don't pay, and reply to this email.
+
+If you have questions, just reply. It comes straight to a person.
+
+AccountingTalent`,
+  };
+}
+
 // The reviewer's fail_reason maps to exactly one sentence from the spec.
 export const FAIL_REASON_SENTENCE: Record<string, string> = {
   quiz_score:

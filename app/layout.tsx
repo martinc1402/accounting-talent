@@ -26,18 +26,13 @@ const geist = Geist({
 });
 
 /*
-  Site-wide defaults, now firm-facing. These used to sell the accountant side
-  because "/" was the accountant page; that page is /accountants and carries its
-  own worker metadata, so the defaults follow the homepage.
+  Site-wide defaults, now job-seeker-facing. "/" is the paid job-search
+  membership for Indian accountants, so the defaults follow it: en_IN, and any
+  route that does not override them previews the job-seeker pitch.
 
-  This matters more than it looks. The old /employers route documented the exact
-  failure in reverse: a firm owner sharing the employer page previewed the
-  accountant pitch, because the root OG sold the worker side. Any route that does
-  not override these now inherits the firm framing, which is the right default
-  when the firm page is the front door.
-
-  locale is en_US to match: US accounting firms are the audience for "/", and
-  /accountants sets en_IN back for its own readers.
+  The previous defaults were the US-firm pitch (en_US). That page now lives at
+  /employers and sets its own metadata and en_US explicitly, so a firm sharing
+  /employers still previews firm copy. /accountants sets its own too.
 
   [TODO: OG IMAGE]. There is no opengraph-image anywhere in the repo, so shares
   render as a text card. Generating one via ImageResponse means committing a
@@ -48,18 +43,18 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://accountingtalent.in"),
   title: {
     default:
-      "Hire Vetted Indian Accountants for Your US Firm | AccountingTalent.in",
+      "Remote & Overseas Accounting Jobs for Indian Accountants | AccountingTalent.in",
     template: "%s | AccountingTalent.in",
   },
   description:
-    "A verified database of India-based accounting professionals for US CPA firms. Search, request an introduction, and hire directly. No staffing agency and no monthly per-seat markup.",
+    "Accounting jobs from employers' own career pages: remote roles open to India and overseas roles that mention visa sponsorship. No recruiters, no salary cut.",
   openGraph: {
-    title: "Hire Vetted Indian Accountants for Your US Firm",
+    title: "Remote and overseas accounting jobs, straight from employers' career pages.",
     description:
-      "Search a verified database of Indian bookkeepers, tax preparers and accountants. Interview and hire them directly, with no agency markup and no exclusivity.",
+      "For Indian CAs, CMAs, ACCAs and accountants. Remote roles open to India and roles abroad that mention visa sponsorship, in the US, Canada, UK, Australia and the Gulf.",
     url: "https://accountingtalent.in",
     siteName: "AccountingTalent.in",
-    locale: "en_US",
+    locale: "en_IN",
     type: "website",
   },
   twitter: { card: "summary_large_image" },

@@ -307,7 +307,7 @@ export const employerPlans: readonly Plan[] = [
       "No private references",
       "No bulk exports",
     ],
-    action: { status: "live", label: "Start free", href: "/#reserve" },
+    action: { status: "live", label: "Start free", href: "/employers#reserve" },
   },
   {
     id: "hiring-pass",
@@ -331,7 +331,7 @@ export const employerPlans: readonly Plan[] = [
     action: {
       status: "early-access",
       label: "Reserve a Hiring Pass",
-      href: "/#reserve",
+      href: "/employers#reserve",
       note: "There is nothing to pay yet. This reserves a pass and tells us to build toward your role.",
     },
   },
@@ -353,7 +353,7 @@ export const employerPlans: readonly Plan[] = [
     action: {
       status: "live",
       label: "Request a shortlist",
-      href: "/#reserve",
+      href: "/employers#reserve",
     },
   },
 ] as const;
@@ -373,7 +373,7 @@ export const ongoingHiring = {
   action: {
     status: "live",
     label: "Discuss ongoing hiring",
-    href: "/#reserve",
+    href: "/employers#reserve",
   } satisfies Action,
 } as const;
 

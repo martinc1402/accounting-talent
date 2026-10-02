@@ -34,7 +34,8 @@ export async function isRateLimited(
     | "introduction"
     | "candidate_photo"
     | "candidate_change"
-    | "signin",
+    | "signin"
+    | "membership",
   // The value the limit is keyed on. Usually an IP; may be any stable identifier
   // (e.g. an application id for per-candidate limits) — it is only ever hashed.
   ip: string,

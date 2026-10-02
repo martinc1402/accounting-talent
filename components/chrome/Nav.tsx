@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { List } from "@phosphor-icons/react/dist/ssr";
-import { navItems, primaryCta, employerCta } from "@/content/site";
+import {
+  navItems,
+  candidateNavItems,
+  primaryCta,
+  employerCta,
+  memberCta,
+} from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Cta } from "@/components/firms/Cta";
@@ -27,9 +33,12 @@ import { Cta } from "@/components/firms/Cta";
   based on route alone would mark "Find Talent" as current the entire time a
   reader is on the homepage, including while they are reading the pricing.
 
-  `audience` drives the CTA only. An accountant shown "Post a role free" has been
-  handed an employer's action, so this stays split. Consistency in structure, not
-  in call to action.
+  `audience` drives the CTA, and for "candidate" the item list too. An accountant
+  shown "Post a role free" has been handed an employer's action, so the CTA stays
+  split. "candidate" is the job seeker on "/" and /get-access: "/" stopped being
+  the firm page, so the firm's section anchors are the wrong menu there and it
+  gets its own (content/site.ts candidateNavItems). "worker" (/accountants, /faq)
+  keeps the firm list as before.
 
   The header is opaque, not translucent. It used to be bg-white/85 with a backdrop
   blur, which reads fine over the light bands but turns a murky grey when it sits
@@ -42,10 +51,12 @@ export function Nav({
   audience = "firm",
 }: {
   active?: string;
-  audience?: "firm" | "worker";
+  audience?: "firm" | "worker" | "candidate";
 }) {
   const isWorker = audience === "worker";
-  const cta = isWorker ? primaryCta : employerCta;
+  const isCandidate = audience === "candidate";
+  const cta = isWorker ? primaryCta : isCandidate ? memberCta : employerCta;
+  const items = isCandidate ? candidateNavItems : navItems;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white">
@@ -59,7 +70,7 @@ export function Nav({
         <Logo compact href="/" />
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const isActive = item.href === active;
             return (
               <Link
@@ -89,7 +100,7 @@ export function Nav({
           {/* On firm pages the nav CTA is the top-of-page ("hero") founding CTA,
               so it fires cta_click{position:hero}; on worker pages it's the plain
               application CTA. Same button styling either way. */}
-          {isWorker ? (
+          {isWorker || isCandidate ? (
             <Button href={cta.href}>{cta.label}</Button>
           ) : (
             <Cta position="hero" />
@@ -104,7 +115,7 @@ export function Nav({
             </summary>
             <div className="absolute right-0 top-full z-50 mt-2 w-64 border border-navy/15 bg-paper p-1">
               <nav aria-label="Main">
-                {navItems.map((item) => (
+                {items.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}

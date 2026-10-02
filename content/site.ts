@@ -67,7 +67,8 @@ export const OPERATOR = "Kaya Virtual (Australia)";
   4727da7 and is worth restoring rather than rewriting: the keyboard handling in
   it was correct and is easy to get wrong.
 
-  The section anchors stay absolute ("/#pricing", not "#pricing") because this nav
+  These four are the FIRM nav, pointing at sections of /employers since that page
+  moved off "/". The section anchors stay absolute ("/employers#pricing", not "#pricing") because this nav
   renders on /legal and /faq too, where a page-local anchor would silently do
   nothing. An absolute anchor still scrolls correctly when you are already there.
   This is the one rule from the old comment that must not be relaxed.
@@ -76,11 +77,39 @@ export const OPERATOR = "Kaya Virtual (Australia)";
   primaryCta below).
 */
 export const navItems = [
-  { label: "Find Talent", href: "/#network" },
-  { label: "How It Works", href: "/#how-hiring-works" },
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Find Talent", href: "/employers#network" },
+  { label: "How It Works", href: "/employers#how-hiring-works" },
+  { label: "Pricing", href: "/employers#pricing" },
   { label: "For Accountants", href: "/accountants" },
 ] as const;
+
+/*
+  The job-seeker nav, on "/" and /get-access. "/" became the paid job-search
+  membership (content/jobs.ts) and the firm pitch moved to /employers, so the two
+  audiences now get different item lists, not just different CTAs. Same absolute-
+  anchor rule as above: "/#pricing" works from /get-access, "#pricing" would not.
+
+  "For Employers" is the only cross-audience item, so a firm that lands on "/"
+  is one tap from its own page.
+*/
+export const candidateNavItems = [
+  { label: "Example listings", href: "/#listings" },
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "For Employers", href: "/employers" },
+] as const;
+
+/*
+  The job-seeker nav CTA. "Reserve access" rather than "Get access" or "Join":
+  there is no checkout yet, and lib/content/ctas.test.ts already holds the line
+  that a paid offer may reserve interest but may not say Get/Buy/Subscribe until
+  payment exists. Short enough to sit beside the hamburger at 360px.
+*/
+export const memberCta = {
+  label: "Reserve access",
+  href: "/get-access",
+} as const;
 
 /*
   The nav CTA on worker pages. "Join free" rather than "Apply free": the page now
@@ -98,9 +127,9 @@ export const primaryCta = {
   the same page rather than the worker funnel.
 
   Target is the intake form, the page's one conversion. The href is absolute
-  ("/#reserve") rather than a bare "#reserve" because this nav also renders on
-  /legal, where a page-local anchor would silently do nothing. An absolute anchor
-  still scrolls correctly when you are already on "/".
+  ("/employers#reserve") rather than a bare "#reserve" because this nav also
+  renders on /legal, where a page-local anchor would silently do nothing. An
+  absolute anchor still scrolls correctly when you are already on /employers.
 
   "Post a role free" rather than the old "Reserve founding access". Posting a role
   is not built, and the label would be a lie if it went anywhere that claimed
@@ -118,16 +147,28 @@ export const primaryCta = {
 */
 export const employerCta = {
   label: "Post a role free",
-  href: "/#reserve",
+  href: "/employers#reserve",
 } as const;
 
 export const footer = {
   tagline: "Hire India's accounting talent, directly.",
   links: [
+    { label: "For Employers", href: "/employers" },
     { label: "For Accountants", href: "/accountants" },
     { label: "FAQ", href: "/faq" },
     { label: "Privacy & Terms", href: "/legal" },
   ],
   email: CONTACT_EMAIL,
   disclosure: `AccountingTalent.in is a talent database operated by ${OPERATOR}. We are not a staffing agency, employer, or party to any employment agreement.`,
+} as const;
+
+/*
+  The footer's job-seeker variant, on "/" and /get-access. The default tagline and
+  disclosure sell the firm side and describe a talent database, which is the
+  wrong thing to sign off a page selling job-search membership with. Links and
+  email are shared; only the two sentences change.
+*/
+export const candidateFooter = {
+  tagline: "Remote and overseas accounting jobs, straight from employers.",
+  disclosure: `AccountingTalent.in is operated by ${OPERATOR}. We are a job-search membership, not a recruitment agency or an employer: we link to listings on employers' own sites, and you apply to the employer directly. We never take a cut of your salary.`,
 } as const;
