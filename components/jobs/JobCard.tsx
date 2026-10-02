@@ -333,18 +333,14 @@ function Cta({ listing, unlockHref }: { listing: JobListing; unlockHref: string 
     ? "text-white/85 ring-1 ring-white/35"
     : "bg-white text-navy";
 
-  // Examples have no listing behind them: an inert, labelled placeholder.
+  // Examples have no listing behind them: an inert placeholder. The "Example
+  // listing" pill in the band is what says so; no apology under the button.
   if (example || !applyUrl) {
     return (
-      <div>
-        <span aria-disabled="true" className={`${ctaBase} ${style} cursor-not-allowed opacity-70`}>
-          {label}
-          <ArrowSquareOut size={18} weight="bold" aria-hidden />
-        </span>
-        <p className="mt-2 text-center text-fine text-white/75">
-          Example only. This card doesn&apos;t link to a real job.
-        </p>
-      </div>
+      <span aria-disabled="true" className={`${ctaBase} ${style} cursor-not-allowed opacity-70`}>
+        {label}
+        <ArrowSquareOut size={18} weight="bold" aria-hidden />
+      </span>
     );
   }
 

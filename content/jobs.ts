@@ -121,7 +121,7 @@ export const membershipPlans: readonly MembershipPlan[] = [
 
 export const pricing = {
   heading: "Founding membership",
-  sub: "Payments aren't live yet. Reserve the plan you'd pick, pay nothing today, and get a founding-member launch discount when the database opens.",
+  sub: "Reserve your plan today and lock in a founding-member launch discount. Nothing is charged until the database opens.",
   currencyLabel: "Show prices in",
   includesHeading: "Every plan will include",
   includes: [
@@ -152,11 +152,15 @@ export const pricing = {
 export const hero = {
   eyebrow: "For Indian CAs, CMAs, ACCAs and accountants",
   h1: "Remote and overseas accounting jobs, straight from employers' career pages.",
-  sub: "A membership to a daily-updated database of verified accounting roles: remote jobs you can do from India, and jobs abroad that mention visa sponsorship, in the US, Canada, the UK, Australia and the Gulf.",
+  sub: "Verified accounting roles, updated daily: remote jobs you can do from India, and jobs abroad that mention visa sponsorship, in the US, Canada, the UK, Australia and the Gulf.",
   primary: { label: "See example listings", href: "#listings" },
   secondary: { label: "View pricing", href: "#pricing" },
-  microcopy: "The database isn't open yet. Founding members pay nothing now, get a launch discount, and hear from us first.",
-  sampleCaption: "An example we wrote to show the format. Not a real job.",
+  /*
+    Confident, and still true: memberships are open; the database is not yet.
+    This line is what stops the present-tense sub above reading as "live now",
+    so if it goes, the sub needs a tense check.
+  */
+  microcopy: "Founding memberships are open, with a launch discount.",
 } as const;
 
 export const problem = {
@@ -206,7 +210,7 @@ export const howItWorks = {
 
 export const filters = {
   heading: "Filters other job boards don't give you",
-  sub: "A preview of the search. It isn't live yet.",
+  sub: "Search the way you actually job hunt: by where you can work, and whether they'll sponsor you.",
   groups: [
     {
       label: "Country",
@@ -473,7 +477,7 @@ export const exampleJobs: readonly JobListing[] = [
 
 export const listings = {
   heading: "What a listing will look like",
-  sub: "These are examples we wrote to show the format. The jobs, employers and quotes are not real.",
+  sub: "Every listing answers the two questions that matter before you apply: can you apply from India, and will they sponsor you. Then it shows you why.",
   freeNote: "On a free account you'll see a few recent listings like the Riyadh one, with the employer name and evidence hidden.",
 } as const;
 
@@ -523,7 +527,7 @@ export const getAccess = {
   eyebrow: "Founding membership",
   h1: "Reserve a founding membership",
   points: [
-    "Payments aren't live yet. Nothing is charged today.",
+    "Nothing is charged today.",
     "Founding members get a launch discount.",
     "We'll email you when the database opens, and you decide then.",
   ],

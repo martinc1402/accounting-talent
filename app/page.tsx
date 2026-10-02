@@ -80,15 +80,11 @@ export default function HomePage() {
               </Button>
             </div>
 
-            <p className="mt-5 flex max-w-[52ch] flex-wrap items-center gap-x-2 gap-y-2 text-caption text-subtle">
-              <StatusLabel status="planned" />
-              <span>{hero.microcopy}</span>
-            </p>
+            <p className="mt-5 max-w-[52ch] text-caption text-subtle">{hero.microcopy}</p>
           </div>
 
           <div className="lg:col-span-5 lg:self-start">
             <JobCard listing={exampleJobs[0]!} now={EXAMPLE_NOW} headingLevel="h2" />
-            <p className="mt-3 text-caption text-subtle">{hero.sampleCaption}</p>
           </div>
         </section>
 
