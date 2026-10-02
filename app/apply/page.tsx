@@ -10,7 +10,7 @@ import { footer } from "@/content/site";
   do. Ad traffic should not be given an exit.
 */
 export const metadata: Metadata = {
-  title: "Apply free",
+  title: "Create your free profile",
   // Page-level robots fully replaces the layout's, which is what we want here.
   robots: { index: false, follow: false },
 };

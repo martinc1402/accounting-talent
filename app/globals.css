@@ -37,6 +37,18 @@
   --color-verified: #22c55e;
   --color-verified-deep: #15803d;
 
+  /*
+    Job-card check tones, for the NAVY card only (components/jobs/JobCard.tsx).
+    "good" deliberately does not get a colour: green belongs to Verified (above)
+    and nothing else, so a good check is a white pill with a check mark. Warn and
+    bad needed hues the brief called for (amber "may sponsor"). Never the only
+    signal: each tone also has its own icon shape and screen-reader text.
+
+    Measured on #131F5B: tone-warn #FCD34D 10.6:1, tone-bad #FDA4AF 8.1:1.
+  */
+  --color-tone-warn: #fcd34d;
+  --color-tone-bad: #fda4af;
+
   --font-display: var(--font-newsreader), Georgia, serif;
   --font-sans: var(--font-geist), system-ui, sans-serif;
 

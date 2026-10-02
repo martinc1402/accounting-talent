@@ -62,11 +62,11 @@ import { faq } from "@/content/faq";
 export const metadata: Metadata = pageMetadata({
   title: "Build Your Accounting Profile | AccountingTalent",
   description:
-    "Create a free professional profile, demonstrate your accounting skills and get discovered by US firms. No application fees, salary commission or pay-to-rank.",
+    "Create a free professional profile, demonstrate your accounting skills and get discovered by US firms. Your profile stays free: no salary commission, no pay-to-rank.",
   path: "/accountants",
   ogTitle: "Prove what you can do. Get discovered by US accounting firms.",
   ogDescription:
-    "A free professional profile built around your skills, software experience, work evidence and vouches. No application fees, no salary commission, no pay-to-rank.",
+    "A free professional profile built around your skills, software experience, work evidence and vouches. No salary commission, no pay-to-rank.",
   locale: "en_IN",
 });
 

@@ -278,15 +278,15 @@ export const QUESTIONS: readonly Question[] = [
     type: "consent",
     label: "One last thing.",
     options: [
-      "I confirm the information above is accurate. I understand AccountingTalent.in is free for professionals, that employers hire and pay directly, and that misrepresenting skills or qualifications will result in permanent removal.",
+      "I confirm the information above is accurate. I understand my AccountingTalent.in profile is free, that employers hire and pay me directly, and that misrepresenting skills or qualifications will result in permanent removal.",
     ],
   },
 ];
 
 export const intro = {
-  h1: "Apply to India's US-accounting talent database",
+  h1: "Create your free AccountingTalent profile",
   reassurance: [
-    "Free for accountants, permanently. Firms pay, you don't.",
+    "Your profile is free. No commission on your salary, ever.",
     "Direct hire: US\u00A0firms pay you, with no agency taking a cut.",
     "3 minutes, structured questions, no resume needed.",
   ],

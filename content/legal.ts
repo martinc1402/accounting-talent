@@ -1,6 +1,17 @@
 import { CONTACT_EMAIL, LAUNCH_WORKER, OPERATOR } from "./site";
 
 /*
+  TODO(legal): before payments go live this needs, at minimum:
+    - proper terms for the paid job-search membership (plans, billing, renewal,
+      access, ending a membership);
+    - a refund and cancellation policy, published and linked from the footer;
+    - a privacy update covering membership reservations (WhatsApp number,
+      target countries, plan) and payment processors;
+    - a DPDP Act 2023 review;
+    - registered business details (name, address, contact) from the operator.
+  Only the "free forever" statements were removed in the 2026-10 pivot; the
+  rest of this file still describes the talent-database model.
+
   ⚠️ DRAFT. NOT LEGALLY REVIEWED.
 
   This text was written from the facts stated in site-structure-and-copy.md
@@ -35,7 +46,7 @@ export const privacy: LegalSection[] = [
     body: [
       "When you apply, we collect the answers you give us: your name, email address, WhatsApp number, city, and optionally a LinkedIn URL. We also collect your professional details: qualification, years of experience, US-client experience, role, software skills, US\u00A0tax\u00A0forms prepared, salary expectation, availability, working hours, notice period, and whether you have a working home setup.",
       "We record how you heard about us, and if an advertisement brought you here, the campaign it came from.",
-      "We do not ask for your PAN, Aadhaar, bank details, or any payment information. We will never ask you for money.",
+      "We do not ask for your PAN, Aadhaar, bank details, or any payment information when you apply. We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf.",
     ],
   },
   {
@@ -85,10 +96,10 @@ export const terms: LegalSection[] = [
     ],
   },
   {
-    heading: "It is free for professionals",
+    heading: "Your profile is free",
     body: [
-      "Listing yourself on AccountingTalent.in is free, and will remain free. US\u00A0firms pay us for access to the database, plus a one-time fee when they hire someone.",
-      "We will never charge you a fee, a commission, a deposit, or a cut of your salary. If anyone contacts you claiming to represent us and asks you for money, it is not us. Please tell us about it.",
+      "Listing yourself on AccountingTalent.in is free.",
+      "We will never take a commission or a cut of your salary. We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf. If anyone claiming to represent us asks you for money any other way, please tell us about it.",
     ],
   },
   {

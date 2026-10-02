@@ -1,5 +1,6 @@
 import type { FaqItem } from "@/content/faq";
 import { CONTACT_EMAIL } from "@/content/site";
+import type { JobListing } from "@/lib/jobs/types";
 
 /*
   The job-seeker homepage ("/") and /get-access, top to bottom.
@@ -242,71 +243,239 @@ export const filters = {
   footnote: "\"Mentions sponsorship\" means the listing's own text says so. It's a signal, not a promise: the employer decides.",
 } as const;
 
-export type ExampleListing = {
-  title: string;
-  /** A description, never a company name. These employers do not exist. */
-  employer: string;
-  location: string;
-  workMode: string;
-  sponsorship: string;
-  roleType: string;
-  experience: string;
-  source: string;
-  posted: string;
-};
+/*
+  The example listings. EVERY ONE IS FICTIONAL: the employers, quotes, salaries
+  and dates were written to show what a real card will carry, and each card says
+  "Example listing" on its face. No applyUrl, so no card links anywhere external.
+
+  Each one demonstrates a different state the scraper will produce:
+    1. Dubai: sponsorship stated, full view.
+    2. Remote US tax: no visa question; the catch is evening hours in IST.
+    3. UK audit senior: licensed sponsor but the listing is silent, so amber
+       "may sponsor"; salary checked against the SOC 2421 going rate.
+    4. Riyadh: the locked free preview (employer and evidence hidden), with
+       Saudization making sponsorship "unclear".
+    5. Abu Dhabi: "UAE residents only", so not eligible from India.
+
+  The UK going rate (£49,200 a year for SOC 2421, Chartered and certified
+  accountants, from 8 April 2026) is a real figure as reported by secondary
+  sources; confirm it against gov.uk Appendix Skilled Occupations before a real
+  listing relies on it, and re-check whenever the Home Office updates rates.
+
+  INR lines use round illustrative rates and say "≈". The scraper should use a
+  dated rate and say which.
+
+  Times are relative to EXAMPLE_NOW, not the clock: this page is static, and a
+  build-time clock would claim "checked 3h ago" for weeks.
+*/
+export const EXAMPLE_NOW = "2026-10-03T09:00:00+05:30";
+
+export const exampleJobs: readonly JobListing[] = [
+  {
+    id: "example-dubai-senior-accountant",
+    title: "Senior Accountant, Group Reporting",
+    employer: { name: "Dunewell Logistics", direct: true },
+    destination: { label: "Dubai, UAE", code: "DXB" },
+    location: "Jebel Ali, Dubai",
+    workMode: "On-site",
+    applyFromIndia: {
+      tone: "good",
+      value: "Open to India",
+      reason: "Listing invites applicants from outside the UAE.",
+    },
+    second: {
+      kind: "visa-sponsorship",
+      check: {
+        tone: "good",
+        value: "Sponsorship stated",
+        reason: "Employment visa and Emirates ID provided by the employer.",
+      },
+    },
+    checkedAt: "2026-10-03T06:00:00+05:30",
+    firstSeenAt: "2026-10-01T10:00:00+05:30",
+    evidence: {
+      quote: "Employment visa, family medical insurance and an annual return flight are provided.",
+      source: "Dunewell careers page (Workday)",
+    },
+    package: ["Employment visa", "Medical insurance", "Annual flight"],
+    requirements: [
+      { label: "IFRS consolidation", kind: "skill" },
+      { label: "5+ yrs, GCC or Big 4", kind: "experience" },
+      { label: "CA or ACCA", kind: "qualification" },
+      { label: "Oracle NetSuite", kind: "skill" },
+    ],
+    salary: {
+      display: "AED 16,000–19,000 a month",
+      source: "employer-stated",
+      basic: "Basic AED 10,500, plus housing and transport",
+      inr: "≈ ₹3.7–4.4 lakh a month",
+    },
+    access: "full",
+    example: true,
+  },
+  {
+    id: "example-remote-us-tax",
+    title: "Tax Associate, US Individual and S-Corp Returns",
+    employer: { name: "Brightledger CPA", direct: true },
+    destination: { label: "Remote · USA", code: "US" },
+    location: "Remote, US firm",
+    workMode: "Remote",
+    applyFromIndia: {
+      tone: "good",
+      value: "Open to India",
+      reason: "Listing says remote from the US or India.",
+    },
+    second: {
+      kind: "working-hours",
+      check: {
+        tone: "warn",
+        value: "Evenings IST",
+        reason: "Needs 4 hours' overlap with US Eastern, about 7pm–11pm IST.",
+      },
+    },
+    checkedAt: "2026-10-03T08:00:00+05:30",
+    firstSeenAt: "2026-10-02T21:00:00+05:30",
+    evidence: {
+      quote: "Fully remote. Open to candidates in the US or India; must overlap at least four hours with Eastern Time.",
+      source: "Brightledger careers page (Greenhouse)",
+    },
+    requirements: [
+      { label: "3+ US busy seasons", kind: "experience" },
+      { label: "CA, CPA or EA", kind: "qualification" },
+      { label: "1040 and 1120-S", kind: "skill" },
+    ],
+    salary: {
+      display: "US$22–28 an hour, contractor",
+      source: "employer-stated",
+      inr: "≈ ₹1,850–2,350 an hour",
+    },
+    access: "full",
+    example: true,
+  },
+  {
+    id: "example-london-audit-senior",
+    title: "Audit Senior, Financial Services",
+    employer: { name: "Halden & Wren LLP", direct: true },
+    destination: { label: "London, UK", code: "LON" },
+    location: "London, UK",
+    workMode: "Hybrid",
+    applyFromIndia: {
+      tone: "neutral",
+      value: "Not restricted",
+      reason: "Listing doesn't limit where applicants live.",
+    },
+    second: {
+      kind: "visa-sponsorship",
+      check: {
+        tone: "warn",
+        value: "May sponsor",
+        reason: "A licensed sponsor, but this listing doesn't mention sponsorship.",
+      },
+    },
+    checkedAt: "2026-10-03T04:00:00+05:30",
+    firstSeenAt: "2026-09-29T12:00:00+05:30",
+    evidence: {
+      quote: "Halden & Wren LLP is listed on the register of licensed sponsors (Skilled Worker). The job advert itself is silent on sponsorship.",
+      source: "Home Office register of licensed sponsors",
+    },
+    package: ["Study support", "Hybrid, 3 days in office"],
+    requirements: [
+      { label: "ACA or ACCA", kind: "qualification" },
+      { label: "FS audit, UK or IFRS", kind: "skill" },
+      { label: "2+ yrs as senior", kind: "experience" },
+    ],
+    salary: {
+      display: "£50,000–56,000 a year",
+      source: "employer-stated",
+      visaThreshold: {
+        tone: "good",
+        text: "Above the £49,200 Skilled Worker going rate for SOC 2421 (from 8 Apr 2026).",
+      },
+      inr: "≈ ₹56–63 lakh a year",
+    },
+    access: "full",
+    example: true,
+  },
+  {
+    id: "example-riyadh-reporting-manager",
+    title: "Financial Reporting Manager",
+    employer: { name: "Sandmere Industrial Co.", direct: true },
+    destination: { label: "Riyadh, Saudi Arabia", code: "RUH" },
+    location: "Riyadh, Saudi Arabia",
+    workMode: "On-site",
+    applyFromIndia: {
+      tone: "good",
+      value: "Open to India",
+      reason: "Listing accepts overseas applicants.",
+    },
+    second: {
+      kind: "visa-sponsorship",
+      check: {
+        tone: "warn",
+        value: "Unclear",
+        reason: "Saudization quotas may limit this role for non-Saudis.",
+      },
+    },
+    checkedAt: "2026-10-03T07:00:00+05:30",
+    firstSeenAt: "2026-10-02T09:00:00+05:30",
+    evidence: {
+      quote: "Hidden on the free preview.",
+      source: "Hidden on the free preview.",
+    },
+    requirements: [
+      { label: "CA or CPA", kind: "qualification" },
+      { label: "8+ yrs", kind: "experience" },
+      { label: "IFRS consolidation", kind: "skill" },
+    ],
+    salary: { display: null, source: "not-disclosed" },
+    access: "locked",
+    example: true,
+  },
+  {
+    id: "example-abu-dhabi-ar",
+    title: "Accounts Receivable Specialist",
+    employer: { name: "Corniche Ledger Services", direct: true },
+    destination: { label: "Abu Dhabi, UAE", code: "AUH" },
+    location: "Abu Dhabi, UAE",
+    workMode: "On-site",
+    applyFromIndia: {
+      tone: "bad",
+      value: "Not eligible",
+      reason: "Listing says UAE residents only.",
+    },
+    second: {
+      kind: "visa-sponsorship",
+      check: {
+        tone: "neutral",
+        value: "Not offered",
+        reason: "Residents-only roles don't sponsor a visa.",
+      },
+    },
+    checkedAt: "2026-10-03T05:00:00+05:30",
+    firstSeenAt: "2026-09-30T15:00:00+05:30",
+    evidence: {
+      quote: "Applicants must currently reside in the UAE with a valid residence visa.",
+      source: "Corniche Ledger careers page (Lever)",
+    },
+    requirements: [
+      { label: "B.Com or M.Com", kind: "qualification" },
+      { label: "2+ yrs AR", kind: "experience" },
+      { label: "SAP FI", kind: "skill" },
+    ],
+    salary: {
+      display: "AED 9,000–11,000 a month",
+      source: "employer-stated",
+      inr: "≈ ₹2.1–2.6 lakh a month",
+    },
+    access: "ineligible",
+    example: true,
+  },
+];
 
 export const listings = {
   heading: "What a listing will look like",
-  sub: "These are examples we wrote to show the format. They are not real jobs and not real employers.",
-  exampleLabel: "Example listing",
-  externalLabel: "External listing, apply on employer's site",
-  freeNote: "On a free account you'll see a few recent listings like these, with the employer name hidden.",
-  items: [
-    {
-      title: "Senior Tax Associate, US individual and business returns",
-      employer: "A mid-sized US CPA firm",
-      location: "USA",
-      workMode: "Remote, open to India",
-      sponsorship: "Remote role, no visa needed",
-      roleType: "Tax",
-      experience: "3 to 6 years",
-      source: "Employer careers page (Greenhouse)",
-      posted: "Posted today",
-    },
-    {
-      title: "Accounts Payable Team Lead",
-      employer: "A Dubai logistics group",
-      location: "Dubai, UAE",
-      workMode: "On-site",
-      sponsorship: "Mentions employment visa",
-      roleType: "AP / AR",
-      experience: "5+ years",
-      source: "Employer careers page (Workday)",
-      posted: "Posted 2 days ago",
-    },
-    {
-      title: "Audit Senior",
-      employer: "A Toronto accounting firm",
-      location: "Toronto, Canada",
-      workMode: "On-site",
-      sponsorship: "Mentions sponsorship",
-      roleType: "Audit",
-      experience: "3 to 5 years",
-      source: "Employer careers page (Lever)",
-      posted: "Posted yesterday",
-    },
-    {
-      title: "FP&A Analyst",
-      employer: "A UK software company",
-      location: "United Kingdom",
-      workMode: "Remote, open to India",
-      sponsorship: "Remote contract, no visa needed",
-      roleType: "FP&A",
-      experience: "2 to 4 years",
-      source: "Employer careers page",
-      posted: "Posted 3 days ago",
-    },
-  ] as readonly ExampleListing[],
+  sub: "These are examples we wrote to show the format. The jobs, employers and quotes are not real.",
+  freeNote: "On a free account you'll see a few recent listings like the Riyadh one, with the employer name and evidence hidden.",
 } as const;
 
 export const trust = {
@@ -405,7 +574,7 @@ export const jobsFaq: readonly FaqItem[] = [
     q: "How do I spot a job scam?",
     a: [
       "A real employer never asks you to pay to apply, to be interviewed, or for a \"visa processing\" or \"training\" fee. Be careful with interviews held only on WhatsApp or Telegram, offers made without any interview, and email addresses that don't match the company's website.",
-      `We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer. If someone claiming to be us asks you for money any other way, don't pay, and tell us at ${CONTACT_EMAIL}.`,
+      `We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf. If someone claiming to be us asks you for money any other way, don't pay, and tell us at ${CONTACT_EMAIL}.`,
     ],
   },
   {

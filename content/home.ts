@@ -21,7 +21,7 @@ export const hero = {
   h1: heroH1Lines.join(" "),
   eyebrow: "Build your AccountingTalent Passport",
   sub: "A free profile built around your skills, software experience, work evidence and vouches from people who have worked with you.",
-  cta: "Join the founding network",
+  cta: "Create your free profile",
   secondaryCta: "See what employers see",
   microcopy:
     "Free to join. No application fees. No salary commission. No pay-to-rank.",
@@ -606,7 +606,7 @@ export const whoWeWant = {
 */
 export const pricing = {
   h2: "Free to build your professional reputation.",
-  sub: "The core product is free and is going to stay that way. Nothing about your profile, your applications or your ranking is behind a payment.",
+  sub: "Your profile is free and stays free, and nobody can pay to rank higher. Our job-search membership is a separate, optional product.",
   free: {
     name: "AccountingTalent Free",
     price: "₹0",
@@ -630,13 +630,19 @@ export const pricing = {
       "No payment required to rank fairly in search.",
     ],
   },
+  /*
+    This slot used to describe "AccountingTalent Pro", a possible paid profile
+    tier. It now describes the job-search membership sold on "/", because that
+    is the paid product that actually exists (as a reservation). Same shape, so
+    components/home/AccountantPricing.tsx is unchanged.
+  */
   pro: {
-    name: "AccountingTalent Pro",
-    status: "Planned for later. Not available, and not being sold.",
-    price: "Possibly ₹299 a month",
-    body: "If it ever ships, it would be presentation and insight tools: deeper profile analytics, tailored résumé exports, a custom profile address, career benchmarking, portfolio tools.",
+    name: "Job-search membership",
+    status: "Separate and optional. Launching soon.",
+    price: "From ₹199 a week",
+    body: "A daily-updated database of remote and overseas accounting jobs, linked to employers' own career pages. You do not need it to keep a profile here.",
     critical:
-      "Pro will not buy a higher position in search results. Ranking is not for sale here to anyone, at any price.",
+      "Paying for membership does not move your profile in employer search. Ranking is not for sale here to anyone, at any price.",
   },
 } as const;
 
@@ -662,7 +668,7 @@ export const verification = {
 
   THE PRICING FIGURES THAT USED TO LIVE HERE ARE GONE. This section previously
   quoted "$1,440 a year, $720 founding, $2,400 per hire" as the proof that
-  accountants are never charged. Those numbers no longer exist anywhere in the
+  accountants were never charged. Those numbers no longer exist anywhere in the
   product, and this file was one of the four places the old comments warned would
   drift. The promise did not depend on the figures, so it is now made directly.
 */
@@ -676,8 +682,8 @@ export const honest = {
   expectIntro: "What you can expect:",
   expect: [
     {
-      term: "A free, permanent profile",
-      body: "We will never charge accountants, at any stage. Firms pay us for hiring access. Not one rupee of what you agree with an employer comes to us, in any month, for as long as you work there.",
+      term: "A free profile, and no cut of your pay",
+      body: "Your profile stays free. Not one rupee of what you agree with an employer comes to us, in any month, for as long as you work there. We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf.",
     },
     {
       term: "Your feedback actually changing things",
@@ -707,8 +713,8 @@ export const honest = {
 
 export const finalCta = {
   h2: "Build a professional profile that shows more than a résumé.",
-  sub: "Join the founding network free and help shape a better way for Indian accountants to be discovered internationally.",
-  cta: "Join the founding network",
+  sub: "Create your free profile and help shape a better way for Indian accountants to be discovered internationally.",
+  cta: "Create your free profile",
   secondaryCta: "See example profiles",
   referral:
     "Know another accountant working US hours for agency pay? Refer them and you will both get featured placement at launch.",

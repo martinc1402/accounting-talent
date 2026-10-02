@@ -80,7 +80,7 @@ export const navItems = [
   { label: "Find Talent", href: "/employers#network" },
   { label: "How It Works", href: "/employers#how-hiring-works" },
   { label: "Pricing", href: "/employers#pricing" },
-  { label: "For Accountants", href: "/accountants" },
+  { label: "For Accountants", href: "/" },
 ] as const;
 
 /*
@@ -117,7 +117,7 @@ export const memberCta = {
   job application, which is the older and smaller promise.
 */
 export const primaryCta = {
-  label: "Join free",
+  label: "Free profile",
   href: "/apply",
 } as const;
 
@@ -154,12 +154,12 @@ export const footer = {
   tagline: "Hire India's accounting talent, directly.",
   links: [
     { label: "For Employers", href: "/employers" },
-    { label: "For Accountants", href: "/accountants" },
+    { label: "For Accountants", href: "/" },
     { label: "FAQ", href: "/faq" },
     { label: "Privacy & Terms", href: "/legal" },
   ],
   email: CONTACT_EMAIL,
-  disclosure: `AccountingTalent.in is a talent database operated by ${OPERATOR}. We are not a staffing agency, employer, or party to any employment agreement.`,
+  disclosure: `AccountingTalent.in is operated by ${OPERATOR}. We are not a recruitment agency or an employer, and not a party to any employment agreement.`,
 } as const;
 
 /*

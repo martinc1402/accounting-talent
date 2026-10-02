@@ -23,10 +23,11 @@ export type FaqItem = {
 export const faq: FaqItem[] = [
   {
     id: "free",
-    q: "Is AccountingTalent free for accountants?",
+    q: "What is free, and what costs money?",
     a: [
-      "Yes, permanently. Creating a profile is free, applying is free, being verified is free, and receiving a message from an employer is free. There is no stage at which we ask an accountant for money.",
-      "US firms pay us for hiring access. That is the entire business. If anyone ever asks you for money to join, to be verified, or to be introduced to a firm, it is not us.",
+      "Your profile is free and stays free: creating it, being verified, and hearing from an employer who finds you. We never take a commission on your salary, and nobody can pay to rank higher.",
+      "Our job-search membership is separate and optional. It is a paid database of remote and overseas accounting jobs, linked to employers' own career pages. You do not need it to keep a profile here.",
+      "We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf.",
     ],
   },
   {

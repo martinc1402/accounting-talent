@@ -8,7 +8,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatusLabel } from "@/components/marketing/StatusLabel";
 import { ProcessSteps } from "@/components/marketing/ProcessSteps";
 import { FaqSection } from "@/components/marketing/FaqSection";
-import { ExampleListingCard } from "@/components/jobs/ExampleListingCard";
+import { JobCard } from "@/components/jobs/JobCard";
 import { FilterPreview } from "@/components/jobs/FilterPreview";
 import { HomePricing } from "@/components/jobs/HomePricing";
 import { pageMetadata } from "@/lib/seo";
@@ -17,6 +17,8 @@ import {
   problem,
   howItWorks,
   listings,
+  exampleJobs,
+  EXAMPLE_NOW,
   trust,
   faqHeading,
   jobsFaq,
@@ -61,8 +63,8 @@ export default function HomePage() {
       <main className="flex-1">
         {/* Hero. Same 7/5 split and top-aligned columns as /employers, for the
             reason recorded there: centring the copy against a tall card pushes
-            the headline below the fold. The right column is one example
-            listing, labelled as one. */}
+            the headline below the fold. The right column is the first example
+            listing (Dubai, sponsorship stated), labelled as one. */}
         <section className="mx-auto grid max-w-[1240px] grid-cols-1 gap-x-16 gap-y-10 px-5 pt-12 pb-16 lg:grid-cols-12 lg:px-8 lg:pt-20 lg:pb-24">
           <div className="lg:col-span-7 lg:self-start">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -87,7 +89,7 @@ export default function HomePage() {
           </div>
 
           <div className="lg:col-span-5 lg:self-start">
-            <ExampleListingCard listing={listings.items[0]} headingLevel="h2" />
+            <JobCard listing={exampleJobs[0]!} now={EXAMPLE_NOW} headingLevel="h2" />
             <p className="mt-3 text-caption text-subtle">{hero.sampleCaption}</p>
           </div>
         </section>
@@ -138,10 +140,13 @@ export default function HomePage() {
               <SectionHeading>{listings.heading}</SectionHeading>
               <p className="mt-5 max-w-[56ch] text-body text-muted">{listings.sub}</p>
             </div>
-            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:mt-14">
-              {listings.items.map((item) => (
-                <li key={item.title}>
-                  <ExampleListingCard listing={item} stretch />
+            {/* All five examples, one per state the scraper will produce (see
+                exampleJobs in content/jobs.ts). The hero repeats the first so
+                this section stands on its own when reached from the nav. */}
+            <ul className="mt-10 grid gap-5 md:grid-cols-2 lg:mt-14 xl:grid-cols-3">
+              {exampleJobs.map((job) => (
+                <li key={job.id} className="min-w-0">
+                  <JobCard listing={job} now={EXAMPLE_NOW} stretch />
                 </li>
               ))}
             </ul>

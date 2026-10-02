@@ -39,7 +39,7 @@ To be straight with you: there's no job to apply for today. We're building the v
 Nothing to do for now — just keep an eye on your inbox (and your spam folder, in case we land there). Questions? Reply to this email and a person will answer.
 
 — AccountingTalent.in
-Free for accounting professionals. Always.`,
+Your profile is free. We never take a cut of your salary.`,
   };
 }
 
@@ -111,7 +111,7 @@ Thanks for reserving a founding membership. Your place is held.
 
 Nothing has been charged, and nothing will be until you choose to pay. When the jobs database opens we'll email you first, with your founding-member launch discount.
 
-One thing to know now: we only ever take payment through our own checkout on accountingtalent.in. Never by phone, WhatsApp or bank transfer. If anyone claiming to be us asks you for money any other way, don't pay, and reply to this email.
+One thing to know now: we only ever take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf. If anyone claiming to be us asks you for money any other way, don't pay, and reply to this email.
 
 If you have questions, just reply. It comes straight to a person.
 
@@ -155,7 +155,7 @@ Please complete it within 7 days. There's no timer — take the time to do it pr
 Questions? Reply to this email and a person will answer.
 
 — AccountingTalent.in
-Free for accounting professionals. Always.`,
+Your profile is free. We never take a cut of your salary.`,
   };
 }
 
@@ -181,7 +181,7 @@ Your assessment link: ${vars.assessment_link}
 If the timing doesn't work or you've decided not to continue, no problem at all — you can ignore this. If you've hit a snag, just reply and a person will help.
 
 — AccountingTalent.in
-Free for accounting professionals. Always.`,
+Your profile is free. We never take a cut of your salary.`,
   };
 }
 

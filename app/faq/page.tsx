@@ -81,13 +81,13 @@ export default function FaqPage() {
               Still deciding?
             </h2>
             <p className="mt-3 max-w-[46ch] text-body text-muted">
-              The application is free, takes three minutes, and you can delete
-              your profile at any time.
+              Your profile is free, the application takes three minutes, and
+              you can delete your profile at any time.
             </p>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center">
               <Button href="/apply" className="w-full sm:w-auto">
-                Apply free, takes 3 minutes
+                Create a free profile, takes 3 minutes
               </Button>
               <a
                 href={`mailto:${CONTACT_EMAIL}`}

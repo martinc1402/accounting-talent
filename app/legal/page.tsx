@@ -7,7 +7,7 @@ import { CONTACT_EMAIL } from "@/content/site";
 export const metadata: Metadata = {
   title: "Privacy & Terms",
   description:
-    "How AccountingTalent.in handles your data, and the terms of using the talent database.",
+    "How AccountingTalent.in handles your data, and the terms of using the site.",
 };
 
 /*

@@ -45,9 +45,9 @@ Someone asked for a sign-in link for this email address, and we weren't able to 
 
 Sign-in is limited while we're still building out the platform, so it isn't open to everyone yet. If you've already applied, nothing is wrong with your application — we'll email you directly when there's something for you to do.
 
-If you're an accounting professional and haven't applied yet: accountingtalent.in/apply. It's free, and it takes about five minutes.
+If you're an accounting professional and haven't applied yet: accountingtalent.in/apply. Your profile is free, and it takes about five minutes.
 
-If you're hiring: accountingtalent.in — reserve founding access and we'll be in touch before the database opens.
+If you're hiring: accountingtalent.in/employers — reserve founding access and we'll be in touch before the database opens.
 
 If this wasn't you, you can ignore this email. Nothing was created and nobody gained access to anything.
 

@@ -73,7 +73,7 @@ If the timing just wasn't right before, we'd genuinely like you to have another 
 Questions? Reply to this email and a person will answer.
 
 — AccountingTalent.in
-Free for accounting professionals. Always.`,
+Your profile is free. We never take a cut of your salary.`,
   };
 }
 
@@ -100,7 +100,7 @@ If it's not for you, do nothing — we won't email you about this again.
 Questions? Reply and a person will answer.
 
 — AccountingTalent.in
-Free for accounting professionals. Always.`,
+Your profile is free. We never take a cut of your salary.`,
   };
 }
 
