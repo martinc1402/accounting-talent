@@ -30,9 +30,8 @@ const geist = Geist({
   membership for Indian accountants, so the defaults follow it: en_IN, and any
   route that does not override them previews the job-seeker pitch.
 
-  The previous defaults were the US-firm pitch (en_US). That page now lives at
-  /employers and sets its own metadata and en_US explicitly, so a firm sharing
-  /employers still previews firm copy. /accountants sets its own too.
+  The previous defaults were the US-firm pitch (en_US). That page (/employers)
+  was removed in 2026-10, so there is no second audience to set metadata for.
 
   [TODO: OG IMAGE]. There is no opengraph-image anywhere in the repo, so shares
   render as a text card. Generating one via ImageResponse means committing a

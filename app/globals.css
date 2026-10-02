@@ -161,8 +161,8 @@ body {
   where the column is narrowest (531px), the same line needs <= 54px; this curve
   gives 53px there.
 
-  Not folded into .display-hero, because that class is shared by the /employers
-  headline and the closing CTA, and neither of those should move.
+  Not folded into .display-hero, because that class is shared by other
+  headlines that should not move.
 
   The mobile floor (2.8rem) is unchanged, so nothing moves below md, where the
   headline wraps naturally anyway.

@@ -16,8 +16,8 @@ import {
   type MembershipPlanId,
 } from "@/content/jobs";
 import { ButtonAction } from "@/components/ui/Button";
-import { Field } from "@/components/apply/Field";
-import { ChipMultiField, SelectMenu, TextField } from "@/components/apply/Controls";
+import { Field } from "@/components/form/Field";
+import { ChipMultiField, SelectMenu, TextField } from "@/components/form/Controls";
 import { CurrencyToggle, PlanGrid, plansFor } from "@/components/jobs/PlanGrid";
 import { useCurrency, usePlanParam } from "@/components/jobs/currency";
 import { formatPrice } from "@/components/jobs/format";
@@ -25,7 +25,7 @@ import { trackMembershipReserved } from "@/lib/analytics";
 
 /*
   /get-access: plan cards and the reservation form, sharing one currency and one
-  plan choice. Same submit architecture as EmployerBrief (controlled fields ->
+  plan choice. Same submit architecture as the old firm intake form (controlled fields ->
   server action via useTransition, honeypot + timestamp, best-effort confirmation
   email server side), writing to membership_reservations.
 

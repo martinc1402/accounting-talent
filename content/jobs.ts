@@ -1,4 +1,3 @@
-import type { FaqItem } from "@/content/faq";
 import { CONTACT_EMAIL } from "@/content/site";
 import type { JobListing } from "@/lib/jobs/types";
 
@@ -126,14 +125,14 @@ export const pricing = {
   currencyLabel: "Show prices in",
   includesHeading: "Every plan will include",
   includes: [
-    "Search every listing, with employer names shown",
+    "Every verified listing, with employer names shown",
     "All filters: country, remote from India, sponsorship signal, role, experience, date posted",
     "New listings added daily",
     "A direct link to apply on the employer's own site",
   ],
   free: {
     heading: "Free account",
-    body: "Create a profile and preview a few recent listings, with employer names hidden.",
+    body: "A preview of a few recent listings, with employer names and evidence hidden.",
   },
   payment: {
     INR: "When checkout opens you'll pay by UPI or card, through our own checkout on accountingtalent.in. Never by phone, WhatsApp or bank transfer.",
@@ -153,7 +152,7 @@ export const pricing = {
 export const hero = {
   eyebrow: "For Indian CAs, CMAs, ACCAs and accountants",
   h1: "Remote and overseas accounting jobs, straight from employers' career pages.",
-  sub: "We're building a daily-updated database of accounting roles you can do from India, and roles abroad that mention visa sponsorship, in the US, Canada, the UK, Australia and the Gulf.",
+  sub: "A membership to a daily-updated database of verified accounting roles: remote jobs you can do from India, and jobs abroad that mention visa sponsorship, in the US, Canada, the UK, Australia and the Gulf.",
   primary: { label: "See example listings", href: "#listings" },
   secondary: { label: "View pricing", href: "#pricing" },
   microcopy: "The database isn't open yet. Founding members pay nothing now, get a launch discount, and hear from us first.",
@@ -187,8 +186,8 @@ export const howItWorks = {
   sub: "Four steps, and the last one happens on the employer's site, not ours.",
   steps: [
     {
-      title: "We find jobs on company sites",
-      body: "Every day we check employers' own career pages and the hiring systems they post on, like Greenhouse, Lever and Workday. Not reposts, not agencies.",
+      title: "We find and verify jobs on company sites",
+      body: "Every day we check employers' own career pages and the hiring systems they post on, like Greenhouse, Lever and Workday. A listing is verified when we've confirmed it's real and still live on the employer's own site. Not reposts, not agencies.",
     },
     {
       title: "We tag each listing",
@@ -483,6 +482,7 @@ export const trust = {
   do: {
     heading: "We do",
     items: [
+      "Verify every listing is live on the employer's own careers page, and re-check it daily",
       "Link to the original listing on the employer's own site",
       "Tag sponsorship and remote signals from the listing's own wording",
       "Remove listings we find are closed or fake, and act on your reports",
@@ -500,91 +500,13 @@ export const trust = {
     ],
   },
   footnote: "Employers decide whether to sponsor a visa, and immigration rules change. A sponsorship tag means the listing mentioned it when we found it. Always check the employer's listing and official government sources before you rely on it.",
+  /*
+    The scam advice that used to live in the homepage FAQ, kept when the FAQs
+    were removed: for this audience it is the most protective sentence on the
+    page.
+  */
+  scam: `A real employer never charges you to apply, to be interviewed, or for a "visa processing" fee. We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf. If someone does, don't pay, and tell us at ${CONTACT_EMAIL}.`,
 } as const;
-
-export const faqHeading = "Questions";
-
-/*
-  ids are an interface, not copy: they drive the faq_opened analytics event
-  (see content/faq.ts). Prefixed "jobs-" so they cannot collide with the
-  accountant or employer FAQ ids in the dashboard.
-*/
-export const jobsFaq: readonly FaqItem[] = [
-  {
-    id: "jobs-what-jobs",
-    q: "What jobs will be included?",
-    a: [
-      "Accounting and finance roles posted on employers' own career pages and hiring systems: audit, tax, AP/AR, FP&A, bookkeeping and related work. Two kinds: remote roles you can do from India, and roles abroad where the listing mentions visa sponsorship.",
-      "We don't include agency reposts, and we don't write listings ourselves.",
-    ],
-  },
-  {
-    id: "jobs-sponsorship",
-    q: "How do you know a job offers visa sponsorship?",
-    a: [
-      "We read the listing's own text. If it says the employer sponsors visas or provides an employment visa, we tag it \"Mentions sponsorship\". If it says it doesn't, we tag that too.",
-      "It's a signal, not a guarantee. Listings can be vague or out of date, the employer makes the final decision, and immigration rules change. Always confirm with the employer and official government sources.",
-    ],
-  },
-  {
-    id: "jobs-remote-india",
-    q: "How do you know a remote job is open to India?",
-    a: [
-      "Many \"remote\" jobs are remote within one country only. We tag a role \"Remote, open to India\" only when the listing allows applicants in India or worldwide. If it's unclear, we don't tag it.",
-    ],
-  },
-  {
-    id: "jobs-countries",
-    q: "Which countries will you cover?",
-    a: [
-      "Remote roles open to India, plus roles in the USA, Canada, the UK, Australia and the Gulf (UAE, Saudi Arabia, Qatar, Oman, Kuwait and Bahrain).",
-    ],
-  },
-  {
-    id: "jobs-refresh",
-    q: "How often will listings be updated?",
-    a: [
-      "Daily. We check employers' sites every day, add new roles and remove ones that have closed, so you can apply early rather than after a role has been reposted everywhere.",
-    ],
-  },
-  {
-    id: "jobs-refunds",
-    q: "Can I cancel or get a refund?",
-    a: [
-      "Nothing is charged yet, so there's nothing to refund. Reserving a plan doesn't commit you to anything.",
-      "Before checkout opens we'll publish our cancellation and refund policy on this site, and you'll see it before you pay.",
-    ],
-  },
-  {
-    id: "jobs-not-agency",
-    q: "Are you a recruitment agency?",
-    a: [
-      "No. We don't place candidates, we don't represent you to employers and we never take a cut of your salary. We find listings and link you to them. You apply directly to the employer, and any offer is between you and them.",
-    ],
-  },
-  {
-    id: "jobs-founding",
-    q: "I joined when it was free. Do I have to pay now?",
-    a: [
-      "No. If you signed up under our earlier promise that AccountingTalent would always be free for accountants, you keep free access as a founding member. You don't need to do anything.",
-    ],
-  },
-  {
-    id: "jobs-scams",
-    q: "How do I spot a job scam?",
-    a: [
-      "A real employer never asks you to pay to apply, to be interviewed, or for a \"visa processing\" or \"training\" fee. Be careful with interviews held only on WhatsApp or Telegram, offers made without any interview, and email addresses that don't match the company's website.",
-      `We only take payment through our own checkout on accountingtalent.in, never by phone, WhatsApp or bank transfer, and no employer or agent will ever ask you for a fee on our behalf. If someone claiming to be us asks you for money any other way, don't pay, and tell us at ${CONTACT_EMAIL}.`,
-    ],
-  },
-  {
-    id: "jobs-reserve",
-    q: "What does reserving a founding membership mean?",
-    a: [
-      "You tell us who you are, where you want to work and which plan you'd pick. Nothing is charged. When the database opens we'll email you first, with your founding-member launch discount, and you decide then whether to pay.",
-    ],
-  },
-];
 
 export const finalCta = {
   heading: "Be first in when the database opens.",

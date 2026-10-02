@@ -32,7 +32,7 @@ export const metadata: Metadata = pageMetadata({
 export default function GetAccessPage() {
   return (
     <>
-      <Nav audience="candidate" />
+      <Nav />
       <main className="flex-1 bg-mist">
         <Container className="pt-12 pb-16 lg:pt-20 lg:pb-28">
           <div className="max-w-[820px]">
@@ -55,7 +55,7 @@ export default function GetAccessPage() {
           </div>
         </Container>
       </main>
-      <Footer audience="candidate" />
+      <Footer />
     </>
   );
 }

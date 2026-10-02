@@ -12,11 +12,45 @@ const nextConfig: NextConfig = {
   },
 
   /*
-    No redirects. /employers used to 308 to "/" while the homepage was the firm
-    pitch; it is a real route again now that "/" is the job-seeker membership
-    page. Browsers that cached the old permanent redirect will keep sending
-    /employers to "/" until their cache clears, which was accepted as a cost.
+    Retired and hidden routes, after the 2026-10 simplification to a single
+    product (the job-search membership on "/").
+
+    - /apply, /employers, /faq: deleted. The redirect catches old links, ads and
+      bookmarks so they land on "/" rather than a 404.
+    - /accountants: code kept, page hidden.
+    - /login, /candidates, /employer, /assessment: the logged-in areas, shut down
+      for now. Their code is kept (a paywall will need sign-in again). Emailed
+      assessment links and dashboard bookmarks now land on "/".
+
+    TEMPORARY (307), NOT PERMANENT, deliberately. These routes may come back, and
+    browsers cache a permanent 308 indefinitely: when /employers 308'd to "/"
+    earlier, bringing it back meant returning visitors kept being bounced until
+    their cache cleared. A 307 is re-checked on every visit.
+
+    `/:path*` matches the bare route as well as anything beneath it. /auth/* (the
+    magic-link callback and sign-out) and /api/* are left alone; with the pages
+    gone nothing links to them.
+
+    lib/content/ctas.test.ts asserts every route here stays covered and
+    temporary.
   */
+  async redirects() {
+    const retired = [
+      "/apply",
+      "/employers",
+      "/faq",
+      "/accountants",
+      "/login",
+      "/candidates",
+      "/employer",
+      "/assessment",
+    ];
+    return retired.map((route) => ({
+      source: `${route}/:path*`,
+      destination: "/",
+      permanent: false,
+    }));
+  },
 };
 
 export default nextConfig;

@@ -8,8 +8,7 @@ import { formatPrice } from "@/components/jobs/format";
   hooks: the caller owns the currency and decides what each card's button does
   (a link to /get-access on "/", a "choose this plan" button on /get-access).
 
-  Same visual vocabulary as components/marketing/PricingCard on /employers: white
-  card with a hairline, the flagged plan in mist with a navy border and pill, no
+  The site's pricing-card vocabulary: white card with a hairline, the flagged plan in mist with a navy border and pill, no
   shadow or scale. A floating card would read as a different site.
 
   Compact on purpose. Four plans stack on a phone, so each card carries only

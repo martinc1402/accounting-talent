@@ -7,7 +7,6 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatusLabel } from "@/components/marketing/StatusLabel";
 import { ProcessSteps } from "@/components/marketing/ProcessSteps";
-import { FaqSection } from "@/components/marketing/FaqSection";
 import { JobCard } from "@/components/jobs/JobCard";
 import { FilterPreview } from "@/components/jobs/FilterPreview";
 import { HomePricing } from "@/components/jobs/HomePricing";
@@ -20,8 +19,6 @@ import {
   exampleJobs,
   EXAMPLE_NOW,
   trust,
-  faqHeading,
-  jobsFaq,
   finalCta,
 } from "@/content/jobs";
 
@@ -31,11 +28,12 @@ import {
   all in content/jobs.ts, which also records the honesty rules this page is held
   to (no counts, no testimonials, every listing an "Example listing").
 
-  The firm pitch that used to live here is at /employers, unchanged.
+  This is the site's one product. The firm pitch (/employers), the profile
+  funnel (/apply) and the FAQs were removed in 2026-10; see next.config.ts.
 
   Bands from the top: white (hero) / mist (problem) / white (how it works) /
   paper (filters) / white (example listings) / paper (pricing) / white (trust) /
-  mist (faq) / navy (final cta + footer). Padding, never margins, so bands sit
+  navy (final cta + footer). Padding, never margins, so bands sit
   flush.
 
   FULLY STATIC, same as the page it replaced, and for the same reason: no
@@ -59,12 +57,12 @@ export const metadata: Metadata = pageMetadata({
 export default function HomePage() {
   return (
     <>
-      <Nav audience="candidate" />
+      <Nav />
       <main className="flex-1">
-        {/* Hero. Same 7/5 split and top-aligned columns as /employers, for the
-            reason recorded there: centring the copy against a tall card pushes
-            the headline below the fold. The right column is the first example
-            listing (Dubai, sponsorship stated), labelled as one. */}
+        {/* Hero. 7/5 split, columns top-aligned rather than centred: centring
+            the copy against a tall card pushes the headline below the fold.
+            The right column is the first example listing (Dubai, sponsorship
+            stated), labelled as one. */}
         <section className="mx-auto grid max-w-[1240px] grid-cols-1 gap-x-16 gap-y-10 px-5 pt-12 pb-16 lg:grid-cols-12 lg:px-8 lg:pt-20 lg:pb-24">
           <div className="lg:col-span-7 lg:self-start">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -187,6 +185,7 @@ export default function HomePage() {
               </div>
             </div>
             <p className="mt-6 max-w-[70ch] text-small text-subtle">{trust.footnote}</p>
+            <p className="mt-4 max-w-[70ch] text-small text-ink">{trust.scam}</p>
 
             {/*
               TODO(social-proof): this is where member quotes or outcomes would
@@ -196,8 +195,6 @@ export default function HomePage() {
             */}
           </Container>
         </section>
-
-        <FaqSection id="faq" heading={faqHeading} items={jobsFaq} band="mist" trackOpens />
 
         {/* Final CTA band. */}
         <section className="bg-navy pt-20 pb-16 lg:pt-28 lg:pb-20">
@@ -217,7 +214,7 @@ export default function HomePage() {
           </Container>
         </section>
       </main>
-      <Footer audience="candidate" />
+      <Footer />
     </>
   );
 }

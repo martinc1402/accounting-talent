@@ -721,7 +721,6 @@ export const finalCta = {
   referralLinkLabel: "Refer them",
 } as const;
 
-export const faqHeading = "Questions accountants ask us";
 
 // Where "See what employers see" and "See example profiles" go: the real preview
 // page, rendering the real profile component through the real authorization

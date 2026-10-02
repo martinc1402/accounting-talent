@@ -1,20 +1,12 @@
 import Link from "next/link";
-import { footer, candidateFooter } from "@/content/site";
+import { footer } from "@/content/site";
 import { Logo } from "@/components/ui/Logo";
 
 /*
   Navy, so that on the homepage it reads as one continuous block with the final
   CTA above it. That is the single deliberate color-block moment on the site.
 */
-export function Footer({
-  audience = "default",
-}: {
-  // "candidate" swaps the tagline and disclosure for the job-seeker pages ("/",
-  // /get-access); links and email are shared.
-  audience?: "default" | "candidate";
-} = {}) {
-  const copy = audience === "candidate" ? candidateFooter : footer;
-
+export function Footer() {
   return (
     <footer className="bg-navy text-white">
       <div className="mx-auto max-w-[1240px] px-5 py-14 lg:px-8 lg:py-16">
@@ -22,7 +14,7 @@ export function Footer({
           <div>
             <Logo tone="white" />
             <p className="mt-3 max-w-[30ch] text-small text-white/70">
-              {copy.tagline}
+              {footer.tagline}
             </p>
           </div>
 
@@ -46,7 +38,7 @@ export function Footer({
         </div>
 
         <p className="mt-8 max-w-[70ch] text-caption text-white/55">
-          {copy.disclosure}
+          {footer.disclosure}
         </p>
       </div>
     </footer>

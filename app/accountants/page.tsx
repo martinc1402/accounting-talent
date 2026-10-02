@@ -13,10 +13,8 @@ import { ProfileDetail } from "@/components/home/ProfileDetail";
 import { TheHonestPart } from "@/components/home/TheHonestPart";
 import { FinalCta } from "@/components/home/FinalCta";
 import { Passport } from "@/components/marketing/Passport";
-import { FaqSection } from "@/components/marketing/FaqSection";
 import { pageMetadata } from "@/lib/seo";
-import { passport, faqHeading } from "@/content/home";
-import { faq } from "@/content/faq";
+import { passport } from "@/content/home";
 
 /*
   Worker-facing page. Every section reads from content/home.ts, and the parts both
@@ -73,7 +71,7 @@ export const metadata: Metadata = pageMetadata({
 export default function AccountantsPage() {
   return (
     <>
-      <Nav active="/accountants" audience="worker" />
+      <Nav />
       <main className="flex-1">
         <Hero />
         <WhyReputation />
@@ -93,7 +91,6 @@ export default function AccountantsPage() {
         <Verification />
         <TheHonestPart />
 
-        <FaqSection heading={faqHeading} items={faq} trackOpens />
 
         <FinalCta />
       </main>
